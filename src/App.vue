@@ -5,27 +5,26 @@
         <v-card-title>Clocks</v-card-title>
         <v-container>
           <v-row>
-            <v-col v-for="clock in clocks" :key="'Clock' + clock.id">
-              <v-btn @click="removeClock(clock.id)"><v-icon start icon="mdi-delete-forever" color="red" /></v-btn>
-              <clock-vue v-bind="clock" @update-slice="updateSlice" />
+            <v-col v-for="clock in clocks" :key="'Clock' + clock.id" cols="2">
+              <clock-vue v-bind="clock" @update-slice="updateSlice" @delete-clock="removeClock" />
             </v-col>
           </v-row>
         </v-container>
       </v-card>
       <v-card>
-        <v-btn @click="addClock()">Add Clock</v-btn>
+        <add-clock-vue @new-clock="addClock" />
       </v-card>
     </v-main>
   </v-app>
 </template>
 
 <script setup lang="ts">
-import { Clock } from '@/types/Clock';
-import ClockVue from "@/components/Clock.vue";
+import { Clock, ClockNoId } from '@/types/Clock';
+import ClockVue from '@/components/Clock.vue';
+import AddClockVue from '@/components/AddClock.vue';
 import { ref } from 'vue';
 
 type Clocks = Clock[];
-type ClockNoId = Omit<Clock, "id">;
 
 const clocks = ref<Clocks>([]);
 addClock({

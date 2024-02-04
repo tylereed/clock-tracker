@@ -6,3 +6,5 @@ export interface Clock {
     color: string;
     size: number;
 }
+
+export type ClockNoId = Omit<Clock, "id">;
