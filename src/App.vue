@@ -3,9 +3,9 @@
     <v-main>
       <v-card>
         <v-card-title>Clocks</v-card-title>
-        <v-container>
-          <v-row>
-            <v-col v-for="clock in clocks" :key="'Clock' + clock.id" cols="2">
+        <v-container fluid>
+          <v-row v-resize="resizeClocks" dense>
+            <v-col v-for="clock in clocks" :key="'Clock' + clock.id" cols="3" lg="2" xxl="1">
               <clock-vue v-bind="clock" @update-slice="updateSlice" @delete-clock="removeClock" />
             </v-col>
           </v-row>
@@ -19,10 +19,14 @@
 </template>
 
 <script setup lang="ts">
-import { Clock, ClockNoId } from '@/types/Clock';
+import { Clock, NewClock } from '@/types/Clock';
 import ClockVue from '@/components/Clock.vue';
 import AddClockVue from '@/components/AddClock.vue';
 import { ref } from 'vue';
+import { useDisplay } from 'vuetify';
+
+const display = useDisplay();
+const MAX_CLOCK_WIDTH = 200;
 
 type Clocks = Clock[];
 
@@ -30,9 +34,12 @@ const clocks = ref<Clocks>([]);
 addClock({
   totalSlices: 8,
   filledSlices: 3,
-  color: 'green',
-  size: 200
+  color: 'green'
 });
+
+function getClockSize() {
+  return Math.min(display.width.value / 4 - 20, MAX_CLOCK_WIDTH);
+}
 
 function updateSlice(id: number, amount: number) {
   if (amount < 0) return;
@@ -40,7 +47,7 @@ function updateSlice(id: number, amount: number) {
   clocks.value[id].filledSlices = amount;
 }
 
-function addClock(toAdd: ClockNoId | undefined = undefined) {
+function addClock(toAdd: NewClock) {
   let c: Clock;
   if (!toAdd) {
     const totalSlices = Math.ceil(Math.random() * 6) + 2;
@@ -50,10 +57,10 @@ function addClock(toAdd: ClockNoId | undefined = undefined) {
       totalSlices,
       filledSlices,
       color: "purple",
-      size: 200
+      size: getClockSize()
     };
   } else {
-    c = { ...toAdd, id: clocks.value.length };
+    c = { ...toAdd, id: clocks.value.length, size: getClockSize() };
   }
   clocks.value.push(c);
 }
@@ -62,6 +69,14 @@ function removeClock(id: number) {
   clocks.value.splice(id, 1);
   for (let i = id; i < clocks.value.length; i++) {
     clocks.value[i].id = i;
+  }
+}
+
+function resizeClocks() {
+  const clockSize = getClockSize();
+
+  for (const clock of clocks.value) {
+    clock.size = clockSize;
   }
 }
 

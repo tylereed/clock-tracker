@@ -7,4 +7,4 @@ export interface Clock {
     size: number;
 }
 
-export type ClockNoId = Omit<Clock, "id">;
+export type NewClock = Omit<Clock, "id" | "size">;

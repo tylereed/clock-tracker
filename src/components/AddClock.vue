@@ -8,19 +8,16 @@
 </template>
 
 <script setup lang="ts">
-import { ClockNoId } from '@/types/Clock';
+import { NewClock } from '@/types/Clock';
 import { ref } from 'vue';
 
 const emit = defineEmits<{
-  (e: 'newClock', clock: ClockNoId | undefined): void
+  (e: 'newClock', clock: NewClock): void
 }>();
 
-//type DefaultClock = Omit<ClockNoId, "totalSlices"> & { totalSlices?: number };
-
-const newClock = ref<ClockNoId>({
+const newClock = ref<NewClock>({
   filledSlices: 0,
   color: "green",
-  size: 200,
   totalSlices: 8
 });
 
@@ -34,7 +31,6 @@ function isNumericRule(value: any) {
 }
 
 function addClock() {
-
   const c = { ...newClock.value };
   emit("newClock", c);
 }
