@@ -30,7 +30,11 @@ import { onMounted, onUpdated, ref } from 'vue';
 const tau = Math.PI * 2;
 
 const clock = defineProps<Clock>();
-const emit = defineEmits(["updateSlice", "deleteClock"]);
+
+const emit = defineEmits<{
+  (e: "updateSlice", id: number,  filledSlices: number): void,
+  (e: "deleteClock", id:  number): void
+}>();
 
 onMounted(render);
 onUpdated(render);
