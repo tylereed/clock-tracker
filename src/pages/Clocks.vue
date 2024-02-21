@@ -1,6 +1,6 @@
 <template>
   <v-card>
-    <clock-list :clocks="clocks" @update-slice="updateSlice" @delete-clock="removeClock"/>
+    <clock-list :clocks="clocks" @update-slice="updateSlice" @move-clock="moveClock" @delete-clock="removeClock"/>
   </v-card>
   <v-card>
     <add-clock-vue @new-clock="addClock" />
@@ -28,8 +28,22 @@ function updateSlice(id: number, amount: number) {
   clocks.value[id].filledSlices = amount;
 }
 
+function moveClock(id: number, newIndex: number) {
+  if (id < newIndex) {
+    newIndex--;
+  }
+  const toMove = clocks.value[id];
+  clocks.value.splice(id, 1);
+  clocks.value.splice(newIndex, 0, toMove);
+  setIds();
+}
+
 function removeClock(id: number) {
   clocks.value.splice(id, 1);
+  setIds(id);
+}
+
+function setIds(id: number = 0) {
   for (let i = id; i < clocks.value.length; i++) {
     clocks.value[i].id = i;
   }
