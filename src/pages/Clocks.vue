@@ -53,19 +53,7 @@ function setIds(id: number = 0) {
 
 function addClock(toAdd: NewClock) {
   let c: Clock;
-  if (!toAdd) {
-    const totalSlices = Math.ceil(Math.random() * 6) + 2;
-    const filledSlices = Math.floor(Math.random() * (totalSlices + 1));
-    c = {
-      id: clocks.value.length,
-      totalSlices,
-      filledSlices,
-      color: "purple",
-      size: getClockSize()
-    };
-  } else {
-    c = { ...toAdd, id: clocks.value.length, size: getClockSize() };
-  }
+  c = { ...toAdd, id: clocks.value.length, size: getClockSize() };
   clocks.value.push(c);
 }
 
