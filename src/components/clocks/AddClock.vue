@@ -2,8 +2,9 @@
   <v-form v-model="isFormValid" @submit.prevent="addClock">
     <v-btn :disabled="!isFormValid" type="submit">Add Clock</v-btn>
     <v-text-field label="Name" v-model="newClock.name" />
-    <v-text-field label="Total Slices" :rules="[isRequiredRule, isNumericRule]" v-model="newClock.totalSlices" />
-    <v-text-field label="Color" v-model="newClock.color" />
+    <v-text-field label="Total Slices" :rules="[isRequiredRule, isNumericRule, inRangeRule(1, 12)]"
+      v-model="newClock.totalSlices" />
+    <v-text-field label="Color" :rules="[isColor]" v-model="newClock.color" />
   </v-form>
 </template>
 
@@ -11,11 +12,13 @@
 import { NewClock } from '@/types/Clock';
 import { ref } from 'vue';
 
-const isFormValid = ref<boolean>(false);
+const hexRegex = /^[0-9a-f]+$/i;
+
 const emit = defineEmits<{
   (e: 'newClock', clock: NewClock): void
 }>();
 
+const isFormValid = ref<boolean>(false);
 const newClock = ref<NewClock>({
   filledSlices: 0,
   color: "",
@@ -23,12 +26,31 @@ const newClock = ref<NewClock>({
 });
 
 function isRequiredRule(value: any) {
-  return !!value || 'Required.';
+  return !!value || 'Required';
 }
 
 const isNumericRegex = /^\d+$/;
 function isNumericRule(value: any) {
-  return isNumericRegex.test(value) || "Must be a number.";
+  return isNumericRegex.test(value) || "Must be a number";
+}
+
+function inRangeRule(min: number, max: number): (value: number | string) => boolean | string {
+  return (value: number | string) => (+value >= min && +value <= max) || `Must be between ${min} and ${max}`
+}
+
+const ele = document.createElement("div");
+function isColor(value: string) {
+  if (!value) {
+    return true;
+  }
+  if (value.match(hexRegex)) {
+    value = "#" + value;
+  }
+
+  ele.style.color = value;
+  const result = !!ele.style.color.split(/\s+/).join('').toLowerCase() || "Not a valid color";
+  ele.style.color = "";
+  return result;
 }
 
 function randomNumber(min: number, max: number) {
@@ -78,6 +100,9 @@ function randomishColor() {
 function addClock() {
   if (isFormValid.value) {
     const c = { ...newClock.value };
+    if (c.color.match(hexRegex)) {
+      c.color = "#" + c.color;
+    }
     c.color ||= randomishColor();
     emit("newClock", c);
   }
