@@ -59,11 +59,12 @@ function drop(e: DragEvent) {
     if (draggedClock) {
       const dropTarget = e.currentTarget as HTMLElement;
       const clockList = dropTarget.closest(".clock-list") as HTMLElement;
+      const childHeight = clockList.children.item(0)!.clientHeight;
       const numberCols = getNumberCols();
       const colWidth = clockList.offsetWidth / numberCols;
 
       const col = Math.round(e.pageX / colWidth);
-      const row = Math.floor((e.pageY - clockList.offsetTop) / draggedClock.size);
+      const row = Math.floor((e.pageY - clockList.offsetTop) / childHeight);
       const index = Math.min(row * numberCols + col, clocks.length);
 
       emit("moveClock", draggedClock.id, index);
