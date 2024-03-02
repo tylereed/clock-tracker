@@ -3,7 +3,7 @@
     <v-card-title>Timer</v-card-title>
     <v-card-text>{{ timerDisplay }}</v-card-text>
     <v-card-actions>
-      <v-btn :disabled="time" @click="startTimer">Start</v-btn>
+      <v-btn :disabled="!!time" @click="startTimer">Start</v-btn>
       <v-btn :disabled="!time" @click="stopResetTimer">{{ timer ? "Stop" : "Reset" }}</v-btn>
     </v-card-actions>
   </v-card>
