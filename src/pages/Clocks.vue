@@ -1,6 +1,9 @@
 <template>
   <v-card>
-    <clock-list :clocks="clocks" @update-slice="updateSlice" @move-clock="moveClock" @delete-clock="removeClock"/>
+    <timer />
+  </v-card>
+  <v-card>
+    <clock-list :clocks="clocks" @update-slice="updateSlice" @move-clock="moveClock" @delete-clock="removeClock" />
   </v-card>
   <v-card>
     <add-clock-vue @new-clock="addClock" />
@@ -11,6 +14,7 @@
 import { Clock, NewClock, getClockSize } from '@/types/Clock';
 import AddClockVue from '@/components/clocks/AddClock.vue';
 import ClockList from '@/components/clocks/ClockList.vue';
+import Timer from '@/components/timer/Timer.vue';
 import { ref } from 'vue';
 
 type Clocks = Clock[];
