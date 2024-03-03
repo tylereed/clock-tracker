@@ -42,14 +42,14 @@ const emit = e;
 const props = defineProps<{ clocks: Clock[] }>();
 const clocks = props.clocks;
 
-interface MovableDropDispay {
+interface MovableDropDisplay {
   display: "none" | "block",
   top: string,
   left: string,
   height: string
 }
 
-const dropDisplayStyle = reactive<MovableDropDispay>({
+const dropDisplayStyle = reactive<MovableDropDisplay>({
   display: "none",
   top: "0px",
   left: "0px",
