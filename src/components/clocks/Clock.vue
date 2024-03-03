@@ -81,7 +81,7 @@ function render() {
     let fillStyle: string | CanvasPattern;
     if (i < clock.filledSlices) {
       fillStyle = clock.color;
-    } else if (i == clock.filledSlices && isHover) {
+    } else if (i === clock.filledSlices && isHover) {
       const offscreen = new OffscreenCanvas(10, 10);
       const offCtx = offscreen.getContext("2d")!;
       offCtx.fillStyle = clock.color;
