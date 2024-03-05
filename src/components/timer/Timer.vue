@@ -1,6 +1,6 @@
 <template>
   <v-card>
-    <v-card-title>Timer</v-card-title>
+    <v-card-item><v-card-title>Timer</v-card-title></v-card-item>
     <v-card-text :style="timerDisplayStyle">{{ timerDisplay }}</v-card-text>
     <v-card-actions>
       <v-btn @click="startTimer" v-if="!isRunning">{{ time ? "Resume" : "Start" }}</v-btn>

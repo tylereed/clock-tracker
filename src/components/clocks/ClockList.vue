@@ -1,6 +1,5 @@
 <template>
   <div id="dropDisplay" :style="dropDisplayStyle" />
-  <v-card-title>Clocks</v-card-title>
   <v-container fluid>
     <v-row class="clock-list" @drop="(e) => drop(e)" @dragover="showDrop" @dragleave="clearDrop" @dragenter.prevent
       v-resize="resizeClocks" dense>
