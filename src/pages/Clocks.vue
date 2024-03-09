@@ -11,7 +11,7 @@
     </v-card-actions>
   </v-card>
 
-  <v-dialog v-model="addEditClockDisplay" width="25%">
+  <v-dialog v-model="addEditClockDisplay" width="25%" min-width="400px">
     <add-clock-vue class="pa-2 ma-6" :clock-values="addEditClockValues" @new-clock="addClock"
       @update-clock="updateClock" @close="addEditClockDisplay = false" />
   </v-dialog>
