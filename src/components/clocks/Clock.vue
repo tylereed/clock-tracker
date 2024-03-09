@@ -3,9 +3,14 @@
     <template v-slot:default="{ isHovering, props }">
       <v-card v-bind="props" class="d-flex justify-center" @click="increment()" @click.right="decrement()"
         @contextmenu.prevent>
-        <v-btn @click.stop="emit('deleteClock', clock.id)" v-show="isHovering" class="topright text-center">
-          <v-icon icon="mdi-delete-forever" color="red" />
-        </v-btn>
+        <v-sheet v-show="isHovering" class="topright text-center">
+          <v-btn @click.stop="emit('editClock', clock.id)">
+            <v-icon icon="mdi-pencil" />
+          </v-btn>
+          <v-btn @click.stop="emit('deleteClock', clock.id)">
+            <v-icon icon="mdi-delete-forever" color="red" />
+          </v-btn>
+        </v-sheet>
         <v-sheet :width="size + 15" :height="size + 65">
           <v-card-title>{{ name || "&nbsp;" }}</v-card-title>
           <canvas ref="canvasRef" class="ma-2" :width="size" :height="size" />
@@ -33,8 +38,9 @@ const clock = defineProps<Clock>();
 let isHover = false;
 
 const emit = defineEmits<{
-  (e: "updateSlice", id: number,  filledSlices: number): void,
-  (e: "deleteClock", id:  number): void
+  (e: "updateSlice", id: number, filledSlices: number): void,
+  (e: "editClock", id: number): void
+  (e: "deleteClock", id: number): void
 }>();
 
 onMounted(render);

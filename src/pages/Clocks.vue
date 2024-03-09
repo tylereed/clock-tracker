@@ -2,26 +2,32 @@
   <v-card>
     <v-card-item><v-card-title>Clocks</v-card-title></v-card-item>
     <v-card-text>
-      <clock-list :clocks="clocks" @update-slice="updateSlice" @move-clock="moveClock" @delete-clock="removeClock" />
+      <clock-list :clocks="clocks" @update-slice="updateSlice" @move-clock="moveClock" @edit-clock="openEdit"
+        @delete-clock="removeClock" />
     </v-card-text>
     <v-card-actions>
       <v-btn @click="clearClocks">Clear Clocks</v-btn>
+      <v-btn @click="openAdd">Add Clock</v-btn>
     </v-card-actions>
   </v-card>
-  <v-card>
-    <add-clock-vue @new-clock="addClock" />
-  </v-card>
+
+  <v-dialog v-model="addEditClockDisplay" width="25%">
+    <add-clock-vue class="pa-2 ma-6" :clock-values="addEditClockValues" @new-clock="addClock"
+      @update-clock="updateClock" @close="addEditClockDisplay = false" />
+  </v-dialog>
 </template>
 
 <script setup lang="ts">
 import { Clock, NewClock, getClockSize } from '@/types/Clock';
-import AddClockVue from '@/components/clocks/AddClock.vue';
+import AddClockVue from '@/components/clocks/AddEditClock.vue';
 import ClockList from '@/components/clocks/ClockList.vue';
 import { ref } from 'vue';
 
 type Clocks = Clock[];
 
 const clocks = ref<Clocks>([]);
+const addEditClockDisplay = ref(false);
+const addEditClockValues = ref<NewClock | null>(null);
 
 function updateSlice(id: number, amount: number) {
   if (amount < 0) return;
@@ -52,10 +58,27 @@ function clearClocks() {
   saveClocks();
 }
 
+function openAdd() {
+  addEditClockValues.value = null;
+  addEditClockDisplay.value = true;
+}
+
+function openEdit(id: number) {
+  addEditClockValues.value = { ...clocks.value[id] };
+  addEditClockDisplay.value = true;
+}
+
 function setIds(id: number = 0) {
   for (let i = id; i < clocks.value.length; i++) {
     clocks.value[i].id = i;
   }
+}
+
+function updateClock(toUpdate: Clock) {
+  const c: Clock = { ...toUpdate };
+  clocks.value[c.id] = c;
+  saveClocks();
+  addEditClockDisplay.value = false;
 }
 
 function addClock(toAdd: NewClock) {
@@ -63,6 +86,7 @@ function addClock(toAdd: NewClock) {
   c = { ...toAdd, id: clocks.value.length, size: getClockSize() };
   clocks.value.push(c);
   saveClocks();
+  addEditClockDisplay.value = false;
 }
 
 function saveClocks() {

@@ -6,7 +6,7 @@
       <v-col v-for="clock in clocks" :key="'Clock' + clock.id" cols="3" lg="2" xxl="1">
         <div draggable="true" @dragstart="startDrag(clock)" @dragend="clearDrag">
           <clock-vue v-bind="clock" @update-slice="(...a) => e('updateSlice', ...a)"
-            @delete-clock="(...a) => e('deleteClock', ...a)" />
+            @edit-clock="(...a) => e('editClock', ...a)" @delete-clock="(...a) => e('deleteClock', ...a)" />
         </div>
       </v-col>
     </v-row>
@@ -34,6 +34,7 @@ const display = useDisplay();
 const e = defineEmits<{
   (e: "updateSlice", id: number, filledSlices: number): void,
   (e: "moveClock", id: number, newIndex: number): void,
+  (e: "editClock", id: number): void,
   (e: "deleteClock", id: number): void
 }>();
 const emit = e;
