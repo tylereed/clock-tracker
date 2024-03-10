@@ -10,5 +10,6 @@ module.exports = {
   ],
   rules: {
     'vue/multi-word-component-names': 'off',
+    'no-dupe-class-members': 'off', // typescript handles this
   },
 }

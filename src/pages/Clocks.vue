@@ -8,6 +8,12 @@
     <v-card-actions>
       <v-btn @click="clearClocks">Clear Clocks</v-btn>
       <v-btn @click="openAdd">Add Clock</v-btn>
+      <v-btn :disabled="!executor.canUndo.value" @click="() => executor.undo()">
+        <v-icon icon="mdi-undo" />
+      </v-btn>
+      <v-btn :disabled="!executor.canRedo.value" @click="() => executor.redo()">
+        <v-icon icon="mdi-redo" />
+      </v-btn>
     </v-card-actions>
   </v-card>
 
@@ -22,6 +28,7 @@ import { Clock, NewClock, getClockSize } from '@/types/Clock';
 import AddClockVue from '@/components/clocks/AddEditClock.vue';
 import ClockList from '@/components/clocks/ClockList.vue';
 import { ref } from 'vue';
+import { Executor } from '@/utils/Executor';
 
 type Clocks = Clock[];
 
@@ -29,11 +36,15 @@ const clocks = ref<Clocks>([]);
 const addEditClockDisplay = ref(false);
 const addEditClockValues = ref<NewClock | null>(null);
 
+const executor = new Executor(saveClocks);
+
 function updateSlice(id: number, amount: number) {
   if (amount < 0) return;
   if (amount > clocks.value[id].totalSlices) return;
-  clocks.value[id].filledSlices = amount;
-  saveClocks();
+
+  const oldAmount = clocks.value[id].filledSlices;
+  executor.runCommand(() => clocks.value[id].filledSlices = amount,
+    () => clocks.value[id].filledSlices = oldAmount);
 }
 
 function moveClock(id: number, newIndex: number) {
@@ -41,21 +52,39 @@ function moveClock(id: number, newIndex: number) {
     newIndex--;
   }
   const toMove = clocks.value[id];
-  clocks.value.splice(id, 1);
-  clocks.value.splice(newIndex, 0, toMove);
-  setIds();
-  saveClocks();
+
+  executor.runCommand(
+    () => {
+      clocks.value.splice(id, 1);
+      clocks.value.splice(newIndex, 0, toMove);
+      setIds();
+    },
+    () => {
+      clocks.value.splice(newIndex, 1);
+      clocks.value.splice(id, 0, toMove);
+      setIds();
+    });
 }
 
 function removeClock(id: number) {
-  clocks.value.splice(id, 1);
-  setIds(id);
-  saveClocks();
+  if (id < 0) return;
+  if (id > clocks.value.length - 1) return;
+
+  const removed = clocks.value[id];
+
+  executor.runCommand(() => {
+    clocks.value.splice(id, 1);
+    setIds(id);
+  }, () => {
+    clocks.value.splice(id, 0, removed);
+    setIds(id);
+  });
 }
 
 function clearClocks() {
-  clocks.value.splice(0, clocks.value.length);
-  saveClocks();
+  const removedClocks = [...clocks.value];
+  executor.runCommand(() => clocks.value.splice(0, clocks.value.length),
+    () => clocks.value.splice(0, 0, ...removedClocks));
 }
 
 function openAdd() {
@@ -75,17 +104,21 @@ function setIds(id: number = 0) {
 }
 
 function updateClock(toUpdate: Clock) {
-  const c: Clock = { ...toUpdate };
-  clocks.value[c.id] = c;
-  saveClocks();
+  const updated: Clock = { ...toUpdate };
+  const oldValue = clocks.value[updated.id];
+
+  executor.runCommand(() => clocks.value[updated.id] = updated,
+    () => clocks.value[updated.id] = oldValue);
+
   addEditClockDisplay.value = false;
 }
 
 function addClock(toAdd: NewClock) {
-  let c: Clock;
-  c = { ...toAdd, id: clocks.value.length, size: getClockSize() };
-  clocks.value.push(c);
-  saveClocks();
+  const added: Clock = { ...toAdd, id: clocks.value.length, size: getClockSize() };
+
+  executor.runCommand(() => clocks.value.push(added),
+    () => clocks.value.pop());
+
   addEditClockDisplay.value = false;
 }
 
