@@ -11,6 +11,11 @@ export interface Clock {
 
 export type NewClock = Omit<Clock, "id" | "size">;
 
+export interface ClockTab {
+  name: string;
+  clocks: Clock[]
+}
+
 export function getClockSize() {
   return Math.min(window.innerWidth / 4 - 20, MAX_CLOCK_WIDTH);
 }

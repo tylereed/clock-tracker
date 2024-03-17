@@ -2,8 +2,18 @@
   <v-card>
     <v-card-item><v-card-title>Clocks</v-card-title></v-card-item>
     <v-card-text>
-      <clock-list :clocks="clocks" @update-slice="updateSlice" @move-clock="moveClock" @edit-clock="openEdit"
-        @delete-clock="removeClock" />
+      <v-tabs v-model="selectedTab">
+        <v-tab v-for="(clockTab, index) in clockTabs" :key="index" @click.middle="removeTab(index)">
+          {{ clockTab.name }}
+        </v-tab>
+        <v-tab @click.native.prevent.stop.capture="addTab" width=".5em"><v-icon icon="mdi-plus" /></v-tab>
+      </v-tabs>
+      <v-window v-model="selectedTab">
+        <v-window-item v-for="(clockTab, index) in clockTabs" :key="index">
+          <clock-list :clocks="clockTab.clocks" @update-slice="updateSlice" @move-clock="moveClock"
+            @edit-clock="openEdit" @delete-clock="removeClock" />
+        </v-window-item>
+      </v-window>
     </v-card-text>
     <v-card-actions>
       <v-btn @click="clearClocks">Clear Clocks</v-btn>
@@ -24,15 +34,19 @@
 </template>
 
 <script setup lang="ts">
-import { Clock, NewClock, getClockSize } from '@/types/Clock';
+import { Clock, ClockTab, NewClock, getClockSize } from '@/types/Clock';
 import AddClockVue from '@/components/clocks/AddEditClock.vue';
 import ClockList from '@/components/clocks/ClockList.vue';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { Executor } from '@/utils/Executor';
 
 type Clocks = Clock[];
+type ClockTabs = ClockTab[];
 
-const clocks = ref<Clocks>([]);
+const clockTabs = ref<ClockTabs>([]);
+const selectedTab = ref(0);
+const clocks = computed<Clocks>(() => clockTabs.value[selectedTab.value].clocks);
+
 const addEditClockDisplay = ref(false);
 const addEditClockValues = ref<NewClock | null>(null);
 
@@ -41,10 +55,16 @@ const executor = new Executor(saveClocks);
 function updateSlice(id: number, amount: number) {
   if (amount < 0) return;
   if (amount > clocks.value[id].totalSlices) return;
+  const tab = selectedTab.value;
 
   const oldAmount = clocks.value[id].filledSlices;
-  executor.runCommand(() => clocks.value[id].filledSlices = amount,
-    () => clocks.value[id].filledSlices = oldAmount);
+  executor.runCommand(() => {
+    selectedTab.value = tab;
+    clocks.value[id].filledSlices = amount;
+  }, () => {
+    selectedTab.value = tab;
+    clocks.value[id].filledSlices = oldAmount
+  });
 }
 
 function moveClock(id: number, newIndex: number) {
@@ -52,14 +72,17 @@ function moveClock(id: number, newIndex: number) {
     newIndex--;
   }
   const toMove = clocks.value[id];
+  const tab = selectedTab.value;
 
   executor.runCommand(
     () => {
+      selectedTab.value = tab;
       clocks.value.splice(id, 1);
       clocks.value.splice(newIndex, 0, toMove);
       setIds();
     },
     () => {
+      selectedTab.value = tab;
       clocks.value.splice(newIndex, 1);
       clocks.value.splice(id, 0, toMove);
       setIds();
@@ -71,11 +94,14 @@ function removeClock(id: number) {
   if (id > clocks.value.length - 1) return;
 
   const removed = clocks.value[id];
+  const tab = selectedTab.value;
 
   executor.runCommand(() => {
+    selectedTab.value = tab;
     clocks.value.splice(id, 1);
     setIds(id);
   }, () => {
+    selectedTab.value = tab;
     clocks.value.splice(id, 0, removed);
     setIds(id);
   });
@@ -83,8 +109,15 @@ function removeClock(id: number) {
 
 function clearClocks() {
   const removedClocks = [...clocks.value];
-  executor.runCommand(() => clocks.value.splice(0, clocks.value.length),
-    () => clocks.value.splice(0, 0, ...removedClocks));
+  const tab = selectedTab.value;
+
+  executor.runCommand(() => {
+    selectedTab.value = tab;
+    clocks.value.splice(0, clocks.value.length)
+  }, () => {
+    selectedTab.value = tab;
+    clocks.value.splice(0, 0, ...removedClocks)
+  });
 }
 
 function openAdd() {
@@ -106,25 +139,79 @@ function setIds(id: number = 0) {
 function updateClock(toUpdate: Clock) {
   const updated: Clock = { ...toUpdate };
   const oldValue = clocks.value[updated.id];
+  const tab = selectedTab.value;
 
-  executor.runCommand(() => clocks.value[updated.id] = updated,
-    () => clocks.value[updated.id] = oldValue);
+  executor.runCommand(() => {
+    selectedTab.value = tab;
+    clocks.value[updated.id] = updated
+  }, () => {
+    selectedTab.value = tab;
+    clocks.value[updated.id] = oldValue;
+  });
 
   addEditClockDisplay.value = false;
 }
 
 function addClock(toAdd: NewClock) {
   const added: Clock = { ...toAdd, id: clocks.value.length, size: getClockSize() };
+  const tab = selectedTab.value;
 
-  executor.runCommand(() => clocks.value.push(added),
-    () => clocks.value.pop());
+  executor.runCommand(() => {
+    selectedTab.value = tab;
+    clocks.value.push(added);
+  }, () => {
+    selectedTab.value = tab;
+    clocks.value.pop();
+  });
 
   addEditClockDisplay.value = false;
 }
 
+function addTab() {
+  const tab = selectedTab.value;
+  const nameRegex = /New Tab (\d+)/;
+
+  executor.runCommand(() => {
+    const indexes = clockTabs.value.map(t => {
+      const match = t.name.match(nameRegex);
+      if (match?.length ?? 0 > 1) {
+        return +match![1];
+      } else {
+        return 0;
+      }
+    });
+    const max = Math.max(...indexes);
+
+    clockTabs.value.push({
+      name: "New Tab " + (max + 1),
+      clocks: []
+    });
+    selectedTab.value = clockTabs.value.length - 1;
+  }, () => {
+    selectedTab.value = tab;
+    clockTabs.value.pop();
+  });
+}
+
+function removeTab(remove: number) {
+  const index = remove;
+  const toRemove = { ...clockTabs.value[index] };
+  const tab = selectedTab.value;
+
+  executor.runCommand(() => {
+    clockTabs.value.splice(index, 1);
+    if (index <= tab) {
+      selectedTab.value = tab - 1;
+    }
+  }, () => {
+    clockTabs.value.splice(index, 0, toRemove);
+    selectedTab.value = index;
+  });
+}
+
 function saveClocks() {
   try {
-    const toSave = [...clocks.value];
+    const toSave = [...clockTabs.value];
     const saveData = JSON.stringify(toSave);
     localStorage.setItem("clocks", saveData);
   } catch (e) {
@@ -136,11 +223,18 @@ function loadClocks() {
   try {
     const clockJson = localStorage.getItem("clocks");
     if (clockJson) {
-      const restoredClocks = JSON.parse(clockJson) as Clocks;
-      clocks.value = restoredClocks;
+      const restoredClocks = JSON.parse(clockJson) as ClockTabs;
+      clockTabs.value = restoredClocks;
     }
   } catch (e) {
     console.log(e);
+  } finally {
+    if (!clockTabs.value.length) {
+      clockTabs.value.push({
+        name: "Default",
+        clocks: []
+      });
+    }
   }
 }
 

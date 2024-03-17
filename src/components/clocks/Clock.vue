@@ -65,9 +65,10 @@ function render() {
   if (!canvasRef.value) return;
 
   const canvas = canvasRef.value;
-  const width = canvas.clientWidth;
-  const height = canvas.clientHeight;
-  const radius = Math.min(width, height) / 2 - 2;
+  const width = clock.size;
+  const height = clock.size;
+  const radius = clock.size / 2 - 2;
+  if (radius < 1) return;
   const x = width / 2;
   const y = height / 2;
   const ctx = canvas.getContext("2d")!;
