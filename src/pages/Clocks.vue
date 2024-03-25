@@ -180,7 +180,7 @@ function addTab() {
         return 0;
       }
     });
-    const max = Math.max(...indexes);
+    const max = Math.max(0, ...indexes);
 
     clockTabs.value.push({
       name: "New Tab " + (max + 1),
@@ -195,16 +195,24 @@ function addTab() {
 
 function removeTab(remove: number) {
   const index = remove;
-  const toRemove = { ...clockTabs.value[index] };
+  const toRemove = clockTabs.value[index];
   const tab = selectedTab.value;
 
-  executor.runCommand(() => {
-    clockTabs.value.splice(index, 1);
+  executor.runCommand(async (): Promise<void> => {
+    const clonedTabs = clockTabs.value.splice(0, clockTabs.value.length);
+    await 1;
+    clonedTabs.splice(index, 1);
+    clockTabs.value = clonedTabs;
+
     if (index <= tab) {
       selectedTab.value = tab - 1;
     }
-  }, () => {
-    clockTabs.value.splice(index, 0, toRemove);
+  }, async (): Promise<void> => {
+    const clonedTabs = clockTabs.value.splice(0, clockTabs.value.length);
+    await 1;
+    clonedTabs.splice(index, 0, toRemove);
+    clockTabs.value = clonedTabs;
+
     selectedTab.value = index;
   });
 }

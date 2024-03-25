@@ -67,7 +67,7 @@ function render() {
   const canvas = canvasRef.value;
   const width = clock.size;
   const height = clock.size;
-  const radius = clock.size / 2 - 2;
+  const radius = clock.size / 2 - 5;
   if (radius < 1) return;
   const x = width / 2;
   const y = height / 2;
