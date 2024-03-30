@@ -3,9 +3,9 @@
     <v-card-item><v-card-title>Timer</v-card-title></v-card-item>
     <v-card-text :style="timerDisplayStyle">{{ timerDisplay }}</v-card-text>
     <v-card-actions>
-      <v-btn @click="startTimer" v-if="!isRunning">{{ time ? "Resume" : "Start" }}</v-btn>
-      <v-btn @click="pauseTimer" v-if="isRunning">Pause</v-btn>
-      <v-btn :disabled="!time" @click="resetTimer">Reset</v-btn>
+      <v-btn @click="startTimer" variant="elevated" color="primary" v-if="!isRunning">{{ time ? "Resume" : "Start" }}</v-btn>
+      <v-btn @click="pauseTimer" variant="elevated" color="primary" v-if="isRunning">Pause</v-btn>
+      <v-btn :disabled="!time" @click="resetTimer" variant="outlined" color="error">Reset</v-btn>
     </v-card-actions>
   </v-card>
 </template>

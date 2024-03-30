@@ -1,14 +1,14 @@
 <template>
   <v-hover @update:model-value="updateHover">
     <template v-slot:default="{ isHovering, props }">
-      <v-card v-bind="props" class="d-flex justify-center" @click="increment()" @click.right="decrement()"
+      <v-card v-bind="props" elevation="5" class="d-flex justify-center" @click="increment()" @click.right="decrement()"
         @contextmenu.prevent>
         <v-sheet v-show="isHovering" class="topright text-center">
           <v-btn @click.stop="emit('editClock', clock.id)">
             <v-icon icon="mdi-pencil" />
           </v-btn>
           <v-btn @click.stop="emit('deleteClock', clock.id)">
-            <v-icon icon="mdi-delete-forever" color="red" />
+            <v-icon icon="mdi-delete-forever" color="error" />
           </v-btn>
         </v-sheet>
         <v-sheet :width="size + 15" :height="size + 65">
@@ -29,12 +29,14 @@
 </style>
 
 <script setup lang="ts">
-import { Clock } from '@/types/Clock';
-import { onMounted, onUpdated, ref } from 'vue';
+import { Clock } from "@/types/Clock";
+import { onMounted, onUpdated, ref } from "vue";
+import { useTheme } from "vuetify";
 
 const tau = Math.PI * 2;
 
 const clock = defineProps<Clock>();
+const vTheme = useTheme();
 let isHover = false;
 
 const emit = defineEmits<{
@@ -79,6 +81,12 @@ function render() {
 
   let previousAngle = originAngle;
 
+  const colors = vTheme.current.value.colors;
+  const { foregroundColor, backgroundColor } = {
+    foregroundColor: vTheme.current.value.dark ? "white" : "black",
+    backgroundColor: colors["surface-lighten-1"] ?? colors.surface
+  };
+
   for (let i = 0; i < clock.totalSlices; i++) {
     ctx.save();
 
@@ -98,10 +106,11 @@ function render() {
       fillStyle = ctx.createPattern(offscreen, "repeat")!;
       ctx.globalAlpha = .4;
     } else {
-      fillStyle = "white";
+      fillStyle = backgroundColor;
     }
 
     ctx.beginPath();
+    ctx.strokeStyle = foregroundColor;
     ctx.fillStyle = fillStyle;
     ctx.moveTo(x, y);
     ctx.arc(x, y, radius, startAngle, previousAngle);

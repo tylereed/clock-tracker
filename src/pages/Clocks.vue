@@ -1,5 +1,5 @@
 <template>
-  <v-card>
+  <v-card class="ma-2">
     <v-card-item><v-card-title>Clocks</v-card-title></v-card-item>
     <v-card-text>
       <v-tabs v-model="selectedTab">
@@ -16,8 +16,8 @@
       </v-window>
     </v-card-text>
     <v-card-actions>
-      <v-btn @click="clearClocks">Clear Clocks</v-btn>
-      <v-btn @click="openAdd">Add Clock</v-btn>
+      <v-btn @click="clearClocks" variant="outlined" color="error">Clear Clocks</v-btn>
+      <v-btn @click="openAdd" variant="elevated" color="primary">Add Clock</v-btn>
       <v-btn :disabled="!executor.canUndo.value" @click="() => executor.undo()">
         <v-icon icon="mdi-undo" />
       </v-btn>

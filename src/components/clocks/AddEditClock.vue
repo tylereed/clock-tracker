@@ -9,8 +9,9 @@
         <v-text-field label="Color" :rules="[isColor]" v-model="newClock.color" />
       </v-card-text>
       <v-card-actions>
-        <v-btn :disabled="!isFormValid" type="submit">{{ isEdit ? "Edit" : "Add" }} Clock</v-btn>
-        <v-btn @click="emit('close')">Close</v-btn>
+        <v-btn variant="elevated" color="primary" :disabled="!isFormValid" type="submit">{{ isEdit ? "Edit" : "Add" }}
+          Clock</v-btn>
+        <v-btn @click="emit('close')" variant="outlined">Close</v-btn>
       </v-card-actions>
     </v-card>
   </v-form>

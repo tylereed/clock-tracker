@@ -1,9 +1,9 @@
 <template>
   <v-app>
     <v-main>
-    <v-card>
-      <timer />
-    </v-card>
+      <v-card class="ma-2">
+        <timer />
+      </v-card>
       <clocks />
     </v-main>
   </v-app>

@@ -18,7 +18,7 @@
   pointer-events: none;
   position: absolute;
   width: 20px;
-  background-color: aqua;
+  background-color: v-bind('vTheme.current.value.colors.info');
   z-index: -1;
 }
 </style>
@@ -26,10 +26,11 @@
 <script setup lang="ts">
 import { Clock, getClockSize } from '@/types/Clock';
 import ClockVue from '@/components/clocks/Clock.vue';
-import { useDisplay } from 'vuetify';
+import { useDisplay, useTheme } from 'vuetify';
 import { reactive } from 'vue';
 
 const display = useDisplay();
+const vTheme = useTheme();
 
 const e = defineEmits<{
   (e: "updateSlice", id: number, filledSlices: number): void,
