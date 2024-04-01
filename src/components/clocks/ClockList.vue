@@ -24,10 +24,11 @@
 </style>
 
 <script setup lang="ts">
-import { Clock, getClockSize } from '@/types/Clock';
-import ClockVue from '@/components/clocks/Clock.vue';
-import { useDisplay, useTheme } from 'vuetify';
-import { reactive } from 'vue';
+import { Clock } from "@/types/Clock";
+import ClockVue from "@/components/clocks/Clock.vue";
+import { getClockSize } from "./helpers";
+import { useDisplay, useTheme } from "vuetify";
+import { reactive } from "vue";
 
 const display = useDisplay();
 const vTheme = useTheme();

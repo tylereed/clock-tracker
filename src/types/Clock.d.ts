@@ -1,5 +1,3 @@
-const MAX_CLOCK_WIDTH = 200;
-
 export interface Clock {
   id: number;
   name?: string;
@@ -9,13 +7,9 @@ export interface Clock {
   size: number;
 }
 
-export type NewClock = Omit<Clock, "id" | "size">;
+export type NewClock = Omit<Clock, "id" | "size"> & Partial<Pick<Clock, "id" | "size">>;
 
 export interface ClockTab {
   name: string;
   clocks: Clock[]
-}
-
-export function getClockSize() {
-  return Math.min(window.innerWidth / 4 - 20, MAX_CLOCK_WIDTH);
 }

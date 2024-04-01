@@ -3,7 +3,7 @@
     <v-card-item><v-card-title>Clocks</v-card-title></v-card-item>
     <v-card-text>
       <v-tabs v-model="selectedTab">
-        <v-tab v-for="(clockTab, index) in clockTabs" :key="index" @click.middle="removeTab(index)">
+        <v-tab v-for="(clockTab, index) in clockTabs" :key="index" @click.middle.prevent="removeTab(index)">
           {{ clockTab.name }}
         </v-tab>
         <v-tab @click.native.prevent.stop.capture="addTab" width=".5em"><v-icon icon="mdi-plus" /></v-tab>
@@ -17,7 +17,31 @@
     </v-card-text>
     <v-card-actions>
       <v-btn @click="clearClocks" variant="outlined" color="error">Clear Clocks</v-btn>
-      <v-btn @click="openAdd" variant="elevated" color="primary">Add Clock</v-btn>
+
+      <v-card class="ma-2" flat>
+        <v-menu transition="scroll-y-transition" :target="mainButton">
+          <template v-slot:activator="{ isActive, props }">
+            <v-btn class="mr-0 rounded-s rounded-e-0" @click="openAdd" variant="elevated" color="primary"
+              ref="mainButton">
+              Add Clock
+            </v-btn>
+            <v-btn class="ma-0 rounded-e rounded-s-0" style="min-width: 0;" variant="elevated" color="primary"
+              v-bind="props">
+              <v-icon :icon="isActive ? 'mdi-menu-down' : 'mdi-menu-up'" />
+            </v-btn>
+          </template>
+          <v-btn class="ma-0 rounded-0 rounded-t" @click="quickAdd(4)" variant="elevated" color="primary">
+            Quick Add 4-Clock
+          </v-btn>
+          <v-btn class="ma-0 rounded-0" @click="quickAdd(6)" variant="elevated" color="primary">
+            Quick Add 6-Clock
+          </v-btn>
+          <v-btn class="ma-0 rounded-0 rounded-b" @click="quickAdd(8)" variant="elevated" color="primary">
+            Quick Add 8-Clock
+          </v-btn>
+        </v-menu>
+      </v-card>
+
       <v-btn :disabled="!executor.canUndo.value" @click="() => executor.undo()">
         <v-icon icon="mdi-undo" />
       </v-btn>
@@ -34,11 +58,12 @@
 </template>
 
 <script setup lang="ts">
-import { Clock, ClockTab, NewClock, getClockSize } from '@/types/Clock';
-import AddClockVue from '@/components/clocks/AddEditClock.vue';
-import ClockList from '@/components/clocks/ClockList.vue';
-import { computed, ref } from 'vue';
-import { Executor } from '@/utils/Executor';
+import { Clock, ClockTab, NewClock } from "@/types/Clock";
+import AddClockVue from "@/components/clocks/AddEditClock.vue";
+import ClockList from "@/components/clocks/ClockList.vue";
+import { createClock, getClockSize } from "@/components/clocks/helpers";
+import { ComponentPublicInstance, computed, ref } from "vue";
+import { Executor } from "@/utils/Executor";
 
 type Clocks = Clock[];
 type ClockTabs = ClockTab[];
@@ -46,6 +71,8 @@ type ClockTabs = ClockTab[];
 const clockTabs = ref<ClockTabs>([]);
 const selectedTab = ref(0);
 const clocks = computed<Clocks>(() => clockTabs.value[selectedTab.value].clocks);
+// @ts-ignore
+const mainButton = ref<ComponentPublicInstance>(null);
 
 const addEditClockDisplay = ref(false);
 const addEditClockValues = ref<NewClock | null>(null);
@@ -152,6 +179,11 @@ function updateClock(toUpdate: Clock) {
   addEditClockDisplay.value = false;
 }
 
+function quickAdd(totalSlices: number) {
+  const toAdd = createClock({ totalSlices });
+  addClock(toAdd);
+}
+
 function addClock(toAdd: NewClock) {
   const added: Clock = { ...toAdd, id: clocks.value.length, size: getClockSize() };
   const tab = selectedTab.value;
@@ -204,7 +236,7 @@ function removeTab(remove: number) {
     clonedTabs.splice(index, 1);
     clockTabs.value = clonedTabs;
 
-    if (index <= tab) {
+    if (index <= tab && tab !== 0) {
       selectedTab.value = tab - 1;
     }
   }, async (): Promise<void> => {
@@ -232,12 +264,15 @@ function loadClocks() {
     const clockJson = localStorage.getItem("clocks");
     if (clockJson) {
       const restoredClocks = JSON.parse(clockJson) as ClockTabs;
-      clockTabs.value = restoredClocks;
+      if (restoredClocks.length > 0 && restoredClocks[0].clocks) {
+        clockTabs.value = restoredClocks;
+      }
     }
   } catch (e) {
     console.log(e);
   } finally {
-    if (!clockTabs.value.length) {
+    if (!clockTabs.value?.length) {
+      clockTabs.value = [];
       clockTabs.value.push({
         name: "Default",
         clocks: []
