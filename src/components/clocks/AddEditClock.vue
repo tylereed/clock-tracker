@@ -4,9 +4,9 @@
       <v-card-title>{{ isEdit ? "Edit" : "Add New" }} Clock</v-card-title>
       <v-card-text>
         <v-text-field label="Name" v-model="newClock.name" />
-        <v-text-field label="Total Slices" :rules="[isRequiredRule, isNumericRule, inRangeRule(3, 12)]"
+        <v-text-field label="Total Slices" :rules="[v.isRequiredRule, v.isNumericRule, v.inRangeRule(3, 12)]"
           v-model="newClock.totalSlices" />
-        <v-text-field label="Color" :rules="[isColor]" v-model="newClock.color" />
+        <v-text-field label="Color" :rules="[v.isColor]" v-model="newClock.color" />
       </v-card-text>
       <v-card-actions>
         <v-btn variant="elevated" color="primary" :disabled="!isFormValid" type="submit">{{ isEdit ? "Edit" : "Add" }}
@@ -18,11 +18,10 @@
 </template>
 
 <script setup lang="ts">
+import { createClock } from "./helpers";
 import { Clock, NewClock } from '@/types/Clock';
-import { createClock, randomishColor } from "./helpers";
+import * as v from "@/utils/validators";
 import { ref, onMounted } from 'vue';
-
-const hexRegex = /^[0-9a-f]+$/i;
 
 const emit = defineEmits<{
   (e: 'newClock', clock: NewClock): void,
@@ -48,34 +47,6 @@ onMounted(() => {
     isEdit.value = false;
   }
 });
-
-function isRequiredRule(value: any) {
-  return !!value || 'Required';
-}
-
-const isNumericRegex = /^\d+$/;
-function isNumericRule(value: any) {
-  return isNumericRegex.test(value) || "Must be a number";
-}
-
-function inRangeRule(min: number, max: number): (value: number | string) => boolean | string {
-  return (value: number | string) => (+value >= min && +value <= max) || `Must be between ${min} and ${max}`
-}
-
-const ele = document.createElement("div");
-function isColor(value: string) {
-  if (!value) {
-    return true;
-  }
-  if (value.match(hexRegex)) {
-    value = "#" + value;
-  }
-
-  ele.style.color = value;
-  const result = !!ele.style.color.split(/\s+/).join('').toLowerCase() || "Not a valid color";
-  ele.style.color = "";
-  return result;
-}
 
 function addEditClock() {
   if (isFormValid.value) {

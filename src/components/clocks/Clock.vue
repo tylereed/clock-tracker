@@ -48,7 +48,7 @@ const emit = defineEmits<{
 onMounted(render);
 onUpdated(render);
 
-const canvasRef = ref<HTMLCanvasElement>();
+const canvasRef = ref<HTMLCanvasElement>(null!);
 
 function increment() {
   emit("updateSlice", clock.id, clock.filledSlices + 1);
@@ -64,8 +64,6 @@ function updateHover(value: boolean) {
 }
 
 function render() {
-  if (!canvasRef.value) return;
-
   const canvas = canvasRef.value;
   const width = clock.size;
   const height = clock.size;
