@@ -4,7 +4,9 @@ export function isRequiredRule(value: any) {
 
 const isNumericRegex = /^\d+$/;
 export function isNumericRule(value: string) {
-  value = value?.trim();
+  if (value?.trim) {
+    value = value?.trim();
+  }
   return isNumericRegex.test(value) || "Must be a number";
 }
 

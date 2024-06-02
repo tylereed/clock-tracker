@@ -4,7 +4,7 @@ import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 import ViteFonts from 'unplugin-fonts/vite'
 
 // Utilities
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config';
 import { fileURLToPath, URL } from 'node:url'
 
 // https://vitejs.dev/config/
@@ -37,5 +37,19 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    coverage: {
+      enabled: true,
+      provider: "v8",
+      reporter: ['text', 'json', 'html'],
+    },
+    server: {
+      deps: {
+        inline: ['vuetify']
+      }
+    }
   },
 })
