@@ -6,47 +6,34 @@
         <v-row class="font-weight-bold" dense>
           <v-col>Round {{ round }}</v-col>
           <v-col>Initiative</v-col>
-          <v-col>Name</v-col>
+          <v-col cols="3">Name</v-col>
           <v-col>AC</v-col>
           <v-col>Max HP</v-col>
           <v-col>HP</v-col>
-          <v-col cols="6">Conditions</v-col>
+          <v-col cols="4">Conditions</v-col>
         </v-row>
         <v-row align="center" v-for="(init, i) in initiatives" :key="i" :class="getRowClass(i)" dense
           style="border-top: 1px solid darkgray;">
           <v-col text-align="center"><v-icon v-if="i === turn" icon="mdi-circle-medium" /></v-col>
           <v-col><v-text-field :hide-details="true" density="compact" v-model="init.order"
               @update:focused="resort" /></v-col>
-          <v-col><v-text-field :hide-details="true" density="compact" v-model="init.name" /></v-col>
+          <v-col cols="3"><v-text-field :hide-details="true" density="compact" v-model="init.name" /></v-col>
           <v-col><v-text-field :hide-details="true" density="compact" v-model="init.ac" /></v-col>
           <v-col><v-text-field :hide-details="true" density="compact" v-model="init.maxHp" /></v-col>
           <v-col><v-text-field :hide-details="true" density="compact" v-model="init.hp" /></v-col>
-          <v-col cols="5">{{ init.conditions }}</v-col>
+          <v-col cols="3">{{ init.conditions }}</v-col>
           <v-col>
             <v-btn @click.stop="deleteInitiative(i)" :class="getRowClass(i)">
               <v-icon icon="mdi-delete-forever" color="error" />
             </v-btn>
           </v-col>
         </v-row>
-        <v-form ref="addForm" v-model="isFormValid" @submit.prevent="addInitiative">
-          <v-row dense class="py-2">
-            <v-col><v-spacer /></v-col>
-            <v-col><v-text-field label="Initiative" density="compact" v-model="newInit.order"
-                :rules="[v.isNumericRule]" /></v-col>
-            <v-col><v-text-field label="Name" density="compact" v-model="newInit.name"
-                :rules="[v.isRequiredRule]" /></v-col>
-            <v-col><v-text-field label="AC" density="compact" v-model="newInit.ac" :rules="[v.isNumericRule]" /></v-col>
-            <v-col><v-text-field label="HP" density="compact" v-model="newInit.maxHp"
-                :rules="[v.isNumericRule]" /></v-col>
-            <v-col cols="5"><v-spacer /></v-col>
-            <v-col><v-btn :disabled="!isFormValid" type="submit">Add</v-btn></v-col>
-            <v-col><v-btn type="clear" @click="clearAddInit">Clear</v-btn></v-col>
-          </v-row>
-        </v-form>
         <v-row>
           <v-col><v-btn @click="decrementTurn" :disabled="turn === 0 && round === 1">Previous</v-btn></v-col>
           <v-col><v-btn @click="incrementTurn" :disabled="initiatives.length === 0">Next</v-btn></v-col>
-          <v-col><v-btn @click="reset">Reset</v-btn></v-col>
+          <v-col><v-btn @click="resetTurn">Reset</v-btn></v-col>
+          <v-col><v-btn @click="addInitiativeDisplay = true" class="mt-3" variant="elevated" color="primary">Add
+              Initiative</v-btn></v-col>
         </v-row>
         <v-row>
           <v-col cols="11">
@@ -67,6 +54,10 @@
       </v-container>
     </v-card-text>
   </v-card>
+
+  <v-dialog v-model="addInitiativeDisplay" width="25%" min-width="400px">
+    <add-initiative class="pa-2 ma-6" @add-init="addInit" @close="addInitiativeDisplay = false" />
+  </v-dialog>
 </template>
 
 <style scoped>
@@ -78,18 +69,18 @@
 <script setup lang="ts">
 import Initiative from "@/types/Initiative";
 import { MonsterNameO5e as MonsterName, getMonsterListCached, getMonsterCached } from "@/utils/Open5e";
-import * as v from "@/utils/validators";
-import { onBeforeMount, ref, } from "vue";
-import { VForm } from "vuetify/lib/components/index.mjs";
+
+import { onBeforeMount, ref } from "vue";
+import AddInitiative from "@/components/initiative/AddInitiative.vue";
 
 type Initiatives = Initiative[];
-type NewInitiative = Omit<Initiative, 'hp'>;
 
 const initiatives = ref<Initiatives>([]);
 
-const addForm = ref<VForm>(null!);
-const isFormValid = ref(false);
-const newInit = ref<NewInitiative>({} as NewInitiative);
+function addInit(init: Initiative) {
+  insertInitiative(init);
+  addInitiativeDisplay.value = false;
+}
 
 function insertInitiative(init: Initiative) {
   setInitiatives([...initiatives.value, init]);
@@ -101,23 +92,6 @@ function resort() {
 
 function setInitiatives(inits: Initiatives) {
   initiatives.value = inits.sort((a, b) => b.order - a.order);
-}
-
-function addInitiative() {
-  if (isFormValid.value) {
-    const init = { ...newInit.value, hp: newInit.value.maxHp };
-    setInitiatives([...initiatives.value, init]);
-  }
-}
-
-function clearAddInit() {
-  addForm.value.reset();
-  addForm.value.isValid = null;
-  addForm.value.errors = [];
-  addForm.value.items.forEach(element => {
-    element.errorMessages = [];
-    element.isValid = null;
-  });
 }
 
 function deleteInitiative(index: number) {
@@ -156,10 +130,13 @@ function incrementTurn() {
   }
 }
 
-function reset() {
+function resetTurn() {
   turn.value = 0;
   round.value = 1;
 }
+
+
+const addInitiativeDisplay = ref(false);
 
 
 const monsterSearch = ref<MonsterName>();

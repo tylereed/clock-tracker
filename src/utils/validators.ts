@@ -3,7 +3,8 @@ export function isRequiredRule(value: any) {
 }
 
 const isNumericRegex = /^\d+$/;
-export function isNumericRule(value: any) {
+export function isNumericRule(value: string) {
+  value = value?.trim();
   return isNumericRegex.test(value) || "Must be a number";
 }
 
