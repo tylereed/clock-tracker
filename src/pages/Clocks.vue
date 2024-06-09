@@ -40,10 +40,9 @@ import { Clock, ClockTab, NewClock } from "@/types/Clock";
 import AddClockVue from "@/components/clocks/AddEditClock.vue";
 import ClockList from "@/components/clocks/ClockList.vue";
 import { createClock, getClockSize } from "@/components/clocks/helpers";
-import { computed, ref } from "vue";
+import { computed, reactive, ref } from "vue";
 import { Executor } from "@/utils/Executor";
 import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
-import { reactive } from "vue";
 
 type Clocks = Clock[];
 type ClockTabs = ClockTab[];

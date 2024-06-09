@@ -51,7 +51,7 @@ export function randomishColor() {
 }
 
 const hexRegex = /^[0-9a-f]+$/i;
-export function createClock(clock: Partial<Clock> & Pick<Clock, 'totalSlices'>): NewClock {
+export function createClock(clock: Partial<Clock> & Pick<Clock, "totalSlices">): NewClock {
   const result = { ...clock };
 
   if (result.color?.match(hexRegex)) {

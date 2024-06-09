@@ -27,7 +27,7 @@ const emit = defineEmits<{
   (e: "close"): void,
 }>();
 
-type NewInitiative = Omit<Initiative, 'hp'>;
+type NewInitiative = Omit<Initiative, "hp">;
 
 const addForm = ref<VForm>(null!);
 const isFormValid = ref(false);

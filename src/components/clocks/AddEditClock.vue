@@ -19,14 +19,14 @@
 
 <script setup lang="ts">
 import { createClock } from "./helpers";
-import { Clock, NewClock } from '@/types/Clock';
+import { Clock, NewClock } from "@/types/Clock";
 import * as v from "@/utils/validators";
-import { ref, onMounted } from 'vue';
+import { ref, onMounted } from "vue";
 
 const emit = defineEmits<{
-  (e: 'newClock', clock: NewClock): void,
-  (e: 'updateClock', clock: Clock): void,
-  (e: 'close'): void
+  (e: "newClock", clock: NewClock): void,
+  (e: "updateClock", clock: Clock): void,
+  (e: "close"): void
 }>();
 
 const isEdit = ref(false);

@@ -39,13 +39,13 @@ const dropdownActions = computed(() => props.actions.slice(1));
 
 function getClass(index: number) {
   if (dropdownActions.value.length === 1) {
-    return ['ma-0'];
+    return ["ma-0"];
   } else if (index === 0) {
-    return ['ma-0', 'rounded-0', 'rounded-t'];
+    return ["ma-0", "rounded-0", "rounded-t"];
   } else if (index === dropdownActions.value.length - 1) {
-    return ['ma-0', 'rounded-0', 'rounded-b'];
+    return ["ma-0", "rounded-0", "rounded-b"];
   } else {
-    return ['ma-0', 'rounded-0'];
+    return ["ma-0", "rounded-0"];
   }
 }
 </script>

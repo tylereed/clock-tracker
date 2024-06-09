@@ -1,5 +1,5 @@
 export function isRequiredRule(value: any) {
-  return !!value || 'Required';
+  return !!value || "Required";
 }
 
 const isNumericRegex = /^\d+$/;
@@ -25,7 +25,7 @@ export function isColor(value: string) {
   }
 
   ele.style.color = value;
-  const result = !!ele.style.color.split(/\s+/).join('').toLowerCase() || "Not a valid color";
+  const result = !!ele.style.color.split(/\s+/).join("").toLowerCase() || "Not a valid color";
   ele.style.color = "";
   return result;
 }
