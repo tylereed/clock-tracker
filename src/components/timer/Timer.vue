@@ -1,84 +1,69 @@
 <template>
-  <v-card>
-    <v-card-item><v-card-title>Timer</v-card-title></v-card-item>
-    <v-card-text :style="timerDisplayStyle">{{ timerDisplay }}</v-card-text>
-    <v-card-actions>
-      <v-btn @click="startTimer" variant="elevated" color="primary" v-if="!isRunning">{{ time ? "Resume" : "Start" }}</v-btn>
-      <v-btn @click="pauseTimer" variant="elevated" color="primary" v-if="isRunning">Pause</v-btn>
-      <v-btn :disabled="!time" @click="resetTimer" variant="outlined" color="error">Reset</v-btn>
-    </v-card-actions>
-  </v-card>
+  <v-hover @update:model-value="updateHover">
+    <template v-slot:default="{ isHovering, props }">
+      <v-card v-bind="props" class="d-flex justify-center" elevation="5">
+        <v-sheet>
+          <v-card elevation="0">
+            <v-card-item><v-card-title>Timer</v-card-title></v-card-item>
+            <v-card-text :style="timerDisplayStyle">{{ timerDisplay }}</v-card-text>
+            <v-card-actions>
+              <v-btn @click="emit('startTimer', timer.id)" variant="elevated" color="primary" v-if="!isRunning">
+                {{ time ? "Resume" : "Start" }}
+              </v-btn>
+              <v-btn @click="emit('pauseTimer', timer.id)" variant="elevated" color="primary"
+                v-if="isRunning">Pause</v-btn>
+              <v-btn :disabled="!time" @click="emit('resetTimer', timer.id)" variant="outlined"
+                color="error">Reset</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-sheet>
+        <v-sheet v-show="isHovering" class="topright text-center">
+          <v-btn @click.stop="emit('deleteTimer', timer.id)" style="width: 8px;">
+            <v-icon icon="mdi-delete-forever" color="error" />
+          </v-btn>
+        </v-sheet>
+      </v-card>
+    </template>
+  </v-hover>
 </template>
 
-<script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
+<style scoped>
+.topright {
+  position: absolute;
+  top: 8px;
+  right: 16px;
+  widows: 8px;
+}
+</style>
 
-const runningId = ref<number | null>(null);
-const pausedId = ref<number | null>(null);
-const time = ref(0);
-const isRunning = ref(false);
-let timePauses = 0
+<script setup lang="ts">
+import { computed } from "vue";
+import { Timer } from "@/types/Timer";
+
+const timer = defineProps<Timer>();
+
+let isHover = false;
+
+const emit = defineEmits<{
+  (e: "deleteTimer", id: number): void,
+  (e: "startTimer", id: number): void,
+  (e: "pauseTimer", id: number): void,
+  (e: "resetTimer", id: number): void
+}>();
 
 const timerDisplay = computed(() => {
-  const minutes = Math.floor(time.value / 60).toString().padStart(2, "0");
-  const seconds = (time.value % 60).toFixed(2).padStart(5, "0");
+  const minutes = Math.floor(timer.time / 60).toString().padStart(2, "0");
+  const seconds = (timer.time % 60).toFixed(2).padStart(5, "0");
 
   return `${minutes}:${seconds}`;
 });
 
-const timerDisplayStyle = reactive<{ visibility: "visible" | "hidden" }>({
-  visibility: "visible"
+const timerDisplayStyle = computed<{ visibility: "visible" | "hidden" }>(() => {
+  return { visibility: timer.isTimerDisplay ? "visible" : "hidden" };
 });
 
-function startTimer() {
-  if (isRunning.value) return;
-
-  if (pausedId.value) {
-    clearInterval(pausedId.value);
-    timerDisplayStyle.visibility = "visible";
-    pausedId.value = null;
-  }
-
-  const startTime = Date.now();
-  let currentTime = 0;
-  function timerCallback() {
-    const now = Date.now();
-    const diff = (now - startTime) / 1000;
-    if (diff > currentTime) {
-      time.value = timePauses + diff;
-      currentTime = diff;
-    }
-  }
-
-  isRunning.value = true;
-  runningId.value = setInterval(timerCallback, 27) as unknown as number;
-}
-
-function pauseTimer() {
-  if (runningId.value) {
-    clearInterval(runningId.value);
-    timePauses = time.value;
-    isRunning.value = false;
-    //timerDisplayStyle.visibility = "hidden";
-    pausedId.value = setInterval(() => timerDisplayStyle.visibility = (timerDisplayStyle.visibility == "visible" ? "hidden" : "visible"), 500) as unknown as number;
-  }
-}
-
-function resetTimer() {
-  if (runningId.value) {
-    clearInterval(runningId.value);
-    runningId.value = null;
-    isRunning.value = false;
-
-    if (pausedId.value) {
-      clearInterval(pausedId.value);
-      timerDisplayStyle.visibility = "visible";
-      pausedId.value = null;
-    }
-
-    time.value = 0;
-    timePauses = 0;
-  }
+function updateHover(value: boolean) {
+  isHover = value;
 }
 
 </script>
