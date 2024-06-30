@@ -4,14 +4,14 @@
       <v-card v-bind="props" class="d-flex justify-center" elevation="5">
         <v-sheet>
           <v-card elevation="0">
-            <v-card-item><v-card-title>Timer</v-card-title></v-card-item>
+            <v-card-item><v-card-title>{{ max != null ? "Countdown" : "Timer" }}</v-card-title></v-card-item>
             <v-card-text :style="timerDisplayStyle">{{ timerDisplay }}</v-card-text>
             <v-card-actions>
-              <v-btn @click="emit('startTimer', timer.id)" variant="elevated" color="primary" v-if="!isRunning">
+              <v-btn v-if="!isRunning" @click="emit('startTimer', timer.id)" variant="elevated" color="primary">
                 {{ time ? "Resume" : "Start" }}
               </v-btn>
-              <v-btn @click="emit('pauseTimer', timer.id)" variant="elevated" color="primary"
-                v-if="isRunning">Pause</v-btn>
+              <v-btn v-if="isRunning" :disabled="!!elapsedId" @click="emit('pauseTimer', timer.id)" variant="elevated"
+                color="primary">Pause</v-btn>
               <v-btn :disabled="!time" @click="emit('resetTimer', timer.id)" variant="outlined"
                 color="error">Reset</v-btn>
             </v-card-actions>
@@ -48,12 +48,19 @@ const emit = defineEmits<{
   (e: "deleteTimer", id: number): void,
   (e: "startTimer", id: number): void,
   (e: "pauseTimer", id: number): void,
-  (e: "resetTimer", id: number): void
+  (e: "resetTimer", id: number): void,
+  (e: "elapsedTimer", id: number): void
 }>();
 
 const timerDisplay = computed(() => {
-  const minutes = Math.floor(timer.time / 60).toString().padStart(2, "0");
-  const seconds = (timer.time % 60).toFixed(2).padStart(5, "0");
+  const t = timer.max ? Math.abs(timer.max - timer.time) : timer.time;
+
+  if (timer.max && timer.time > timer.max && !timer.elapsed) {
+    emit("elapsedTimer", timer.id);
+  }
+
+  const minutes = Math.floor(t / 60).toString().padStart(2, "0");
+  const seconds = !timer.elapsed ? (t % 60).toFixed(2).padStart(5, "0") : (t % 60).toFixed(0).padStart(2, "0");
 
   return `${minutes}:${seconds}`;
 });

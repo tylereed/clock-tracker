@@ -1,5 +1,5 @@
 export function isRequiredRule(value: any) {
-  return !!value || "Required";
+  return value != null || "Required";
 }
 
 const isNumericRegex = /^\d+$/;

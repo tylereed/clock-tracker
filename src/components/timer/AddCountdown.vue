@@ -1,0 +1,43 @@
+<template>
+  <v-form v-model="isFormValid" @submit.prevent="addNewCountdown">
+    <v-card>
+      <v-card-title>Add New Countdown</v-card-title>
+      <v-card-text>
+        <v-text-field label="Hours" v-model="hours"
+          :rules="[v.isRequiredRule, v.isNumericRule, v.inRangeRule(0, 23)]" />
+        <v-text-field label="Minutes" v-model="minutes"
+          :rules="[v.isRequiredRule, v.isNumericRule, v.inRangeRule(0, 59), countdownHasValue]" />
+      </v-card-text>
+      <v-card-actions>
+        <v-btn variant="elevated" color="primary" :disabled="!isFormValid" type="submit">Add Countdown</v-btn>
+        <v-btn @click="emit('close')" variant="outlined">Close</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-form>
+</template>
+
+<script setup lang="ts">
+import * as v from "@/utils/validators";
+import { ref } from "vue";
+
+const isFormValid = ref(false);
+const hours = ref(0);
+const minutes = ref(0);
+
+const emit = defineEmits<{
+  (e: "newCountdown", max: number): void,
+  (e: "close"): void
+}>();
+
+function addNewCountdown() {
+  if (isFormValid.value) {
+    const max = ((60 * hours.value) + minutes.value) * 60;
+    emit("newCountdown", max);
+  }
+}
+
+function countdownHasValue() {
+  return hours.value + minutes.value > 0 || "Time must have a value";
+}
+
+</script>
