@@ -18,6 +18,10 @@ export class Executor {
     this.afterExecute = afterExecute;
   }
 
+  async invertCommand(param: Command) {
+    this.runCommand(param.undo, param.execute);
+  }
+
   runCommand(command: Command): void;
   runCommand(command: () => void | Promise<void>, undo: () => void | Promise<void>): void;
   async runCommand(param: Command | (() => void | Promise<void>), undo?: () => void | Promise<void>): Promise<void> {
@@ -32,6 +36,10 @@ export class Executor {
     }
 
     await command.execute();
+    this.pushUndo(command);
+  }
+
+  pushUndo(command: Command) {
     this.undoStack.push(command);
     this.redoStack = [];
     this.canUndo.value = true;

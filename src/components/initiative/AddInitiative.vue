@@ -33,7 +33,6 @@ const addForm = ref<VForm>(null!);
 const isFormValid = ref(false);
 const newInit = ref<NewInitiative>({} as NewInitiative);
 
-
 function addInitiative() {
   if (isFormValid.value) {
     const init = { ...newInit.value, hp: newInit.value.maxHp };

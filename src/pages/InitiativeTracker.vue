@@ -16,11 +16,15 @@
           style="border-top: 1px solid darkgray;">
           <v-col text-align="center"><v-icon v-if="i === turn" icon="mdi-circle-medium" /></v-col>
           <v-col><v-text-field :hide-details="true" density="compact" v-model="init.order"
-              @update:focused="resort" /></v-col>
-          <v-col cols="3"><v-text-field :hide-details="true" density="compact" v-model="init.name" /></v-col>
-          <v-col><v-text-field :hide-details="true" density="compact" v-model="init.ac" /></v-col>
-          <v-col><v-text-field :hide-details="true" density="compact" v-model="init.maxHp" /></v-col>
-          <v-col><v-text-field :hide-details="true" density="compact" v-model="init.hp" /></v-col>
+              @update:focused="(focused) => updateUndoRedo(i, 'order', focused)" /></v-col>
+          <v-col cols="3"><v-text-field :hide-details="true" density="compact" v-model="init.name"
+              @update:focused="(focused) => updateUndoRedo(i, 'name', focused)" /></v-col>
+          <v-col><v-text-field :hide-details="true" density="compact" v-model="init.ac"
+              @update:focused="(focused) => updateUndoRedo(i, 'ac', focused)" /></v-col>
+          <v-col><v-text-field :hide-details="true" density="compact" v-model="init.maxHp"
+              @update:focused="(focused) => updateUndoRedo(i, 'maxHp', focused)" /></v-col>
+          <v-col><v-text-field :hide-details="true" density="compact" v-model="init.hp"
+              @update:focused="(focused) => updateUndoRedo(i, 'hp', focused)" /></v-col>
           <v-col cols="3">{{ init.conditions }}</v-col>
           <v-col>
             <v-btn @click.stop="deleteInitiative(i)" :class="getRowClass(i)">
@@ -53,6 +57,14 @@
         </v-row>
       </v-container>
     </v-card-text>
+    <v-card-actions>
+      <v-btn :disabled="!executor.canUndo.value" @click="() => executor.undo()">
+        <v-icon icon="mdi-undo" />
+      </v-btn>
+      <v-btn :disabled="!executor.canRedo.value" @click="() => executor.redo()">
+        <v-icon icon="mdi-redo" />
+      </v-btn>
+    </v-card-actions>
   </v-card>
 
   <v-dialog v-model="addInitiativeDisplay" width="25%" min-width="400px">
@@ -69,21 +81,34 @@
 <script setup lang="ts">
 import Initiative from "@/types/Initiative";
 import { MonsterNameO5e as MonsterName, getMonsterListCached, getMonsterCached } from "@/utils/Open5e";
-
 import { onBeforeMount, ref } from "vue";
 import AddInitiative from "@/components/initiative/AddInitiative.vue";
+import { Executor, Command } from "@/utils/Executor";
+import debounce from "debounce";
 
-type Initiatives = Initiative[];
+type InitWithId = Initiative & { id: number };
+type Initiatives = InitWithId[];
 
 const initiatives = ref<Initiatives>([]);
+
+const executor = new Executor(saveInits);
 
 function addInit(init: Initiative) {
   insertInitiative(init);
   addInitiativeDisplay.value = false;
 }
 
+let initId = 0;
 function insertInitiative(init: Initiative) {
-  setInitiatives([...initiatives.value, init]);
+  const newInit = { ...init, id: initId };
+  initId++;
+
+  executor.runCommand(() => {
+    setInitiatives([...initiatives.value, newInit]);
+  }, (): void => {
+    initiatives.value = initiatives.value.filter(x => x.id !== newInit.id)
+  });
+
 }
 
 function resort() {
@@ -95,10 +120,20 @@ function setInitiatives(inits: Initiatives) {
 }
 
 function deleteInitiative(index: number) {
-  initiatives.value.splice(index, 1);
-  if (turn.value > index) {
-    turn.value--;
-  }
+  const removed = initiatives.value[index];
+  const incrementTurn = turn.value > index;
+
+  executor.runCommand(() => {
+    initiatives.value.splice(index, 1);
+    if (turn.value > index) {
+      turn.value--;
+    }
+  }, () => {
+    initiatives.value.splice(index, 0, removed);
+    if (incrementTurn) {
+      turn.value++;
+    }
+  });
 }
 
 function getRowClass(index: number) {
@@ -111,33 +146,49 @@ function getRowClass(index: number) {
 const turn = ref(0);
 const round = ref(1);
 
+const turnChanger: Command = {
+  execute: () => {
+    turn.value++;
+    if (turn.value === initiatives.value.length) {
+      turn.value = 0;
+      round.value++;
+    }
+  },
+  undo: () => {
+    turn.value--;
+    if (turn.value < 0) {
+      turn.value = initiatives.value.length - 1;
+      round.value--;
+    }
+  }
+}
+
 function decrementTurn() {
   if (turn.value == 0 && round.value == 1) {
     return;
   }
-  turn.value--;
-  if (turn.value < 0) {
-    turn.value = initiatives.value.length - 1;
-    round.value--;
-  }
+  executor.invertCommand(turnChanger);
 }
 
 function incrementTurn() {
-  turn.value++;
-  if (turn.value === initiatives.value.length) {
-    turn.value = 0;
-    round.value++;
-  }
+  executor.runCommand(turnChanger);
 }
 
 function resetTurn() {
-  turn.value = 0;
-  round.value = 1;
+  const oldTurn = turn.value;
+  const oldRound = round.value;
+
+  executor.runCommand(() => {
+    turn.value = 0;
+    round.value = 1;
+  }, () => {
+    turn.value = oldTurn;
+    round.value = oldRound;
+  });
 }
 
 
 const addInitiativeDisplay = ref(false);
-
 
 const monsterSearch = ref<MonsterName>();
 
@@ -172,4 +223,70 @@ async function addMonster() {
   }
 }
 
+const oldValues = new Map<string, any>();
+function updateUndoRedo(index: number, propName: keyof Initiative, focused: boolean) {
+  if (focused) {
+    const value = initiatives.value[index][propName];
+    if (value !== "") {
+      oldValues.set(propName + index, value);
+    }
+  } else {
+    const initiative = initiatives.value[index];
+    const value = initiative[propName];
+    const oldValue = oldValues.get(propName + index);
+    if (value == oldValue) {
+      return;
+    }
+
+    const command: Command = {
+      execute: () => {
+        const init = initiative as any;
+        init[propName] = value;
+        if (propName === "order") {
+          resort();
+        }
+      },
+      undo: () => {
+        const init = initiative as any;
+        init[propName] = oldValue;
+        if (propName === "order") {
+          resort();
+        }
+      }
+    };
+    executor.pushUndo(command);
+    if (propName === "order") {
+      resort();
+    }
+  }
+}
+
+const saveDebounced = debounce(function () {
+  try {
+    const toSave = [...initiatives.value];
+    const saveData = JSON.stringify(toSave);
+    localStorage.setItem("inits", saveData);
+  } catch (e) {
+    console.log(e);
+  }
+}, 500);
+function saveInits() {
+  saveDebounced();
+}
+
+function loadInits() {
+  try {
+    const initJson = localStorage.getItem("inits");
+    if (initJson) {
+      const restoredInits = JSON.parse(initJson) as Initiatives;
+      if (restoredInits.length > 0) {
+        initiatives.value = restoredInits;
+      }
+    }
+  } catch (e) {
+    console.log(e);
+  }
+}
+
+loadInits();
 </script>

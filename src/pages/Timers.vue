@@ -27,7 +27,6 @@ import TimerVue from "@/components/timer/Timer.vue";
 import AddCountdown from "@/components/timer/AddCountdown.vue";
 import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
 import { reactive, ref } from "vue";
-// @ts-ignore
 import { useToast } from "vue-toast-notification";
 import { Timer } from "@/types/Timer";
 
