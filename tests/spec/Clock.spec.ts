@@ -8,7 +8,7 @@ import { Clock } from "../../src/types/Clock";
 
 // sometimes the test runner doesn't load canvas, causing the tests to fail spuriously
 // importing it seems to ensure the package is always loaded
-import * as c from "canvas";
+import canvas from "canvas";
 
 const vuetify = createVuetify({
   components,

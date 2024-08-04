@@ -5,6 +5,7 @@
       <v-card-text>
         <v-text-field label="Initiative" density="compact" v-model="newInit.order" :rules="[v.isRequiredRule, v.isNumericRule]" />
         <v-text-field label="Name" density="compact" v-model="newInit.name" :rules="[v.isRequiredRule]" />
+        <v-text-field label="Dex Score" density="compact" v-model="newInit.dex" :rules="[v.isNumericRule]" />
         <v-text-field label="AC" density="compact" v-model="newInit.ac" :rules="[v.isNumericRule]" />
         <v-text-field label="HP" density="compact" v-model="newInit.maxHp" :rules="[v.isNumericRule]" />
       </v-card-text>

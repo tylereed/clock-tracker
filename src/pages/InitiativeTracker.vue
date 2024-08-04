@@ -116,7 +116,7 @@ function resort() {
 }
 
 function setInitiatives(inits: Initiatives) {
-  initiatives.value = inits.sort((a, b) => b.order - a.order);
+  initiatives.value = inits.sort((a, b) => b.order - a.order || b.dex - a.dex);
 }
 
 function deleteInitiative(index: number) {
@@ -214,6 +214,7 @@ async function addMonster() {
     const initMonster: Initiative = {
       name: `${monster.name} ${letter}`,
       order: Math.floor((monster.dexterity - 10) / 2),
+      dex: monster.dexterity,
       ac: monster.armor_class,
       maxHp: monster.hit_points,
       hp: monster.hit_points
