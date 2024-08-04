@@ -36,6 +36,13 @@
               <v-icon icon="mdi-delete-forever" color="error" />
             </v-btn>
           </v-col>
+          <template v-if="i === turn && init.hasActions">
+            <v-col cols="12">
+              <p v-for="attack in init.actions">
+                <b>{{ attack.name }}</b> {{ attack.desc }}
+              </p>
+            </v-col>
+          </template>
         </v-row>
         <v-row>
           <v-col><v-btn @click="decrementTurn" :disabled="turn === 0 && round === 1">Previous</v-btn></v-col>
@@ -84,7 +91,7 @@
 </style>
 
 <script setup lang="ts">
-import Initiative from "@/types/Initiative";
+import Initiative, { Attack } from "@/types/Initiative";
 import { MonsterNameO5e as MonsterName, getMonsterListCached, getMonsterCached } from "@/utils/Open5e";
 import { onBeforeMount, ref } from "vue";
 import AddInitiative from "@/components/initiative/AddInitiative.vue";
@@ -267,14 +274,27 @@ async function addMonster() {
 
     const initMonster: Initiative = {
       name: `${monster.name} ${letter}`,
-      order: Math.floor((monster.dexterity - 10) / 2),
+      order: -1, //Math.floor((monster.dexterity - 10) / 2), // Should eventually allow rolling on add
       dex: monster.dexterity,
       ac: monster.armor_class,
       maxHp: monster.hit_points,
-      hp: monster.hit_points
+      hp: monster.hit_points,
+      actions: [...buildActions(monster.actions)],
+      get hasActions() { return true; }
     }
 
     insertInitiative(initMonster);
+  }
+}
+
+function* buildActions(...args: ({ name: string, desc: string }[] | undefined)[]): Generator<Attack> {
+
+  for (const arg of args) {
+    if (arg) {
+      for (const a of arg) {
+        yield { name: a.name, desc: a.desc };
+      }
+    }
   }
 }
 

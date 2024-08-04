@@ -6,4 +6,11 @@ export default interface Initiative {
   maxHp: number;
   hp: number;
   conditions?: string;
+  get hasActions(): boolean;
+  actions: Attack[];
+}
+
+export interface Attack {
+  name: string;
+  desc: string;
 }
