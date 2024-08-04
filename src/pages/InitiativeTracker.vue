@@ -61,6 +61,8 @@
                 </v-list-item>
               </template>
             </v-autocomplete>
+            <br />
+            <div><v-btn @click="showLicense = !showLicense">Monster Data License Information</v-btn></div>
           </v-col>
           <v-col cols="1">
             <v-btn class="mt-3" variant="elevated" color="primary" :disabled="!monsterSearch"
@@ -82,6 +84,9 @@
   <v-dialog v-model="addInitiativeDisplay" width="25%" min-width="400px">
     <add-initiative class="pa-2 ma-6" @add-init="addInit" @close="addInitiativeDisplay = false" />
   </v-dialog>
+  <v-dialog v-model="showLicense" width="75%" min-width="400px">
+    <license />
+  </v-dialog>
 </template>
 
 <style scoped>
@@ -91,10 +96,12 @@
 </style>
 
 <script setup lang="ts">
+import AddInitiative from "@/components/initiative/AddInitiative.vue";
+import License from "@/components/initiative/License.vue";
+
 import Initiative, { Attack } from "@/types/Initiative";
 import { MonsterNameO5e as MonsterName, getMonsterListCached, getMonsterCached } from "@/utils/Open5e";
 import { onBeforeMount, ref } from "vue";
-import AddInitiative from "@/components/initiative/AddInitiative.vue";
 import { Executor, Command } from "@/utils/Executor";
 import debounce from "debounce";
 
@@ -250,6 +257,7 @@ function resetTurn() {
 
 
 const addInitiativeDisplay = ref(false);
+const showLicense = ref(false);
 
 const monsterSearch = ref<MonsterName>();
 
