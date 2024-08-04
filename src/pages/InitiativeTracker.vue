@@ -2,7 +2,7 @@
   <v-card class="ma-2">
     <v-card-item><v-card-title>Initiative</v-card-title></v-card-item>
     <v-card-text>
-      <v-container fluid>
+      <v-container class="init-table" fluid>
         <v-row class="font-weight-bold" dense>
           <v-col>Round {{ round }}</v-col>
           <v-col>Initiative</v-col>
@@ -12,19 +12,24 @@
           <v-col>HP</v-col>
           <v-col cols="4">Conditions</v-col>
         </v-row>
-        <v-row align="center" v-for="(init, i) in initiatives" :key="i" :class="getRowClass(i)" dense
+        <v-row align="center" v-for="(init, i) in initiatives" :key="i" :class="getRowClass(i) + ' init-row'" dense
           style="border-top: 1px solid darkgray;">
           <v-col text-align="center"><v-icon v-if="i === turn" icon="mdi-circle-medium" /></v-col>
           <v-col><v-text-field :hide-details="true" density="compact" v-model="init.order"
-              @update:focused="(focused) => updateUndoRedo(i, 'order', focused)" /></v-col>
+              @update:focused="(focused) => updateUndoRedo(i, 'order', focused)"
+              @keyup.enter.stop="nextRow($event)" /></v-col>
           <v-col cols="3"><v-text-field :hide-details="true" density="compact" v-model="init.name"
-              @update:focused="(focused) => updateUndoRedo(i, 'name', focused)" /></v-col>
+              @update:focused="(focused) => updateUndoRedo(i, 'name', focused)"
+              @keyup.enter.stop="nextRow($event)" /></v-col>
           <v-col><v-text-field :hide-details="true" density="compact" v-model="init.ac"
-              @update:focused="(focused) => updateUndoRedo(i, 'ac', focused)" /></v-col>
+              @update:focused="(focused) => updateUndoRedo(i, 'ac', focused)"
+              @keyup.enter.stop="nextRow($event)" /></v-col>
           <v-col><v-text-field :hide-details="true" density="compact" v-model="init.maxHp"
-              @update:focused="(focused) => updateUndoRedo(i, 'maxHp', focused)" /></v-col>
+              @update:focused="(focused) => updateUndoRedo(i, 'maxHp', focused)"
+              @keyup.enter.stop="nextRow($event)" /></v-col>
           <v-col><v-text-field :hide-details="true" density="compact" v-model="init.hp"
-              @update:focused="(focused) => updateUndoRedo(i, 'hp', focused)" /></v-col>
+              @update:focused="(focused) => updateUndoRedo(i, 'hp', focused)"
+              @keyup.enter.stop="nextRow($event)" /></v-col>
           <v-col cols="3">{{ init.conditions }}</v-col>
           <v-col>
             <v-btn @click.stop="deleteInitiative(i)" :class="getRowClass(i)">
@@ -140,6 +145,55 @@ function getRowClass(index: number) {
   if (index % 2 === 1) {
     return "alternate-row";
   }
+}
+
+function nextRow(event: KeyboardEvent) {
+  const forward = !event.getModifierState("Shift");
+  const textfield = event.target as HTMLElement;
+  const parentRow = textfield.closest(".init-row") as HTMLElement;
+
+  if (forward) {
+    const nextRow = findSibling(parentRow, ".init-row") ?? parentRow?.closest(".init-table")?.querySelector(".init-row");
+    const nextInit = nextRow?.querySelector("input");
+    if (nextInit) {
+      nextInit.focus();
+    }
+  } else {
+    let previousRow = findPreviousSibling(parentRow, ".init-row");
+    if (!previousRow) {
+      const table = parentRow?.closest(".init-table");
+      const allRows = table?.querySelectorAll(".init-row");
+      if (allRows && allRows.length > 1) {
+        previousRow = allRows[allRows.length - 1] as HTMLElement;
+      }
+    }
+    const previousInit = previousRow?.querySelector("input");
+    if (previousInit) {
+      previousInit.focus();
+    }
+  }
+}
+
+function findSibling(element: HTMLElement, selector: string) {
+  let sibling = element?.nextElementSibling;
+  while (sibling != null) {
+    if (sibling.matches(selector)) {
+      return sibling as HTMLElement;
+    }
+    sibling = sibling.nextElementSibling;
+  }
+  return null;
+}
+
+function findPreviousSibling(element: HTMLElement, selector: string) {
+  let previous = element?.previousElementSibling;
+  while (previous != null) {
+    if (previous.matches(selector)) {
+      return previous as HTMLElement;
+    }
+    previous = previous.previousElementSibling;
+  }
+  return null;
 }
 
 
