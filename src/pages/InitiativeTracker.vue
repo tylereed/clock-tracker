@@ -27,9 +27,25 @@
           <v-col><v-text-field :hide-details="true" density="compact" v-model="init.maxHp"
               @update:focused="(focused) => updateUndoRedo(i, 'maxHp', focused)"
               @keyup.enter.stop="nextRow($event)" /></v-col>
-          <v-col><v-text-field :hide-details="true" density="compact" v-model="init.hp"
-              @update:focused="(focused) => updateUndoRedo(i, 'hp', focused)"
-              @keyup.enter.stop="nextRow($event)" /></v-col>
+          <v-col>
+            <v-menu location="end" :close-on-content-click="false" :open-on-focus="true" :offset="2">
+              <template v-slot:activator="{ props }">
+                <v-text-field v-bind="props" :hide-details="true" density="compact" v-model="init.hp"
+                  @update:focused="(focused) => { updateUndoRedo(i, 'hp', focused); hpChange = 0; }"
+                  :rules="[validateHp]" @keyup.enter.stop="nextRow($event)" />
+              </template>
+              <v-card>
+                <div align="center" class="ma-2">
+                  <v-btn class="ma-1" variant="outlined" color="primary" prepend-icon="mdi-flask"
+                    @click="changeHealth(i, '+')" :disabled="!healAndDamageValid">Heal</v-btn>
+                  <v-text-field class="ma-1" density="compact" v-model="hpChange" hide-details="auto"
+                    :rules="[validateHpChange]" />
+                  <v-btn class="ma-1" variant="outlined" color="error" prepend-icon="mdi-bandage"
+                    @click="changeHealth(i, '-')" :disabled="!healAndDamageValid">Damage</v-btn>
+                </div>
+              </v-card>
+            </v-menu>
+          </v-col>
           <v-col cols="3">{{ init.conditions }}</v-col>
           <v-col>
             <v-btn @click.stop="deleteInitiative(i)" :class="getRowClass(i)">
@@ -101,8 +117,10 @@ import License from "@/components/initiative/License.vue";
 
 import Initiative, { Attack } from "@/types/Initiative";
 import { MonsterNameO5e as MonsterName, getMonsterListCached, getMonsterCached } from "@/utils/Open5e";
-import { onBeforeMount, ref } from "vue";
+import { computed, onBeforeMount, ref } from "vue";
 import { Executor, Command } from "@/utils/Executor";
+import * as v from "@/utils/validators";
+
 import debounce from "debounce";
 
 type InitWithId = Initiative & { id: number };
@@ -135,7 +153,7 @@ function resort() {
 }
 
 function setInitiatives(inits: Initiatives) {
-  initiatives.value = inits.sort((a, b) => b.order - a.order || b.dex - a.dex);
+  initiatives.value = inits.sort((a, b) => b.order - a.order || (b.dex ?? 0) - (a.dex ?? 0));
 }
 
 function deleteInitiative(index: number) {
@@ -314,34 +332,63 @@ function updateUndoRedo(index: number, propName: keyof Initiative, focused: bool
       oldValues.set(propName + index, value);
     }
   } else {
-    const initiative = initiatives.value[index];
-    const value = initiative[propName];
+    const newValue = initiatives.value[index][propName];
     const oldValue = oldValues.get(propName + index);
-    if (value == oldValue) {
-      return;
-    }
-
-    const command: Command = {
-      execute: () => {
-        const init = initiative as any;
-        init[propName] = value;
-        if (propName === "order") {
-          resort();
-        }
-      },
-      undo: () => {
-        const init = initiative as any;
-        init[propName] = oldValue;
-        if (propName === "order") {
-          resort();
-        }
-      }
-    };
-    executor.pushUndo(command);
-    if (propName === "order") {
-      resort();
-    }
+    insertInitCommand(index, propName, newValue, oldValue);
   }
+}
+
+function insertInitCommand(index: number, propName: keyof Initiative, newValue: any, oldValue: any) {
+  const initiative = initiatives.value[index];
+
+  if (newValue == oldValue) {
+    return;
+  }
+
+  const command: Command = {
+    execute: () => {
+      const init = initiative as any;
+      init[propName] = newValue;
+      if (propName === "order") {
+        resort();
+      }
+    },
+    undo: () => {
+      const init = initiative as any;
+      init[propName] = oldValue;
+      if (propName === "order") {
+        resort();
+      }
+    }
+  };
+  executor.pushUndo(command);
+  if (propName === "order") {
+    resort();
+  }
+}
+
+const hpChange = ref(0);
+const hpValid = ref(true);
+const hpChangeValid = ref(true);
+const healAndDamageValid = computed(() => hpValid.value && hpChangeValid.value);
+
+function changeHealth(index: number, type: "+" | "-") {
+  const change = +hpChange.value;
+  const oldValue = +(initiatives.value[index].hp ?? 0);
+  const newValue = type === "+" ?
+    Math.min(oldValue + change, initiatives.value[index].maxHp || Number.MAX_SAFE_INTEGER) :
+    Math.max(oldValue - change, 0);
+  initiatives.value[index].hp = newValue;
+  hpChange.value = 0;
+  insertInitCommand(index, "hp", newValue, oldValue);
+}
+
+function validateHp(value: string) {
+  return v.validate(hpValid, value, v.isNumericRule);
+}
+
+function validateHpChange(value: string) {
+  return v.validate(hpChangeValid, value, v.isRequiredRule, v.isNumericRule);
 }
 
 const saveDebounced = debounce(function () {

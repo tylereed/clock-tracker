@@ -1,10 +1,10 @@
 export default interface Initiative {
   name: string;
-  dex: number;
   order: number;
-  ac: number;
-  maxHp: number;
-  hp: number;
+  dex?: number;
+  ac?: number;
+  maxHp?: number;
+  hp?: number;
   conditions?: string;
   get hasActions(): boolean;
   actions: Attack[];

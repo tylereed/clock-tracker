@@ -1,3 +1,21 @@
+import { Ref } from "vue";
+
+export function chain(value: string, ...funcs: ((value: any) => boolean | string)[]) {
+  for (const validator of funcs) {
+    const v = validator(value);
+    if (v !== true) {
+      return v;
+    }
+  }
+  return true;
+}
+
+export function validate(valid: Ref<Boolean>, value: string, ...funcs: ((value: any) => boolean | string)[]) {
+  const result = chain(value, ...funcs);
+  valid.value = result === true;
+  return result;
+}
+
 /**
  * Marks a field as being required
  * @param value Validates a field to a non-null value
