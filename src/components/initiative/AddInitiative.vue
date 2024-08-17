@@ -1,13 +1,13 @@
 <template>
-  <v-form ref="addForm" v-model="isFormValid" @submit.prevent="addInitiative">
+  <v-form v-model="isFormValid" @submit.prevent="addInitiative">
     <v-card>
       <v-card-title>Add PC Initiative</v-card-title>
       <v-card-text>
-        <v-text-field label="Initiative" density="compact" v-model="newInit.order" :rules="[v.isRequiredRule, v.isNumericRule]" />
-        <v-text-field label="Name" density="compact" v-model="newInit.name" :rules="[v.isRequiredRule]" />
-        <v-text-field label="Dex Score" density="compact" v-model="newInit.dex" :rules="[v.isNumericRule]" />
-        <v-text-field label="AC" density="compact" v-model="newInit.ac" :rules="[v.isNumericRule]" />
-        <v-text-field label="HP" density="compact" v-model="newInit.maxHp" :rules="[v.isNumericRule]" />
+        <v-text-field label="Initiative" density="compact" v-model="newInit.order" :rules="v.OrderRules" />
+        <v-text-field label="Name" density="compact" v-model="newInit.name" :rules="v.NameRules" />
+        <v-text-field label="Dex Score" density="compact" v-model="newInit.dex" :rules="v.DexRules" />
+        <v-text-field label="AC" density="compact" v-model="newInit.ac" :rules="v.AcRules" />
+        <v-text-field label="HP" density="compact" v-model="newInit.maxHp" :rules="v.MaxHpRules" />
       </v-card-text>
       <v-card-actions>
         <v-btn variant="elevated" color="primary" :disabled="!isFormValid" type="submit">Add</v-btn>
@@ -19,9 +19,8 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import { VForm } from "vuetify/lib/components/index.mjs";
 import Initiative from "@/types/Initiative";
-import * as v from "@/utils/validators";
+import v from "./InitiativeRules"
 
 const emit = defineEmits<{
   (e: "addInit", init: Initiative): void,
@@ -30,7 +29,6 @@ const emit = defineEmits<{
 
 type NewInitiative = Omit<Initiative, "hp">;
 
-const addForm = ref<VForm>(null!);
 const isFormValid = ref(false);
 const newInit = ref<NewInitiative>({} as NewInitiative);
 

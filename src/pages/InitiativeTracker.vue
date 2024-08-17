@@ -15,24 +15,25 @@
         <v-row align="center" v-for="(init, i) in initiatives" :key="i" :class="getRowClass(i) + ' init-row'" dense
           style="border-top: 1px solid darkgray;">
           <v-col text-align="center"><v-icon v-if="i === turn" icon="mdi-circle-medium" /></v-col>
-          <v-col><v-text-field :hide-details="true" density="compact" v-model="init.order"
+          <v-col><v-text-field :hide-details="true" density="compact" v-model="init.order" :rules="r.OrderRules"
               @update:focused="(focused) => updateUndoRedo(i, 'order', focused)"
               @keyup.enter.stop="nextRow($event)" /></v-col>
-          <v-col cols="3"><v-text-field :hide-details="true" density="compact" v-model="init.name"
+          <v-col cols="3"><v-text-field :hide-details="true" density="compact" v-model="init.name" :rules="r.NameRules"
               @update:focused="(focused) => updateUndoRedo(i, 'name', focused)"
               @keyup.enter.stop="nextRow($event)" /></v-col>
-          <v-col><v-text-field :hide-details="true" density="compact" v-model="init.ac"
+          <v-col><v-text-field :hide-details="true" density="compact" v-model="init.ac" :rules="r.AcRules"
               @update:focused="(focused) => updateUndoRedo(i, 'ac', focused)"
               @keyup.enter.stop="nextRow($event)" /></v-col>
-          <v-col><v-text-field :hide-details="true" density="compact" v-model="init.maxHp"
+          <v-col><v-text-field :hide-details="true" density="compact" v-model="init.maxHp" :rules="r.MaxHpRules"
               @update:focused="(focused) => updateUndoRedo(i, 'maxHp', focused)"
               @keyup.enter.stop="nextRow($event)" /></v-col>
           <v-col>
-            <v-menu location="end" :close-on-content-click="false" :open-on-focus="true" :offset="2">
+            <v-menu location="end center" :close-on-content-click="false" :open-on-focus="true" :offset="2">
               <template v-slot:activator="{ props }">
                 <v-text-field v-bind="props" :hide-details="true" density="compact" v-model="init.hp"
+                  :rules="[validateHp]"
                   @update:focused="(focused) => { updateUndoRedo(i, 'hp', focused); hpChange = 0; }"
-                  :rules="[validateHp]" @keyup.enter.stop="nextRow($event)" />
+                  @keyup.enter.stop="nextRow($event)" />
               </template>
               <v-card>
                 <div align="center" class="ma-2">
@@ -120,6 +121,7 @@ import { MonsterNameO5e as MonsterName, getMonsterListCached, getMonsterCached }
 import { computed, onBeforeMount, ref } from "vue";
 import { Executor, Command } from "@/utils/Executor";
 import * as v from "@/utils/validators";
+import r from "@/components/initiative/InitiativeRules";
 
 import debounce from "debounce";
 
@@ -384,7 +386,7 @@ function changeHealth(index: number, type: "+" | "-") {
 }
 
 function validateHp(value: string) {
-  return v.validate(hpValid, value, v.isNumericRule);
+  return v.validate(hpValid, value, ...r.HpRules);
 }
 
 function validateHpChange(value: string) {
