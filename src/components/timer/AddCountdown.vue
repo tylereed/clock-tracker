@@ -3,9 +3,9 @@
     <v-card>
       <v-card-title>Add New Countdown</v-card-title>
       <v-card-text>
-        <v-text-field label="Hours" v-model="hours"
+        <v-text-field label="Hours" v-model="txtHours" validate-on="input"
           :rules="[v.isRequiredRule, v.isNumericRule, v.inRangeRule(0, 23)]" />
-        <v-text-field label="Minutes" v-model="minutes"
+        <v-text-field label="Minutes" v-model="txtMinutes" validate-on="input"
           :rules="[v.isRequiredRule, v.isNumericRule, v.inRangeRule(0, 59), countdownHasValue]" />
       </v-card-text>
       <v-card-actions>
@@ -18,11 +18,15 @@
 
 <script setup lang="ts">
 import * as v from "@/utils/validators";
-import { ref } from "vue";
+import { ref, computed } from "vue";
 
 const isFormValid = ref(false);
-const hours = ref(0);
-const minutes = ref(0);
+
+const txtHours = ref("");
+const txtMinutes = ref("");
+
+const hours = computed(() => +txtHours.value);
+const minutes = computed(() => +txtMinutes.value);
 
 const emit = defineEmits<{
   (e: "newCountdown", max: number): void,
