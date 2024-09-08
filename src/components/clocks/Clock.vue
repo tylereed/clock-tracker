@@ -71,7 +71,8 @@ function render() {
   if (radius < 1) return;
   const x = width / 2;
   const y = height / 2;
-  const ctx = canvas.getContext("2d")!;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
 
   ctx.clearRect(0, 0, clock.size, clock.size);
 

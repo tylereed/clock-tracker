@@ -73,7 +73,7 @@ function updateSlice(id: number, amount: number) {
     clocks.value[id].filledSlices = amount;
   }, () => {
     selectedTab.value = tab;
-    clocks.value[id].filledSlices = oldAmount
+    clocks.value[id].filledSlices = oldAmount;
   });
 }
 
