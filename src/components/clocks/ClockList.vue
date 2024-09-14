@@ -126,7 +126,7 @@ function drop(e: DragEvent) {
     }
   }
   finally {
-    clearDrag()
+    clearDrag();
   }
 }
 

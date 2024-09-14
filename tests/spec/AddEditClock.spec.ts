@@ -137,4 +137,69 @@ describe("AddEditClock", () => {
   test("Validates Color - Invalid colors - asdf", testValidateColorBad("asdf"));
   test("Validates Color - Invalid colors - #GGGGGG", testValidateColorBad("#GGGGGG"));
 
+  test("Valid - Emits Add New", async () => {
+    const wrapper = await mountAddEditClock();
+
+    const vform = wrapper.getComponent({ name: "VForm" });
+
+    const values = ["New Clock", 9, "#00FF00"];
+
+    const vtextfields = wrapper.findAllComponents({ name: "VTextField" });
+    for (let i = 0; i < values.length; i++) {
+      const value = values[i];
+      const vtextfield = vtextfields[i];
+      vtextfield.trigger("focus");
+      vtextfield.setValue(value);
+      vtextfield.trigger("blur");
+    }
+
+    await vform.trigger("validate");
+    await vform.trigger("submit.prevent");
+
+    const events = wrapper.emitted("newClock");
+    expect(events).toHaveLength(1);
+    const actual = events![0][0] as NewClock;
+    expect(actual.name).toBe("New Clock");
+    expect(actual.color).toBe("#00FF00");
+    expect(actual.filledSlices).toBe(0);
+    expect(actual.totalSlices).toBe(9);
+  });
+
+  test("Valid - Emits Edit", async () => {
+    const p: Clock = {
+      id: 1,
+      filledSlices: 2,
+      color: "#000000",
+      totalSlices: 8,
+      size: 200
+    };
+    const wrapper = await mountAddEditClock(p);
+
+    const vform = wrapper.getComponent({ name: "VForm" });
+
+    const values = ["Edit Clock", 7, "#FF0000"];
+
+    const vtextfields = wrapper.findAllComponents({ name: "VTextField" });
+    for (let i = 0; i < values.length; i++) {
+      const value = values[i];
+      const vtextfield = vtextfields[i];
+      vtextfield.trigger("focus");
+      vtextfield.setValue(value);
+      vtextfield.trigger("blur");
+    }
+
+    await vform.trigger("validate");
+    await vform.trigger("submit.prevent");
+
+    const events = wrapper.emitted("updateClock");
+    expect(events).toHaveLength(1);
+    const actual = events![0][0] as Clock;
+    expect.soft(actual.id).toBe(1);
+    expect.soft(actual.name).toBe("Edit Clock");
+    expect.soft(actual.color).toBe("#FF0000");
+    expect.soft(actual.filledSlices).toBe(2);
+    expect.soft(actual.totalSlices).toBe(7);
+    expect.soft(actual.size).toBe(200);
+  });
+
 });
