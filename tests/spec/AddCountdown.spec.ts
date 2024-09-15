@@ -4,7 +4,6 @@ import { createVuetify } from "vuetify";
 import * as components from "vuetify/components";
 import * as directives from "vuetify/directives";
 import AddCountDown from "../../src/components/timer/AddCountdown.vue";
-import { fail } from "assert";
 
 const vuetify = createVuetify({
   components,

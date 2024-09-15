@@ -183,9 +183,9 @@ describe("AddEditClock", () => {
     for (let i = 0; i < values.length; i++) {
       const value = values[i];
       const vtextfield = vtextfields[i];
-      vtextfield.trigger("focus");
+      await vtextfield.trigger("focus");
       vtextfield.setValue(value);
-      vtextfield.trigger("blur");
+      await vtextfield.trigger("blur");
     }
 
     await vform.trigger("validate");

@@ -97,11 +97,11 @@ describe("ClockList", () => {
     wrapper.vm.showDrop(dragEvent);
   });
 
-  test("Propogates Increment", () => {
+  test("Propogates Increment", async () => {
     const wrapper = getClockList(1);
 
     const clock = wrapper.findComponent({ name: "Clock" }).findComponent({ name: "VCard" });
-    clock.trigger("click");
+    await clock.trigger("click");
 
     const events = wrapper.emitted("updateSlice")!;
 
@@ -109,11 +109,11 @@ describe("ClockList", () => {
     expect(events[0]).toStrictEqual([0, 2]);
   });
 
-  test("Propogates Decrement", () => {
+  test("Propogates Decrement", async () => {
     const wrapper = getClockList(1);
 
     const clock = wrapper.findComponent({ name: "Clock" }).findComponent({ name: "VCard" });
-    clock.trigger("click.right");
+    await clock.trigger("click.right");
 
     const events = wrapper.emitted("updateSlice")!;
 
@@ -121,14 +121,14 @@ describe("ClockList", () => {
     expect(events[0]).toStrictEqual([0, 0]);
   });
 
-  test("Propogates Edit", () => {
+  test("Propogates Edit", async () => {
     const wrapper = getClockList(1);
 
     const clock = wrapper.findComponent({ name: "Clock" }).findComponent({ name: "VCard" });
-    clock.trigger("hover");
+    await clock.trigger("hover");
 
     const editButton = clock.findAllComponents({ name: "VBtn" })[0];
-    editButton.trigger("click");
+    await editButton.trigger("click");
 
     const events = wrapper.emitted("editClock")!;
 
@@ -136,14 +136,14 @@ describe("ClockList", () => {
     expect(events[0]).toStrictEqual([0]);
   });
 
-  test("Propogates Delete", () => {
+  test("Propogates Delete", async () => {
     const wrapper = getClockList(1);
 
     const clock = wrapper.findComponent({ name: "Clock" }).findComponent({ name: "VCard" });
-    clock.trigger("hover");
+    await clock.trigger("hover");
 
     const deleteButton = clock.findAllComponents({ name: "VBtn" })[1];
-    deleteButton.trigger("click");
+    await deleteButton.trigger("click");
 
     const events = wrapper.emitted("deleteClock")!;
 
@@ -151,15 +151,15 @@ describe("ClockList", () => {
     expect(events[0]).toStrictEqual([0]);
   });
 
-  test("Drag Start End", () => {
+  test("Drag Start End", async () => {
     const wrapper = getClockList(1);
 
     const clock = wrapper.findComponent({ name: "Clock" }).findComponent({ name: "VCard" });
-    
-    clock.trigger("dragstart");
+
+    await clock.trigger("dragstart");
     expect(wrapper.vm.draggedClock).not.toBeNull();
 
-    clock.trigger("dragend");
+    await clock.trigger("dragend");
     expect(wrapper.vm.draggedClock).toBeNull();
   });
 
