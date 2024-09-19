@@ -4,9 +4,9 @@
       <v-card-title>Add New Countdown</v-card-title>
       <v-card-text>
         <v-text-field label="Hours" v-model="txtHours" validate-on="input"
-          :rules="[v.isRequiredRule, v.isNumericRule, v.inRangeRule(0, 23)]" />
+          :rules="[v.isRequiredRule, v.isWholeNumber, v.inRangeRule(0, 23)]" />
         <v-text-field label="Minutes" v-model="txtMinutes" validate-on="input"
-          :rules="[v.isRequiredRule, v.isNumericRule, v.inRangeRule(0, 59), countdownHasValue]" />
+          :rules="[v.isRequiredRule, v.isWholeNumber, v.inRangeRule(0, 59), countdownHasValue]" />
       </v-card-text>
       <v-card-actions>
         <v-btn variant="elevated" color="primary" :disabled="!isFormValid" type="submit">Add Countdown</v-btn>

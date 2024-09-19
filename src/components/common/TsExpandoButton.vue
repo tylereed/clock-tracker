@@ -1,5 +1,5 @@
 <template>
-  <v-card class="ma-2" flat>
+  <v-card flat>
     <v-menu transition="scroll-y-transition" :target="mainButton">
       <template v-slot:activator="{ isActive, props }">
         <v-btn class="mr-0 rounded-s rounded-e-0" @click="mainAction.action()" variant="elevated" color="primary"
@@ -27,7 +27,7 @@ const mainButton = ref<ComponentPublicInstance>(null!);
 
 type ButtonAction = {
   label: string,
-  action: () => void,
+  action: () => void | Promise<void>,
 };
 
 const props = defineProps<{

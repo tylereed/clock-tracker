@@ -1,4 +1,4 @@
-import { mount } from "@vue/test-utils";
+import { mount, VueWrapper } from "@vue/test-utils";
 import { describe, expect, test, vi } from "vitest";
 import { createVuetify } from "vuetify";
 import * as components from "vuetify/components";
@@ -6,12 +6,12 @@ import * as directives from "vuetify/directives";
 import ClockList from "../../src/components/clocks/ClockList.vue";
 import { Clock } from "../../src/types/Clock";
 
+global.ResizeObserver = require("resize-observer-polyfill");
+
 const vuetify = createVuetify({
   components,
   directives
 });
-
-global.ResizeObserver = require("resize-observer-polyfill");
 
 function* makeClocks(clocksCount: number) {
   for (let i = 0; i < clocksCount; i++) {
@@ -26,7 +26,7 @@ function* makeClocks(clocksCount: number) {
   }
 }
 
-function getClockList(listLength: number = 0) {
+function mountClockList(listLength: number = 0): VueWrapper<any, any> {
   return mount(ClockList,
     {
       props: { clocks: [...makeClocks(listLength)] },
@@ -42,14 +42,14 @@ function getClockList(listLength: number = 0) {
 describe("ClockList", () => {
 
   test("Mount ClockList", () => {
-    const wrapper = getClockList(5);
+    const wrapper = mountClockList(5);
 
     const html = wrapper.html();
     expect(html).toContain("clock-list");
   });
 
   test("getDropLocation", () => {
-    const wrapper = getClockList(5);
+    const wrapper = mountClockList(5);
     // mocked isn't getting called when running getDropLocation...
     wrapper.vm.getNumberCols = vi.fn().mockResolvedValue(6);
     // console.log(wrapper.html());
@@ -85,7 +85,7 @@ describe("ClockList", () => {
   });
 
   test.skip("showDrop", () => {
-    const wrapper = getClockList(5);
+    const wrapper = mountClockList(5);
     const toDrag = { id: 1 } as Clock;
     const dragEvent = {
       preventDefault: () => { },
@@ -98,7 +98,7 @@ describe("ClockList", () => {
   });
 
   test("Propogates Increment", async () => {
-    const wrapper = getClockList(1);
+    const wrapper = mountClockList(1);
 
     const clock = wrapper.findComponent({ name: "Clock" }).findComponent({ name: "VCard" });
     await clock.trigger("click");
@@ -110,7 +110,7 @@ describe("ClockList", () => {
   });
 
   test("Propogates Decrement", async () => {
-    const wrapper = getClockList(1);
+    const wrapper = mountClockList(1);
 
     const clock = wrapper.findComponent({ name: "Clock" }).findComponent({ name: "VCard" });
     await clock.trigger("click.right");
@@ -122,7 +122,7 @@ describe("ClockList", () => {
   });
 
   test("Propogates Edit", async () => {
-    const wrapper = getClockList(1);
+    const wrapper = mountClockList(1);
 
     const clock = wrapper.findComponent({ name: "Clock" }).findComponent({ name: "VCard" });
     await clock.trigger("hover");
@@ -137,7 +137,7 @@ describe("ClockList", () => {
   });
 
   test("Propogates Delete", async () => {
-    const wrapper = getClockList(1);
+    const wrapper = mountClockList(1);
 
     const clock = wrapper.findComponent({ name: "Clock" }).findComponent({ name: "VCard" });
     await clock.trigger("hover");
@@ -152,7 +152,7 @@ describe("ClockList", () => {
   });
 
   test("Drag Start End", async () => {
-    const wrapper = getClockList(1);
+    const wrapper = mountClockList(1);
 
     const clock = wrapper.findComponent({ name: "Clock" }).findComponent({ name: "VCard" });
 

@@ -53,7 +53,7 @@
               <v-icon icon="mdi-delete-forever" color="error" />
             </v-btn>
           </v-col>
-          <template v-if="i === turn && init.hasActions">
+          <template v-if="i === turn && init.actions">
             <v-col cols="12">
               <p v-for="attack in init.actions">
                 <b>{{ attack.name }}</b> {{ attack.desc }}
@@ -65,11 +65,11 @@
           <v-col><v-btn @click="decrementTurn" :disabled="turn === 0 && round === 1">Previous</v-btn></v-col>
           <v-col><v-btn @click="incrementTurn" :disabled="initiatives.length === 0">Next</v-btn></v-col>
           <v-col><v-btn @click="resetTurn">Reset</v-btn></v-col>
-          <v-col><v-btn @click="addInitiativeDisplay = true" class="mt-3" variant="elevated" color="primary">Add
+          <v-col><v-btn @click="addInitiative" variant="elevated" color="primary">Add
               Initiative</v-btn></v-col>
         </v-row>
         <v-row>
-          <v-col cols="11">
+          <v-col cols="9">
             <v-autocomplete v-model="monsterSearch" :items="monsters" :custom-filter="monsterNameFilter" return-object
               auto-select-first item-title="name" item-value="slug">
               <template v-slot:item="{ props, item }">
@@ -81,9 +81,8 @@
             <br />
             <div><v-btn @click="showLicense = !showLicense">Monster Data License Information</v-btn></div>
           </v-col>
-          <v-col cols="1">
-            <v-btn class="mt-3" variant="elevated" color="primary" :disabled="!monsterSearch"
-              @click="addMonster">Add<br />Monster</v-btn>
+          <v-col cols="3">
+            <ts-expando-button class="mt-3" :disabled="!monsterSearch" :actions="addMonsterButtons" />
           </v-col>
         </v-row>
       </v-container>
@@ -98,8 +97,9 @@
     </v-card-actions>
   </v-card>
 
-  <v-dialog v-model="addInitiativeDisplay" width="25%" min-width="400px">
-    <add-initiative class="pa-2 ma-6" @add-init="addInit" @close="addInitiativeDisplay = false" />
+  <v-dialog v-model="addInitiativeDisplay" width="50%" min-width="400px">
+    <add-edit-initiative class="pa-2 ma-6" :monster-stats="monsterStats" @add-init="addInit"
+      @close="addInitiativeDisplay = false" />
   </v-dialog>
   <v-dialog v-model="showLicense" width="75%" min-width="400px">
     <license />
@@ -113,17 +113,19 @@
 </style>
 
 <script setup lang="ts">
-import AddInitiative from "@/components/initiative/AddInitiative.vue";
+import AddEditInitiative from "@/components/initiative/AddEditInitiative.vue";
 import License from "@/components/initiative/License.vue";
+import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
 
-import Initiative, { Attack } from "@/types/Initiative";
-import { MonsterNameO5e as MonsterName, getMonsterListCached, getMonsterCached } from "@/utils/Open5e";
-import { computed, onBeforeMount, ref } from "vue";
+import Initiative, { Actions } from "@/types/Initiative";
+import { MonsterNameO5e as MonsterName, getMonsterListCached, getMonsterCached, MonsterO5e } from "@/utils/Open5e";
+import { computed, onBeforeMount, reactive, ref } from "vue";
 import { Executor, Command } from "@/utils/Executor";
 import * as v from "@/utils/validators";
 import r from "@/components/initiative/InitiativeRules";
 
 import debounce from "debounce";
+import Dice from "@/utils/Dice";
 
 type InitWithId = Initiative & { id: number };
 type Initiatives = InitWithId[];
@@ -275,19 +277,36 @@ function resetTurn() {
   });
 }
 
-
 const addInitiativeDisplay = ref(false);
 const showLicense = ref(false);
 
 const monsterSearch = ref<MonsterName>();
+const monsterStats = ref<MonsterO5e | null>(null);
 
 onBeforeMount(async () => {
   monsters.value = await getMonsterListCached();
-})
+});
 
 const monsters = ref<MonsterName[]>([]);
 function monsterNameFilter(title: string, queryText: string): boolean {
   return title.toLocaleLowerCase().includes(queryText.toLocaleLowerCase());
+}
+
+const addMonsterButtons = reactive([
+  { label: "Add Monster", action: addMonster },
+  { label: "Edit Monster", action: editMonster }
+]);
+
+function addInitiative() {
+  monsterStats.value = null;
+  addInitiativeDisplay.value = true;
+}
+
+async function editMonster() {
+  if (monsterSearch.value) {
+    monsterStats.value = await getMonsterCached(monsterSearch.value.slug);
+    addInitiativeDisplay.value = true;
+  }
 }
 
 let nameIndex = 0;
@@ -302,20 +321,19 @@ async function addMonster() {
 
     const initMonster: Initiative = {
       name: `${monster.name} ${letter}`,
-      order: -1, //Math.floor((monster.dexterity - 10) / 2), // Should eventually allow rolling on add
+      order: 10 + Dice.calculateModifier(monster.dexterity),
       dex: monster.dexterity,
       ac: monster.armor_class,
       maxHp: monster.hit_points,
       hp: monster.hit_points,
-      actions: [...buildActions(monster.actions)],
-      get hasActions() { return true; }
+      actions: [...buildActions(monster.actions)]
     }
 
     insertInitiative(initMonster);
   }
 }
 
-function* buildActions(...args: ({ name: string, desc: string }[] | undefined)[]): Generator<Attack> {
+function* buildActions(...args: ({ name: string, desc: string }[] | undefined)[]): Generator<Actions> {
 
   for (const arg of args) {
     if (arg) {
@@ -390,7 +408,7 @@ function validateHp(value: string) {
 }
 
 function validateHpChange(value: string) {
-  return v.validate(hpChangeValid, value, v.isRequiredRule, v.isNumericRule);
+  return v.validate(hpChangeValid, value, v.isRequiredRule, v.isWholeNumber);
 }
 
 const saveDebounced = debounce(function () {

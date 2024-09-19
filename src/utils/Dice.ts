@@ -14,6 +14,21 @@ export default class Dice {
     this.#modifier = modifier;
   }
 
+  static D20 = {
+    ofStat(stat: number) {
+      const mod = Dice.calculateModifier(stat);
+      return new Dice(1, 20, mod);
+    },
+
+    ofModifier(mod: number) {
+      return new Dice(1, 20, mod);
+    }
+  }
+
+  static calculateModifier(stat: number) {
+    return Math.floor((stat - 10) / 2);
+  }
+
   static parse(input: string) {
     const chars = new CharStream(input, true);
     const lexer = new RollLexer(chars);
@@ -23,7 +38,7 @@ export default class Dice {
     const tree = parser.roll();
     const listener = new HealthListener();
 
-    ParseTreeWalker.DEFAULT.walk(listener as unknown as ParseTreeListener, tree);
+    ParseTreeWalker.DEFAULT.walk(listener, tree);
 
     return listener.build();
   }

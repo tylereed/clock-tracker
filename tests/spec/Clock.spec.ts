@@ -6,12 +6,12 @@ import * as directives from "vuetify/directives";
 import ClockVue from "../../src/components/clocks/Clock.vue";
 import { Clock } from "../../src/types/Clock";
 
+global.ResizeObserver = require("resize-observer-polyfill");
+
 const vuetify = createVuetify({
   components,
   directives
 });
-
-global.ResizeObserver = require("resize-observer-polyfill");
 
 const baseClock: Clock = {
   id: 1,

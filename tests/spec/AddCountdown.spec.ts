@@ -4,6 +4,7 @@ import { createVuetify } from "vuetify";
 import * as components from "vuetify/components";
 import * as directives from "vuetify/directives";
 import AddCountDown from "../../src/components/timer/AddCountdown.vue";
+import { ErrorMessages } from "../../src/utils/validators";
 
 const vuetify = createVuetify({
   components,
@@ -72,7 +73,7 @@ describe("AddCountdown.vue", () => {
     await vform.trigger("submit.prevent");
 
     const html = txtHours.html();
-    expect(html).toContain("Required");
+    expect(html).toContain(ErrorMessages.RequiredMessage);
   });
 
   test("validates hours - not a number", async () => {
@@ -82,7 +83,7 @@ describe("AddCountdown.vue", () => {
     await txtHours.trigger("blur");
 
     const html = txtHours.html();
-    expect(html).toContain("Must be a number");
+    expect(html).toContain(ErrorMessages.WholeNumberMessage);
   });
 
   test("validates hours - too high", async () => {
@@ -92,7 +93,7 @@ describe("AddCountdown.vue", () => {
     await txtHours.trigger("blur");
 
     const html = txtHours.html();
-    expect(html).toContain("Must be between 0 and 23");
+    expect(html).toContain(ErrorMessages.RangeMessage(0, 23));
   });
 
   test("validates minutes - required", async () => {
@@ -103,7 +104,7 @@ describe("AddCountdown.vue", () => {
     await vform.trigger("submit.prevent");
 
     const html = txtMinutes.html();
-    expect(html).toContain("Required");
+    expect(html).toContain(ErrorMessages.RequiredMessage);
   });
 
   test("validates minutes - not a number", async () => {
@@ -113,7 +114,7 @@ describe("AddCountdown.vue", () => {
     await txtMinutes.trigger("blur");
 
     const html = txtMinutes.html();
-    expect(html).toContain("Must be a number");
+    expect(html).toContain(ErrorMessages.WholeNumberMessage);
   });
 
   test("validates minutes - too high", async () => {
@@ -123,7 +124,7 @@ describe("AddCountdown.vue", () => {
     await txtMinutes.trigger("blur");
 
     const html = txtMinutes.html();
-    expect(html).toContain("Must be between 0 and 59");
+    expect(html).toContain(ErrorMessages.RangeMessage(0, 59));
   });
 
   test("validates hours and minutes - no time", async () => {

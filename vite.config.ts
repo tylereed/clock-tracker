@@ -4,7 +4,7 @@ import vuetify, { transformAssetUrls } from "vite-plugin-vuetify";
 import ViteFonts from "unplugin-fonts/vite";
 
 // Utilities
-import { defineConfig, configDefaults } from "vitest/config";
+import { defineConfig } from "vitest/config";
 import { fileURLToPath, URL } from "node:url";
 
 // https://vitejs.dev/config/
@@ -45,7 +45,8 @@ export default defineConfig({
       enabled: true,
       provider: "v8",
       reporter: ["text", "json", "html"],
-      //exclude: [...configDefaults.exclude, "**.d.ts", "src/App.vue", "src/main.ts", "src/plugins/**"]
+      include: ["src/**"],
+      exclude: ["src/**.d.ts", "src/App.vue", "src/main.ts", "src/generated/**", "src/plugins/**", "src/types/**"]
     },
     server: {
       deps: {

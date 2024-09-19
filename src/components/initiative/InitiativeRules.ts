@@ -10,10 +10,10 @@ interface InitiativeRules {
 }
 
 export default {
-  OrderRules: [v.isRequiredRule, v.isNumericRule],
+  OrderRules: [v.isRequiredRule, v.isWholeNumber],
   NameRules: [v.isRequiredRule],
-  DexRules: [v.isNumericRule],
-  AcRules: [v.isNumericRule],
-  MaxHpRules: [v.isNumericRule],
-  HpRules: [v.isNumericRule]
+  DexRules: [v.isInteger],
+  AcRules: [v.isWholeNumber],
+  MaxHpRules: [v.isWholeNumber],
+  HpRules: [v.isWholeNumber]
 } as InitiativeRules;

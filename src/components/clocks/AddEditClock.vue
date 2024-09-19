@@ -4,7 +4,7 @@
       <v-card-title>{{ isEdit ? "Edit" : "Add New" }} Clock</v-card-title>
       <v-card-text>
         <v-text-field label="Name" v-model="newClock.name" />
-        <v-text-field label="Total Slices" :rules="[v.isRequiredRule, v.isNumericRule, v.inRangeRule(3, 12)]"
+        <v-text-field label="Total Slices" :rules="[v.isRequiredRule, v.isWholeNumber, v.inRangeRule(3, 12)]"
           v-model="newClock.totalSlices" />
         <v-text-field label="Color" :rules="[v.isColor]" v-model="newClock.color" />
       </v-card-text>
@@ -29,6 +29,8 @@ const emit = defineEmits<{
   (e: "close"): void
 }>();
 
+const props = defineProps<{ clockValues: NewClock | null }>();
+
 const isEdit = ref(false);
 const isFormValid = ref(false);
 const newClock = ref<NewClock>({
@@ -36,8 +38,6 @@ const newClock = ref<NewClock>({
   color: "",
   totalSlices: 8
 });
-
-const props = defineProps<{ clockValues: NewClock | null }>();
 
 onMounted(() => {
   if (props.clockValues) {

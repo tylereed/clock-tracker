@@ -5,6 +5,9 @@ import * as components from "vuetify/components";
 import * as directives from "vuetify/directives";
 import AddEditClock from "../../src/components/clocks/AddEditClock.vue";
 import { Clock, NewClock } from "../../src/types/Clock";
+import { ErrorMessages } from "../../src/utils/validators";
+
+global.ResizeObserver = require("resize-observer-polyfill");
 
 const vuetify = createVuetify({
   components,
@@ -30,8 +33,6 @@ async function mountAddEditClock(props: NewClock | null = null) {
 
   return wrapper;
 }
-
-global.ResizeObserver = require("resize-observer-polyfill");
 
 describe("AddEditClock", () => {
 
@@ -60,7 +61,7 @@ describe("AddEditClock", () => {
     expect(html).not.toMatch("Add Clock");
   });
 
-  test("Validates Total Slices - Must be a number", async () => {
+  test("Validates Total Slices - Must be a positive number", async () => {
     const wrapper = await mountAddEditClock();
 
     const vform = wrapper.getComponent({ name: "VForm" });
@@ -70,7 +71,7 @@ describe("AddEditClock", () => {
     await vform.trigger("submit.prevent");
 
     const html = wrapper.html();
-    expect(html).toContain("Must be a number");
+    expect(html).toContain(ErrorMessages.WholeNumberMessage);
   });
 
   test("Validates Total Slices - Must be between 3 and 12 - Too low", async () => {
@@ -83,7 +84,7 @@ describe("AddEditClock", () => {
     await vform.trigger("submit.prevent");
 
     const html = wrapper.html();
-    expect(html).toContain("Must be between 3 and 12");
+    expect(html).toContain(ErrorMessages.RangeMessage(3, 12));
   });
 
   test("Validates Total Slices - Must be between 3 and 12 - Too high", async () => {
@@ -97,7 +98,7 @@ describe("AddEditClock", () => {
 
     const html = wrapper.html();
 
-    expect(html).toContain("Must be between 3 and 12");
+    expect(html).toContain(ErrorMessages.RangeMessage(3, 12));
   });
 
   function testValidateColor(color: string, valid: boolean) {
@@ -113,9 +114,9 @@ describe("AddEditClock", () => {
       const html = wrapper.html();
 
       if (valid) {
-        expect(html).not.toContain("Not a valid color");
+        expect(html).not.toContain(ErrorMessages.ColorMessage);
       } else {
-        expect(html).toContain("Not a valid color");
+        expect(html).toContain(ErrorMessages.ColorMessage);
       }
     }
   }

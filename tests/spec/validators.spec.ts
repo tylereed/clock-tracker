@@ -1,14 +1,14 @@
 import { describe, expect, test } from "vitest";
 import * as v from "../../src/utils/validators";
+import { ErrorMessages } from "../../src/utils/validators";
 
 describe("isRequiredRule", () => {
-  const RequiredString = "Required";
 
   test.each([
     null, undefined, "", " "
   ])('isRequired(%o) is false', (value) => {
     const result = v.isRequiredRule(value);
-    expect(result).toStrictEqual(RequiredString);
+    expect(result).toStrictEqual(ErrorMessages.RequiredMessage);
   });
 
   test.each([
@@ -19,29 +19,43 @@ describe("isRequiredRule", () => {
   });
 });
 
-describe("isNumericRule", () => {
-  const NumericRuleFailed = "Must be a number";
+describe("isWholeNumberRule", () => {
 
   test.each([
     "a", "1.1", "-1"
-  ])("isNumericRule(%o) is false", (value) => {
-    const result = v.isNumericRule(value);
-    expect(result).toStrictEqual(NumericRuleFailed);
+  ])("isWholeNumberRule(%o) is false", (value) => {
+    const result = v.isWholeNumber(value);
+    expect(result).toStrictEqual(ErrorMessages.WholeNumberMessage);
   });
 
   test.each([
     null, undefined, "", " ", "0", "1"
-  ])("inNumeric(%o) is true", (value) => {
-    const result = v.isNumericRule(value!);
+  ])("isWholeNumberRule(%o) is true", (value) => {
+    const result = v.isWholeNumber(value!);
+    expect(result).toStrictEqual(true);
+  });
+
+});
+
+describe("isIntegerRule", () => {
+
+  test.each([
+    "a", "1.1"
+  ])("isIntegerRule(%o) is false", (value) => {
+    const result = v.isInteger(value);
+    expect(result).toStrictEqual(ErrorMessages.IntegerMessage);
+  });
+
+  test.each([
+    null, undefined, "", " ", "0", "1", "-1"
+  ])("isIntegerRule(%o) is true", (value) => {
+    const result = v.isInteger(value!);
     expect(result).toStrictEqual(true);
   });
 
 });
 
 describe("inRangeRule", () => {
-  function formatFailedMessage(min: number, max: number) {
-    return `Must be between ${min} and ${max}`;
-  }
 
   test.each([
     ["a", 0, 10],
@@ -52,7 +66,7 @@ describe("inRangeRule", () => {
     ["0", 1, 10],
     ["11", 1, 10]
   ])("inRange(%o, %d, %d) fails", (test, min, max) => {
-    const expected = formatFailedMessage(min, max);
+    const expected = ErrorMessages.RangeMessage(min, max);
 
     const actual = v.inRangeRule(min, max)(test);
     expect(actual).toStrictEqual(expected);
@@ -75,8 +89,6 @@ describe("inRangeRule", () => {
 });
 
 describe("isColor", () => {
-  const ColorRuleFailed = "Not a valid color";
-
   test.each([
     "asdf",
     "blurple",
@@ -84,8 +96,8 @@ describe("isColor", () => {
     "AAAAA",
     "aaaaaaaaa"
   ])("isColor(%o) fails", (value) => {
-    const actual = v.isColor(value as any);
-    expect(actual).toStrictEqual(ColorRuleFailed);
+    const actual = v.isColor(value);
+    expect(actual).toStrictEqual(ErrorMessages.ColorMessage);
   });
 
   test.each([
@@ -96,7 +108,7 @@ describe("isColor", () => {
     "00FFFFFF",
     "#000000"
   ])("isColor(%o) passed", (value) => {
-    const actual = v.isColor(value as any);
+    const actual = v.isColor(value);
     expect(actual).toStrictEqual(true);
   });
 });
