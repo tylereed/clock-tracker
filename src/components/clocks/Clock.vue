@@ -30,7 +30,7 @@
 
 <script setup lang="ts">
 import { Clock } from "@/types/Clock";
-import { onMounted, onUpdated, ref } from "vue";
+import { onMounted, onUpdated, ref, watch } from "vue";
 import { useTheme } from "vuetify";
 
 const tau = Math.PI * 2;
@@ -47,6 +47,7 @@ const emit = defineEmits<{
 
 onMounted(render);
 onUpdated(render);
+watch(vTheme.current, render);
 
 const canvasRef = ref<HTMLCanvasElement>(null!);
 

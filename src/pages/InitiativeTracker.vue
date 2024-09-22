@@ -110,6 +110,9 @@
 .alternate-row {
   background: #c2cdd2;
 }
+.alternate-row-dark {
+  background: #424242;
+}
 </style>
 
 <script setup lang="ts">
@@ -120,6 +123,7 @@ import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
 import Initiative, { Actions } from "@/types/Initiative";
 import { MonsterNameO5e as MonsterName, getMonsterListCached, getMonsterCached, MonsterO5e } from "@/utils/Open5e";
 import { computed, onBeforeMount, reactive, ref } from "vue";
+import { useTheme } from "vuetify";
 import { Executor, Command } from "@/utils/Executor";
 import * as v from "@/utils/validators";
 import r from "@/components/initiative/InitiativeRules";
@@ -129,6 +133,8 @@ import Dice from "@/utils/Dice";
 
 type InitWithId = Initiative & { id: number };
 type Initiatives = InitWithId[];
+
+const vTheme = useTheme();
 
 const initiatives = ref<Initiatives>([]);
 
@@ -179,6 +185,9 @@ function deleteInitiative(index: number) {
 
 function getRowClass(index: number) {
   if (index % 2 === 1) {
+    if (vTheme.current.value.dark) {
+      return "alternate-row-dark";
+    }
     return "alternate-row";
   }
 }
