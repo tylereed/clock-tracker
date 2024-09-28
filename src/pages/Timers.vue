@@ -23,11 +23,13 @@
 </template>
 
 <script setup lang="ts">
-import TimerVue from "@/components/timer/Timer.vue";
-import AddCountdown from "@/components/timer/AddCountdown.vue";
-import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
 import { reactive, ref } from "vue";
 import { useToast } from "vue-toast-notification";
+
+import AddCountdown from "@/components/timer/AddCountdown.vue";
+import TimerVue from "@/components/timer/Timer.vue";
+import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
+
 import { Timer } from "@/types/Timer";
 
 type Timers = Timer[];

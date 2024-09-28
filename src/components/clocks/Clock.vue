@@ -29,9 +29,10 @@
 </style>
 
 <script setup lang="ts">
-import { Clock } from "@/types/Clock";
 import { onMounted, onUpdated, ref, watch } from "vue";
 import { useTheme } from "vuetify";
+
+import { Clock } from "@/types/Clock";
 
 const tau = Math.PI * 2;
 

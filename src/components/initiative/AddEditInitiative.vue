@@ -30,10 +30,11 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
-import Initiative, { Actions } from "@/types/Initiative";
-import v from "./InitiativeRules";
+
 import Dice from "@/utils/Dice";
+import Initiative, { Actions } from "@/types/Initiative";
 import { MonsterO5e } from "@/utils/Open5e";
+import v from "./InitiativeRules";
 
 const props = defineProps<{ monsterStats: MonsterO5e | null }>();
 

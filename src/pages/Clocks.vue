@@ -36,13 +36,15 @@
 </template>
 
 <script setup lang="ts">
-import { Clock, ClockTab, NewClock } from "@/types/Clock";
+import { computed, reactive, ref } from "vue";
+
 import AddClockVue from "@/components/clocks/AddEditClock.vue";
 import ClockList from "@/components/clocks/ClockList.vue";
-import { createClock, getClockSize } from "@/components/clocks/helpers";
-import { computed, reactive, ref } from "vue";
-import { Executor } from "@/utils/Executor";
 import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
+import { createClock, getClockSize } from "@/components/clocks/helpers";
+
+import { Clock, ClockTab, NewClock } from "@/types/Clock";
+import { Executor } from "@/utils/Executor";
 
 type Clocks = Clock[];
 type ClockTabs = ClockTab[];

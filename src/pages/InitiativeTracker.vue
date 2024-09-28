@@ -116,20 +116,20 @@
 </style>
 
 <script setup lang="ts">
+import { computed, onBeforeMount, reactive, ref } from "vue";
+import { useTheme } from "vuetify";
+import debounce from "debounce";
+
 import AddEditInitiative from "@/components/initiative/AddEditInitiative.vue";
 import License from "@/components/initiative/License.vue";
 import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
-
-import Initiative, { Actions } from "@/types/Initiative";
-import { MonsterNameO5e as MonsterName, getMonsterListCached, getMonsterCached, MonsterO5e } from "@/utils/Open5e";
-import { computed, onBeforeMount, reactive, ref } from "vue";
-import { useTheme } from "vuetify";
-import { Executor, Command } from "@/utils/Executor";
-import * as v from "@/utils/validators";
 import r from "@/components/initiative/InitiativeRules";
 
-import debounce from "debounce";
 import Dice from "@/utils/Dice";
+import { Executor, Command } from "@/utils/Executor";
+import Initiative, { Actions } from "@/types/Initiative";
+import { MonsterNameO5e as MonsterName, getMonsterListCached, getMonsterCached, MonsterO5e } from "@/utils/Open5e";
+import * as v from "@/utils/validators";
 
 type InitWithId = Initiative & { id: number };
 type Initiatives = InitWithId[];

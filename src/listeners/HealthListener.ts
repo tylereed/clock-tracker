@@ -1,6 +1,6 @@
-import RollListener from "@/generated/parsers/RollListener";
-import { RollContext } from "@/generated/parsers/RollParser";
 import Dice from "@/utils/Dice";
+import { RollContext } from "@/generated/parsers/RollParser";
+import RollListener from "@/generated/parsers/RollListener";
 
 export default class HealthListener extends RollListener {
 

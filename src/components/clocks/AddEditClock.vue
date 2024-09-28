@@ -18,10 +18,11 @@
 </template>
 
 <script setup lang="ts">
-import { createClock } from "./helpers";
-import { Clock, NewClock } from "@/types/Clock";
-import * as v from "@/utils/validators";
 import { ref, onMounted } from "vue";
+
+import { Clock, NewClock } from "@/types/Clock";
+import { createClock } from "./helpers";
+import * as v from "@/utils/validators";
 
 const emit = defineEmits<{
   (e: "newClock", clock: NewClock): void,

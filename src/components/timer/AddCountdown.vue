@@ -17,8 +17,9 @@
 </template>
 
 <script setup lang="ts">
-import * as v from "@/utils/validators";
 import { ref, computed } from "vue";
+
+import * as v from "@/utils/validators";
 
 const isFormValid = ref(false);
 

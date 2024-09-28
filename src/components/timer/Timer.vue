@@ -38,6 +38,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+
 import { Timer } from "@/types/Timer";
 
 const timer = defineProps<Timer>();
