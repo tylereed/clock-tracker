@@ -14,7 +14,7 @@
         </v-row>
         <v-row align="center" v-for="(init, i) in initiatives" :key="i" :class="getRowClass(i) + ' init-row'" dense
           style="border-top: 1px solid darkgray;">
-          <v-col text-align="center"><v-icon v-if="i === turn" icon="mdi-circle-medium" /></v-col>
+          <v-col text-align="center"><v-icon v-show="i === turn" icon="mdi-circle-medium" /></v-col>
           <v-col><v-text-field :hide-details="true" density="compact" v-model="init.order" :rules="r.OrderRules"
               @update:focused="(focused) => updateUndoRedo(i, 'order', focused)"
               @keyup.enter.stop="nextRow($event)" /></v-col>
@@ -47,13 +47,16 @@
               </v-card>
             </v-menu>
           </v-col>
-          <v-col cols="3">{{ init.conditions }}</v-col>
+          <v-col cols="3">
+            <conditions-vue v-bind="init.conditions" @apply-condition="name => applyCondition(i, name)"
+              @remove-condition="name => removeCondition(i, name)" />
+          </v-col>
           <v-col>
             <v-btn @click.stop="deleteInitiative(i)" :class="getRowClass(i)">
               <v-icon icon="mdi-delete-forever" color="error" />
             </v-btn>
           </v-col>
-          <template v-if="i === turn && init.actions">
+          <template v-show="i === turn && init.actions">
             <v-col cols="12">
               <p v-for="attack in init.actions">
                 <b>{{ attack.name }}</b> {{ attack.desc }}
@@ -110,6 +113,7 @@
 .alternate-row {
   background: #c2cdd2;
 }
+
 .alternate-row-dark {
   background: #424242;
 }
@@ -121,10 +125,12 @@ import { useTheme } from "vuetify";
 import debounce from "debounce";
 
 import AddEditInitiative from "@/components/initiative/AddEditInitiative.vue";
+import ConditionsVue from "@/components/initiative/Conditions.vue";
 import License from "@/components/initiative/License.vue";
 import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
 import r from "@/components/initiative/InitiativeRules";
 
+import Conditions from "@/types/Conditions";
 import Dice from "@/utils/Dice";
 import { Executor, Command } from "@/utils/Executor";
 import Initiative, { Actions } from "@/types/Initiative";
@@ -335,6 +341,7 @@ async function addMonster() {
       ac: monster.armor_class,
       maxHp: monster.hit_points,
       hp: monster.hit_points,
+      conditions: {},
       actions: [...buildActions(monster.actions)]
     }
 
@@ -420,6 +427,16 @@ function validateHpChange(value: string) {
   return v.validate(hpChangeValid, value, v.isRequiredRule, v.isWholeNumber);
 }
 
+function applyCondition(index: number, name: keyof Conditions) {
+  executor.runCommand(() => { initiatives.value[index].conditions[name] = true; },
+    () => { initiatives.value[index].conditions[name] = false; });
+}
+
+function removeCondition(index: number, name: keyof Conditions) {
+  executor.runCommand(() => { initiatives.value[index].conditions[name] = false; },
+    () => { initiatives.value[index].conditions[name] = true; });
+}
+
 const saveDebounced = debounce(function () {
   try {
     const toSave = [...initiatives.value];
@@ -439,6 +456,12 @@ function loadInits() {
     if (initJson) {
       const restoredInits = JSON.parse(initJson) as Initiatives;
       if (restoredInits.length > 0) {
+        for (const init of restoredInits) {
+          if (!init.conditions) {
+            init.conditions = {};
+          }
+        }
+
         initiatives.value = restoredInits;
       }
     }

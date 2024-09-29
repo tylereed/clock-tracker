@@ -1,0 +1,17 @@
+export default interface Conditions {
+  blinded?: boolean,
+  charmed?: boolean,
+  deafened?: boolean,
+  exhausted?: boolean,
+  frightened?: boolean,
+  grappled?: boolean,
+  incapacitated?: boolean,
+  invisible?: boolean,
+  paralyzed?: boolean,
+  petrified?: boolean,
+  poisoned?: boolean,
+  prone?: boolean,
+  restrained?: boolean,
+  stunned?: boolean,
+  unconscious?: boolean,
+}

@@ -1,7 +1,7 @@
+import { CharStream, CommonTokenStream, ParseTreeWalker } from "antlr4";
+import HealthListener from "@/listeners/HealthListener";
 import RollLexer from "@/generated/parsers/RollLexer";
 import RollParser from "@/generated/parsers/RollParser";
-import HealthListener from "@/listeners/HealthListener";
-import { CharStream, CommonTokenStream, ParseTreeListener, ParseTreeWalker } from "antlr4";
 
 export default class Dice {
   #count: number;

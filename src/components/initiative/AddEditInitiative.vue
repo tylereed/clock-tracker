@@ -60,6 +60,7 @@ onMounted(() => {
       dex: props.monsterStats.dexterity,
       ac: props.monsterStats.armor_class,
       maxHp: props.monsterStats.hit_points,
+      conditions: {},
       actions: [...buildActions(props.monsterStats.actions)]
     };
   } else {
@@ -105,6 +106,7 @@ function addInitiative() {
       ac: asInt(newInit.value.ac),
       maxHp: asInt(newInit.value.maxHp),
       hp: asInt(newInit.value.maxHp),
+      conditions: {},
       actions: newInit.value.actions,
       bonusAction: newInit.value.bonusAction
     };

@@ -1,3 +1,5 @@
+import Conditions from "./Conditions";
+
 export default interface Initiative {
   name: string;
   order: number;
@@ -5,7 +7,7 @@ export default interface Initiative {
   ac?: number;
   maxHp?: number;
   hp?: number;
-  conditions?: string;
+  conditions: Conditions;
   actions?: Actions[];
   bonusAction?: Actions[];
 }
