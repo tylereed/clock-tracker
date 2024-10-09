@@ -2,75 +2,11 @@
   <v-card class="ma-2">
     <v-card-item><v-card-title>Initiative</v-card-title></v-card-item>
     <v-card-text>
-      <v-container class="init-table" fluid>
-        <v-row class="font-weight-bold" dense>
-          <v-col>Round {{ round }}</v-col>
-          <v-col>Initiative</v-col>
-          <v-col cols="3">Name</v-col>
-          <v-col>AC</v-col>
-          <v-col>Max HP</v-col>
-          <v-col>HP</v-col>
-          <v-col cols="4">Conditions</v-col>
-        </v-row>
-        <v-row align="center" v-for="(init, i) in initiatives" :key="i" :class="getRowClass(i) + ' init-row'" dense
-          style="border-top: 1px solid darkgray;">
-          <v-col text-align="center"><v-icon v-show="i === turn" icon="mdi-circle-medium" /></v-col>
-          <v-col><v-text-field :hide-details="true" density="compact" v-model="init.order" :rules="r.OrderRules"
-              @update:focused="(focused) => updateUndoRedo(i, 'order', focused)"
-              @keyup.enter.stop="nextRow($event)" /></v-col>
-          <v-col cols="3"><v-text-field :hide-details="true" density="compact" v-model="init.name" :rules="r.NameRules"
-              @update:focused="(focused) => updateUndoRedo(i, 'name', focused)"
-              @keyup.enter.stop="nextRow($event)" /></v-col>
-          <v-col><v-text-field :hide-details="true" density="compact" v-model="init.ac" :rules="r.AcRules"
-              @update:focused="(focused) => updateUndoRedo(i, 'ac', focused)"
-              @keyup.enter.stop="nextRow($event)" /></v-col>
-          <v-col><v-text-field :hide-details="true" density="compact" v-model="init.maxHp" :rules="r.MaxHpRules"
-              @update:focused="(focused) => updateUndoRedo(i, 'maxHp', focused)"
-              @keyup.enter.stop="nextRow($event)" /></v-col>
-          <v-col>
-            <v-menu location="end center" :close-on-content-click="false" :open-on-focus="true" :offset="2">
-              <template v-slot:activator="{ props }">
-                <v-text-field v-bind="props" :hide-details="true" density="compact" v-model="init.hp"
-                  :rules="[validateHp]"
-                  @update:focused="(focused) => { updateUndoRedo(i, 'hp', focused); hpChange = 0; }"
-                  @keyup.enter.stop="nextRow($event)" />
-              </template>
-              <v-card>
-                <div align="center" class="ma-2">
-                  <v-btn class="ma-1" variant="outlined" color="primary" prepend-icon="mdi-flask"
-                    @click="changeHealth(i, '+')" :disabled="!healAndDamageValid">Heal</v-btn>
-                  <v-text-field class="ma-1" density="compact" v-model="hpChange" hide-details="auto"
-                    :rules="[validateHpChange]" />
-                  <v-btn class="ma-1" variant="outlined" color="error" prepend-icon="mdi-bandage"
-                    @click="changeHealth(i, '-')" :disabled="!healAndDamageValid">Damage</v-btn>
-                </div>
-              </v-card>
-            </v-menu>
-          </v-col>
-          <v-col cols="3">
-            <conditions-vue v-bind="init.conditions" @apply-condition="name => applyCondition(i, name)"
-              @remove-condition="name => removeCondition(i, name)" />
-          </v-col>
-          <v-col>
-            <v-btn @click.stop="deleteInitiative(i)" :class="getRowClass(i)">
-              <v-icon icon="mdi-delete-forever" color="error" />
-            </v-btn>
-          </v-col>
-          <template v-show="i === turn && init.actions">
-            <v-col cols="12">
-              <p v-for="attack in init.actions">
-                <b>{{ attack.name }}</b> {{ attack.desc }}
-              </p>
-            </v-col>
-          </template>
-        </v-row>
-        <v-row>
-          <v-col><v-btn @click="decrementTurn" :disabled="turn === 0 && round === 1">Previous</v-btn></v-col>
-          <v-col><v-btn @click="incrementTurn" :disabled="initiatives.length === 0">Next</v-btn></v-col>
-          <v-col><v-btn @click="resetTurn">Reset</v-btn></v-col>
-          <v-col><v-btn @click="addInitiative" variant="elevated" color="primary">Add
-              Initiative</v-btn></v-col>
-        </v-row>
+      <initiative-table :initiatives="initiatives" :turn="turn" :round="round" @apply-condition="applyCondition"
+        @remove-condition="removeCondition" @add-initiative="addInitiativeDisplay = true"
+        @delete-initiative="deleteInitiative" @increment-turn="incrementTurn" @decrement-turn="decrementTurn"
+        @reset-turn="resetTurn" @insert-init-command="insertInitCommand" />
+      <v-container fluid>
         <v-row>
           <v-col cols="9">
             <v-autocomplete v-model="monsterSearch" :items="monsters" :custom-filter="monsterNameFilter" return-object
@@ -109,38 +45,20 @@
   </v-dialog>
 </template>
 
-<style scoped>
-.alternate-row {
-  background: #c2cdd2;
-}
-
-.alternate-row-dark {
-  background: #424242;
-}
-</style>
-
 <script setup lang="ts">
 import { computed, onBeforeMount, reactive, ref } from "vue";
-import { useTheme } from "vuetify";
 import debounce from "debounce";
 
 import AddEditInitiative from "@/components/initiative/AddEditInitiative.vue";
-import ConditionsVue from "@/components/initiative/Conditions.vue";
+import InitiativeTable from "@/components/initiative/InitiativeTable.vue";
 import License from "@/components/initiative/License.vue";
 import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
-import r from "@/components/initiative/InitiativeRules";
 
 import Conditions from "@/types/Conditions";
 import Dice from "@/utils/Dice";
 import { Executor, Command } from "@/utils/Executor";
-import Initiative, { Actions } from "@/types/Initiative";
+import Initiative, { Actions, Initiatives } from "@/types/Initiative";
 import { MonsterNameO5e as MonsterName, getMonsterListCached, getMonsterCached, MonsterO5e } from "@/utils/Open5e";
-import * as v from "@/utils/validators";
-
-type InitWithId = Initiative & { id: number };
-type Initiatives = InitWithId[];
-
-const vTheme = useTheme();
 
 const initiatives = ref<Initiatives>([]);
 
@@ -188,65 +106,6 @@ function deleteInitiative(index: number) {
     }
   });
 }
-
-function getRowClass(index: number) {
-  if (index % 2 === 1) {
-    if (vTheme.current.value.dark) {
-      return "alternate-row-dark";
-    }
-    return "alternate-row";
-  }
-}
-
-function nextRow(event: KeyboardEvent) {
-  const forward = !event.getModifierState("Shift");
-  const textfield = event.target as HTMLElement;
-  const parentRow = textfield.closest(".init-row") as HTMLElement;
-
-  if (forward) {
-    const nextRow = findSibling(parentRow, ".init-row") ?? parentRow?.closest(".init-table")?.querySelector(".init-row");
-    const nextInit = nextRow?.querySelector("input");
-    if (nextInit) {
-      nextInit.focus();
-    }
-  } else {
-    let previousRow = findPreviousSibling(parentRow, ".init-row");
-    if (!previousRow) {
-      const table = parentRow?.closest(".init-table");
-      const allRows = table?.querySelectorAll(".init-row");
-      if (allRows && allRows.length > 1) {
-        previousRow = allRows[allRows.length - 1] as HTMLElement;
-      }
-    }
-    const previousInit = previousRow?.querySelector("input");
-    if (previousInit) {
-      previousInit.focus();
-    }
-  }
-}
-
-function findSibling(element: HTMLElement, selector: string) {
-  let sibling = element?.nextElementSibling;
-  while (sibling != null) {
-    if (sibling.matches(selector)) {
-      return sibling as HTMLElement;
-    }
-    sibling = sibling.nextElementSibling;
-  }
-  return null;
-}
-
-function findPreviousSibling(element: HTMLElement, selector: string) {
-  let previous = element?.previousElementSibling;
-  while (previous != null) {
-    if (previous.matches(selector)) {
-      return previous as HTMLElement;
-    }
-    previous = previous.previousElementSibling;
-  }
-  return null;
-}
-
 
 const turn = ref(0);
 const round = ref(1);
@@ -360,20 +219,6 @@ function* buildActions(...args: ({ name: string, desc: string }[] | undefined)[]
   }
 }
 
-const oldValues = new Map<string, any>();
-function updateUndoRedo(index: number, propName: keyof Initiative, focused: boolean) {
-  if (focused) {
-    const value = initiatives.value[index][propName];
-    if (value !== "") {
-      oldValues.set(propName + index, value);
-    }
-  } else {
-    const newValue = initiatives.value[index][propName];
-    const oldValue = oldValues.get(propName + index);
-    insertInitCommand(index, propName, newValue, oldValue);
-  }
-}
-
 function insertInitCommand(index: number, propName: keyof Initiative, newValue: any, oldValue: any) {
   const initiative = initiatives.value[index];
 
@@ -401,30 +246,6 @@ function insertInitCommand(index: number, propName: keyof Initiative, newValue: 
   if (propName === "order") {
     resort();
   }
-}
-
-const hpChange = ref(0);
-const hpValid = ref(true);
-const hpChangeValid = ref(true);
-const healAndDamageValid = computed(() => hpValid.value && hpChangeValid.value);
-
-function changeHealth(index: number, type: "+" | "-") {
-  const change = +hpChange.value;
-  const oldValue = +(initiatives.value[index].hp ?? 0);
-  const newValue = type === "+" ?
-    Math.min(oldValue + change, initiatives.value[index].maxHp || Number.MAX_SAFE_INTEGER) :
-    Math.max(oldValue - change, 0);
-  initiatives.value[index].hp = newValue;
-  hpChange.value = 0;
-  insertInitCommand(index, "hp", newValue, oldValue);
-}
-
-function validateHp(value: string) {
-  return v.validate(hpValid, value, ...r.HpRules);
-}
-
-function validateHpChange(value: string) {
-  return v.validate(hpChangeValid, value, v.isRequiredRule, v.isWholeNumber);
 }
 
 function applyCondition(index: number, name: keyof Conditions) {

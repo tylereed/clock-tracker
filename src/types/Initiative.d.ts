@@ -16,3 +16,6 @@ export interface Actions {
   name: string;
   desc: string;
 }
+
+export type InitWithId = Initiative & { id: number };
+export type Initiatives = InitWithId[];
