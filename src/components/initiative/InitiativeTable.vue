@@ -51,13 +51,11 @@
           <v-icon icon="mdi-delete-forever" color="error" />
         </v-btn>
       </v-col>
-      <template v-show="i === turn && init.actions">
-        <v-col cols="12">
-          <p v-for="attack in init.actions">
-            <b>{{ attack.name }}</b> {{ attack.desc }}
-          </p>
-        </v-col>
-      </template>
+      <v-col cols="12" v-show="i === turn && init.actions">
+        <p v-for="attack in init.actions">
+          <b>{{ attack.name }}</b> {{ attack.desc }}
+        </p>
+      </v-col>
     </v-row>
     <v-row v-if="turn != null">
       <v-col><v-btn @click="emit('decrementTurn')" :disabled="turn === 0 && round === 1">Previous</v-btn></v-col>

@@ -3,7 +3,7 @@
     <v-card-item><v-card-title>Initiative</v-card-title></v-card-item>
     <v-card-text>
       <initiative-table :initiatives="initiatives" :turn="turn" :round="round" @apply-condition="applyCondition"
-        @remove-condition="removeCondition" @add-initiative="addInitiativeDisplay = true"
+        @remove-condition="removeCondition" @add-initiative="monsterStats = null; addInitiativeDisplay = true"
         @delete-initiative="deleteInitiative" @increment-turn="incrementTurn" @decrement-turn="decrementTurn"
         @reset-turn="resetTurn" @insert-init-command="insertInitCommand" />
       <v-container fluid>
