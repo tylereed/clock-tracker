@@ -19,11 +19,11 @@ export class Executor {
   }
 
   async invertCommand(param: Command) {
-    this.runCommand(param.undo, param.execute);
+    await this.runCommand(param.undo, param.execute);
   }
 
-  runCommand(command: Command): void;
-  runCommand(command: () => void | Promise<void>, undo: () => void | Promise<void>): void;
+  runCommand(command: Command): Promise<void>;
+  runCommand(command: () => void | Promise<void>, undo: () => void | Promise<void>): Promise<void>;
   async runCommand(param: Command | (() => void | Promise<void>), undo?: () => void | Promise<void>): Promise<void> {
     let command: Command;
     if (undo) {

@@ -1,41 +1,35 @@
 <template>
-  <v-card class="ma-2">
-    <v-card-item><v-card-title>Initiative</v-card-title></v-card-item>
-    <v-card-text>
-      <initiative-table :initiatives="initiatives" :turn="turn" :round="round" @apply-condition="applyCondition"
-        @remove-condition="removeCondition" @add-initiative="monsterStats = null; addInitiativeDisplay = true"
-        @delete-initiative="deleteInitiative" @increment-turn="incrementTurn" @decrement-turn="decrementTurn"
-        @reset-turn="resetTurn" @insert-init-command="insertInitCommand" />
-      <v-container fluid>
-        <v-row>
-          <v-col cols="9">
-            <v-autocomplete v-model="monsterSearch" :items="monsters" :custom-filter="monsterNameFilter" return-object
-              auto-select-first item-title="name" item-value="slug">
-              <template v-slot:item="{ props, item }">
-                <v-list-item v-bind="props" :title="''">
-                  {{ item.title }} <v-chip density="comfortable" size="x-small">{{ item.raw.document__slug }}</v-chip>
-                </v-list-item>
-              </template>
-            </v-autocomplete>
-            <br />
-            <div><v-btn @click="showLicense = !showLicense">Monster Data License Information</v-btn></div>
-          </v-col>
-          <v-col cols="3">
-            <ts-expando-button class="mt-3" :disabled="!monsterSearch" :actions="addMonsterButtons" />
-          </v-col>
-        </v-row>
-      </v-container>
-    </v-card-text>
-    <v-card-actions>
-      <v-btn :disabled="!executor.canUndo.value" @click="() => executor.undo()">
-        <v-icon icon="mdi-undo" />
-      </v-btn>
-      <v-btn :disabled="!executor.canRedo.value" @click="() => executor.redo()">
-        <v-icon icon="mdi-redo" />
-      </v-btn>
-    </v-card-actions>
-  </v-card>
-
+  <initiative-table :initiatives="initiatives" :turn="turn" :round="round" @apply-condition="applyCondition"
+    @remove-condition="removeCondition" @add-initiative="addInitiative" @delete-initiative="deleteInitiative"
+    @increment-turn="incrementTurn" @decrement-turn="decrementTurn" @reset-turn="resetTurn"
+    @insert-init-command="insertInitCommand" />
+  <v-container fluid>
+    <v-row>
+      <v-col cols="9">
+        <v-autocomplete v-model="monsterSearch" :items="monsters" :custom-filter="monsterNameFilter" return-object
+          auto-select-first item-title="name" item-value="slug">
+          <template v-slot:item="{ props, item }">
+            <v-list-item v-bind="props" :title="''">
+              {{ item.title }} <v-chip density="comfortable" size="x-small">{{ item.raw.document__slug }}</v-chip>
+            </v-list-item>
+          </template>
+        </v-autocomplete>
+        <br />
+        <div><v-btn @click="showLicense = !showLicense">Monster Data License Information</v-btn></div>
+      </v-col>
+      <v-col cols="3">
+        <ts-expando-button class="mt-3" :disabled="!monsterSearch" :actions="addMonsterButtons" />
+      </v-col>
+    </v-row>
+  </v-container>
+  <v-card-actions>
+    <v-btn :disabled="!executor.canUndo.value" @click="() => executor.undo()">
+      <v-icon icon="mdi-undo" />
+    </v-btn>
+    <v-btn :disabled="!executor.canRedo.value" @click="() => executor.redo()">
+      <v-icon icon="mdi-redo" />
+    </v-btn>
+  </v-card-actions>
   <v-dialog v-model="addInitiativeDisplay" width="50%" min-width="400px">
     <add-edit-initiative class="pa-2 ma-6" :monster-stats="monsterStats" @add-init="addInit"
       @close="addInitiativeDisplay = false" />
@@ -46,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeMount, reactive, ref } from "vue";
+import { onBeforeMount, reactive, ref } from "vue";
 import debounce from "debounce";
 
 import AddEditInitiative from "@/components/initiative/AddEditInitiative.vue";

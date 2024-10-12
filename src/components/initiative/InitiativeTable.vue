@@ -7,7 +7,8 @@
       <v-col>AC</v-col>
       <v-col>Max HP</v-col>
       <v-col>HP</v-col>
-      <v-col cols="4">Conditions</v-col>
+      <v-col v-if="hasInitiative" cols="3">Conditions</v-col>
+      <v-col></v-col>
     </v-row>
     <v-row align="center" v-for="(init, i) in initiatives" :key="i" :class="getRowClass(i) + ' init-row'" dense
       style="border-top: 1px solid darkgray;">
@@ -42,7 +43,7 @@
           </v-card>
         </v-menu>
       </v-col>
-      <v-col cols="3">
+      <v-col v-if="hasInitiative" cols="3">
         <conditions-vue v-bind="init.conditions" @apply-condition="name => emit('applyCondition', i, name)"
           @remove-condition="name => emit('removeCondition', i, name)" />
       </v-col>
@@ -90,8 +91,13 @@ import * as v from "@/utils/validators";
 
 const vTheme = useTheme();
 
-const props = defineProps<{ initiatives: Initiatives, turn?: number, round?: number }>();
-const { initiatives, turn } = toRefs(props);
+const props = defineProps<{
+  initiatives: Initiatives,
+  turn?: number,
+  round?: number,
+  hasInitiative?: boolean
+}>();
+const { initiatives } = toRefs(props);
 
 const emit = defineEmits<{
   applyCondition: [id: number, name: keyof Conditions],
