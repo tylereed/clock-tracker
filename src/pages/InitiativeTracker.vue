@@ -41,7 +41,6 @@
 
 <script setup lang="ts">
 import { onBeforeMount, reactive, ref } from "vue";
-import debounce from "debounce";
 
 import AddEditInitiative from "@/components/initiative/AddEditInitiative.vue";
 import InitiativeTable from "@/components/initiative/InitiativeTable.vue";
@@ -52,11 +51,12 @@ import Conditions from "@/types/Conditions";
 import Dice from "@/utils/Dice";
 import { Executor, Command } from "@/utils/Executor";
 import Initiative, { Actions, Initiatives } from "@/types/Initiative";
+import * as i from "@/components/initiative/initiativeHelpers";
 import { MonsterNameO5e as MonsterName, getMonsterListCached, getMonsterCached, MonsterO5e } from "@/utils/Open5e";
 
 const initiatives = ref<Initiatives>([]);
 
-const executor = new Executor(saveInits);
+const executor = new Executor(() => i.saveInits(initiatives.value, "encounter"));
 
 function addInit(init: Initiative) {
   insertInitiative(init);
@@ -65,8 +65,7 @@ function addInit(init: Initiative) {
 
 let initId = 0;
 function insertInitiative(init: Initiative) {
-  const newInit = { ...init, id: initId };
-  initId++;
+  const newInit = { ...init, id: initId++ };
 
   executor.runCommand(() => {
     setInitiatives([...initiatives.value, newInit]);
@@ -214,32 +213,13 @@ function* buildActions(...args: ({ name: string, desc: string }[] | undefined)[]
 }
 
 function insertInitCommand(index: number, propName: keyof Initiative, newValue: any, oldValue: any) {
-  const initiative = initiatives.value[index];
-
-  if (newValue == oldValue) {
-    return;
-  }
-
-  const command: Command = {
-    execute: () => {
-      const init = initiative as any;
-      init[propName] = newValue;
-      if (propName === "order") {
-        resort();
-      }
-    },
-    undo: () => {
-      const init = initiative as any;
-      init[propName] = oldValue;
+  i.insertInitCommand(executor, initiatives.value, index, propName, newValue, oldValue,
+    function () {
       if (propName === "order") {
         resort();
       }
     }
-  };
-  executor.pushUndo(command);
-  if (propName === "order") {
-    resort();
-  }
+  );
 }
 
 function applyCondition(index: number, name: keyof Conditions) {
@@ -252,38 +232,16 @@ function removeCondition(index: number, name: keyof Conditions) {
     () => { initiatives.value[index].conditions[name] = true; });
 }
 
-const saveDebounced = debounce(function () {
-  try {
-    const toSave = [...initiatives.value];
-    const saveData = JSON.stringify(toSave);
-    localStorage.setItem("inits", saveData);
-  } catch (e) {
-    console.log(e);
-  }
-}, 500);
-function saveInits() {
-  saveDebounced();
-}
-
 function loadInits() {
-  try {
-    const initJson = localStorage.getItem("inits");
-    if (initJson) {
-      const restoredInits = JSON.parse(initJson) as Initiatives;
-      if (restoredInits.length > 0) {
-        for (const init of restoredInits) {
-          if (!init.conditions) {
-            init.conditions = {};
-          }
-        }
-
-        initiatives.value = restoredInits;
-      }
-    }
-  } catch (e) {
-    console.log(e);
+  let result = i.loadInits();
+  if (result.length) {
+    i.saveInits(result, "encounter");
+    i.deleteInits();
+  } else {
+    result = i.loadInits("encounter");
   }
+  return result;
 }
 
-loadInits();
+initiatives.value = loadInits();
 </script>
