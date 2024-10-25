@@ -31,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 
 import InitiativeTable from "@/components/initiative/InitiativeTable.vue";
 import * as i from "@/components/initiative/initiativeHelpers";
@@ -44,15 +44,32 @@ const PartyNamePrefix = "party-";
 const FullPrefix = i.makeKey(PartyNamePrefix)
 
 
-const allInitiatives = ref(new Map<string, Initiatives>(loadAllParties()));
-const partyNames = computed(() => [...allInitiatives.value.keys()]);
+const allInitiatives = ref<Map<string, Initiatives>>();
+const initiatives = ref<Initiatives>([]);
+const partyNames = computed(() => allInitiatives.value ? [...allInitiatives.value.keys()] : []);
 const search = ref<string>("Default");
 const selectedParty = ref<string>("Default");
-const initiatives = computed(() => allInitiatives.value.get(selectedParty.value)!);
 
-pcId = allInitiatives.value.values().flatMap(x => x).map(x => x.order).reduce((x, y) => x > y ? x : y);
+watch(selectedParty, (value) => {
+  if (value && allInitiatives.value) {
+    initiatives.value = allInitiatives.value?.get(value) ?? [];
+  } else {
+    initiatives.value = [];
+  }
+});
 
 const executor = new Executor(() => i.saveInits(initiatives.value, `${PartyNamePrefix}${selectedParty.value}`));
+
+onMounted(() => {
+  allInitiatives.value = new Map<string, Initiatives>(loadAllParties());
+  pcId = [...allInitiatives.value.values()].flatMap(x => x).map(x => x.order).reduce((x, y) => x > y ? x : y);
+  
+  const i = allInitiatives.value.keys();
+  const first = i.next();
+  if (!first.done) {
+    setSelected(first.value);
+  }
+});
 
 function newPc(): InitWithId {
   return {
@@ -64,23 +81,23 @@ function newPc(): InitWithId {
 }
 
 function setSelected(selected: string) {
-  if (allInitiatives.value.has(selected)) {
-    selectedParty.value = selected;
+  if (allInitiatives.value?.has(selected)) {
+    search.value = selectedParty.value = selected;
   }
 }
 
 function createNewParty() {
-  if (!allInitiatives.value.has(search.value)) {
+  if (!allInitiatives.value?.has(search.value)) {
     const selectedPartyName = selectedParty.value;
     const newPartyName = search.value;
     const newParty = [newPc()];
 
     executor.runCommand(() => {
-      allInitiatives.value.set(newPartyName, [...newParty]);
+      allInitiatives.value!.set(newPartyName, [...newParty]);
       search.value = selectedParty.value = newPartyName;
     }, () => {
       search.value = selectedParty.value = selectedPartyName;
-      allInitiatives.value.delete(newPartyName);
+      allInitiatives.value!.delete(newPartyName);
     });
   }
 }
