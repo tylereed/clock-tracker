@@ -61,6 +61,10 @@ const PartyNamePrefix = "party-";
 const FullPrefix = i.makeKey(PartyNamePrefix)
 
 
+const emit = defineEmits<{
+  (e: "sendToInitiative", inits: Initiatives): void,
+}>();
+
 const allInitiatives = ref<Map<string, Initiatives>>();
 const initiatives = ref<Initiatives>([]);
 const partyNames = computed(() => allInitiatives.value ? [...allInitiatives.value.keys()] : []);
@@ -152,6 +156,10 @@ function addPc() {
       setSelected(selected);
       initiatives.value.pop();
     });
+}
+
+function sendToInit() {
+  emit("sendToInitiative", initiatives.value);
 }
 
 function deleteInitiative(id: number) {

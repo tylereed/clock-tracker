@@ -40,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeMount, reactive, ref } from "vue";
+import { onBeforeMount, onMounted, reactive, ref, toRefs } from "vue";
 
 import AddEditInitiative from "@/components/initiative/AddEditInitiative.vue";
 import InitiativeTable from "@/components/initiative/InitiativeTable.vue";
@@ -54,7 +54,12 @@ import Initiative, { Actions, Initiatives } from "@/types/Initiative";
 import * as i from "@/components/initiative/initiativeHelpers";
 import { MonsterNameO5e as MonsterName, getMonsterListCached, getMonsterCached, MonsterO5e } from "@/utils/Open5e";
 
-const initiatives = ref<Initiatives>([]);
+const emit = defineEmits<{
+  (e: "setInitiatives", inits: Initiatives): void,
+}>();
+
+const props = defineProps<{ initiatives: Initiatives}>();
+const { initiatives } = toRefs(props);
 
 const columns = i.buildInitiativeColumns({ hasInitiative: true, hasHp: true, hasConditions: true });
 
@@ -72,7 +77,8 @@ function insertInitiative(init: Initiative) {
   executor.runCommand(() => {
     setInitiatives([...initiatives.value, newInit]);
   }, (): void => {
-    initiatives.value = initiatives.value.filter(x => x.id !== newInit.id)
+    setInitiatives(initiatives.value.filter(x => x.id !== newInit.id));
+    //initiatives.value = initiatives.value.filter(x => x.id !== newInit.id)
   });
 
 }
@@ -82,7 +88,7 @@ function resort() {
 }
 
 function setInitiatives(inits: Initiatives) {
-  initiatives.value = inits.sort((a, b) => b.order - a.order || (b.dex ?? 0) - (a.dex ?? 0));
+  emit("setInitiatives", inits);
 }
 
 function deleteInitiative(index: number) {
@@ -90,6 +96,7 @@ function deleteInitiative(index: number) {
   const incrementTurn = turn.value > index;
 
   executor.runCommand(() => {
+    //initiatives.value.filter((init, i) => index !== i);
     initiatives.value.splice(index, 1);
     if (turn.value > index) {
       turn.value--;
@@ -245,5 +252,9 @@ function loadInits() {
   return result;
 }
 
-initiatives.value = loadInits();
+onMounted(() => {
+  setInitiatives(loadInits());
+});
+
+//initiatives.value = loadInits();
 </script>
