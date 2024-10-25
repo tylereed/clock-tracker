@@ -19,3 +19,13 @@ export interface Actions {
 
 export type InitWithId = Initiative & { id: number };
 export type Initiatives = InitWithId[];
+
+export interface InitiativeColumns {
+  hasInitiative: boolean,
+  hasDex: boolean,
+  hasName: boolean,
+  hasAc: boolean,
+  hasMaxHp: boolean,
+  hasHp: boolean,
+  hasConditions: boolean
+}

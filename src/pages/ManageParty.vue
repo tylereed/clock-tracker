@@ -24,12 +24,15 @@
     </v-row>
   </v-container>
 
-  <initiative-table :initiatives="initiatives" @delete-initiative="deleteInitiative"
+  <initiative-table :initiatives="initiatives" :columns="columns" @delete-initiative="deleteInitiative"
     @insert-init-command="insertInitCommand" />
   <v-container fluid>
     <v-row>
-      <v-col cols="3">
+      <v-col>
         <v-btn variant="elevated" color="primary" @click="addPc">Add</v-btn>
+      </v-col>
+      <v-col>
+        <v-btn variant="elevated" color="primary" @click="sendToInit">Send to Initiative</v-btn>
       </v-col>
     </v-row>
   </v-container>
@@ -72,6 +75,8 @@ watch(selectedParty, (value) => {
   }
 });
 
+const columns = i.buildInitiativeColumns({ hasDex: true });
+
 const executor = new Executor(() => i.saveInits(initiatives.value, `${PartyNamePrefix}${selectedParty.value}`));
 
 onMounted(() => {
@@ -95,7 +100,8 @@ function newPc(): InitWithId {
 
 function setSelected(selected?: string | null) {
   if (selected && allInitiatives.value?.has(selected)) {
-    search.value = selectedParty.value = selected;
+    search.value = selected;
+    selectedParty.value = selected;
   }
 }
 

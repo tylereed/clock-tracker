@@ -1,7 +1,7 @@
 import debounce from "debounce";
 
 import { Command, Executor } from "@/utils/Executor";
-import Initiative, { Initiatives } from "@/types/Initiative";
+import Initiative, { InitiativeColumns, Initiatives } from "@/types/Initiative";
 
 export function makeKey(name?: string) {
   return name ? "inits-" + name : "inits";
@@ -72,4 +72,18 @@ export function insertInitCommand(executor: Executor, initiatives: Initiatives,
   };
   executor.pushUndo(command);
   callback?.call(undefined);
+}
+
+export function buildInitiativeColumns(columns: Partial<InitiativeColumns>) {
+  const defaultColumns: InitiativeColumns = {
+    hasInitiative: false,
+    hasDex: false,
+    hasName: true,
+    hasAc: true,
+    hasMaxHp: true,
+    hasHp: false,
+    hasConditions: false
+  };
+
+  return { ...defaultColumns, ...columns };
 }

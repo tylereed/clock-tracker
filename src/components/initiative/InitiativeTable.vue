@@ -1,30 +1,36 @@
 <template>
   <v-container class="init-table" fluid>
     <v-row class="font-weight-bold" dense>
-      <v-col v-if="round != null">Round {{ round }}</v-col>
-      <v-col>Initiative</v-col>
-      <v-col cols="3">Name</v-col>
-      <v-col>AC</v-col>
-      <v-col>Max HP</v-col>
-      <v-col>HP</v-col>
-      <v-col v-if="hasInitiative" cols="3">Conditions</v-col>
-      <v-col></v-col>
+      <v-col v-if="hasTurnOrder">Round {{ round }}</v-col>
+      <v-col v-if="hasInitiative">Initiative</v-col>
+      <v-col v-if="hasDex">Dex</v-col>
+      <v-col cols="3" v-if="hasName">Name</v-col>
+      <v-col v-if="hasAc">AC</v-col>
+      <v-col v-if="hasMaxHp">Max HP</v-col>
+      <v-col v-if="hasHp">HP</v-col>
+      <v-col v-if="hasConditions" cols="3">Conditions</v-col>
+      <v-col cols="1"></v-col>
     </v-row>
     <v-row align="center" v-for="(init, i) in initiatives" :key="i" :class="getRowClass(i) + ' init-row'" dense
       style="border-top: 1px solid darkgray;">
-      <v-col text-align="center" v-if="turn != null"><v-icon v-show="i === turn" icon="mdi-circle-medium" /></v-col>
-      <v-col><v-text-field :hide-details="true" density="compact" v-model="init.order" :rules="r.OrderRules"
-          @update:focused="(focused) => updateUndoRedo(i, 'order', focused)"
+      <v-col v-if="hasTurnOrder" text-align="center"><v-icon v-show="i === turn" icon="mdi-circle-medium" /></v-col>
+      <v-col v-if="hasInitiative">
+        <v-text-field :hide-details="true" density="compact" v-model="init.order" :rules="r.OrderRules"
+          @update:focused="(focused) => updateUndoRedo(i, 'order', focused)" @keyup.enter.stop="nextRow($event)" />
+      </v-col>
+      <v-col v-if="hasDex">
+        <v-text-field :hide-details="true" density="compact" v-model="init.dex" :rules="r.DexRules"
+          @update:focused="(focused) => updateUndoRedo(i, 'dex', focused)" @keyup.enter.stop="nextRow($event)" />
+      </v-col>
+      <v-col cols="3" v-if="hasName"><v-text-field :hide-details="true" density="compact" v-model="init.name"
+          :rules="r.NameRules" @update:focused="(focused) => updateUndoRedo(i, 'name', focused)"
           @keyup.enter.stop="nextRow($event)" /></v-col>
-      <v-col cols="3"><v-text-field :hide-details="true" density="compact" v-model="init.name" :rules="r.NameRules"
-          @update:focused="(focused) => updateUndoRedo(i, 'name', focused)"
-          @keyup.enter.stop="nextRow($event)" /></v-col>
-      <v-col><v-text-field :hide-details="true" density="compact" v-model="init.ac" :rules="r.AcRules"
+      <v-col v-if="hasAc"><v-text-field :hide-details="true" density="compact" v-model="init.ac" :rules="r.AcRules"
           @update:focused="(focused) => updateUndoRedo(i, 'ac', focused)" @keyup.enter.stop="nextRow($event)" /></v-col>
-      <v-col><v-text-field :hide-details="true" density="compact" v-model="init.maxHp" :rules="r.MaxHpRules"
-          @update:focused="(focused) => updateUndoRedo(i, 'maxHp', focused)"
+      <v-col v-if="hasMaxHp"><v-text-field :hide-details="true" density="compact" v-model="init.maxHp"
+          :rules="r.MaxHpRules" @update:focused="(focused) => updateUndoRedo(i, 'maxHp', focused)"
           @keyup.enter.stop="nextRow($event)" /></v-col>
-      <v-col>
+      <v-col v-if="hasHp">
         <v-menu location="end center" :close-on-content-click="false" :open-on-focus="true" :offset="2">
           <template v-slot:activator="{ props }">
             <v-text-field v-bind="props" :hide-details="true" density="compact" v-model="init.hp" :rules="[validateHp]"
@@ -43,11 +49,11 @@
           </v-card>
         </v-menu>
       </v-col>
-      <v-col v-if="hasInitiative" cols="3">
+      <v-col v-if="hasConditions" cols="3">
         <conditions-vue v-bind="init.conditions" @apply-condition="name => emit('applyCondition', i, name)"
           @remove-condition="name => emit('removeCondition', i, name)" />
       </v-col>
-      <v-col>
+      <v-col cols="1">
         <v-btn @click.stop="emit('deleteInitiative', i)" :class="getRowClass(i)">
           <v-icon icon="mdi-delete-forever" color="error" />
         </v-btn>
@@ -58,7 +64,7 @@
         </p>
       </v-col>
     </v-row>
-    <v-row v-if="turn != null">
+    <v-row v-if="hasTurnOrder">
       <v-col><v-btn @click="emit('decrementTurn')" :disabled="turn === 0 && round === 1">Previous</v-btn></v-col>
       <v-col><v-btn @click="emit('incrementTurn')" :disabled="initiatives.length === 0">Next</v-btn></v-col>
       <v-col><v-btn @click="emit('resetTurn')">Reset</v-btn></v-col>
@@ -85,7 +91,7 @@ import { useTheme } from "vuetify";
 
 import Conditions from "@/types/Conditions";
 import { findSibling, findPreviousSibling } from "@/utils/helpers";
-import Initiative, { Initiatives } from "@/types/Initiative";
+import Initiative, { InitiativeColumns, Initiatives } from "@/types/Initiative";
 import r from "@/components/initiative/InitiativeRules";
 import * as v from "@/utils/validators";
 
@@ -95,9 +101,11 @@ const props = defineProps<{
   initiatives: Initiatives,
   turn?: number,
   round?: number,
-  hasInitiative?: boolean
+  columns: InitiativeColumns
 }>();
-const { initiatives } = toRefs(props);
+const { initiatives, turn, round } = toRefs(props);
+const { hasInitiative, hasDex, hasName, hasAc, hasMaxHp, hasHp, hasConditions } = toRefs(props.columns);
+const hasTurnOrder = computed(() => turn.value != null && round.value != null);
 
 const emit = defineEmits<{
   applyCondition: [id: number, name: keyof Conditions],

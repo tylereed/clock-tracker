@@ -1,8 +1,8 @@
 <template>
-  <initiative-table :initiatives="initiatives" :turn="turn" :round="round" @apply-condition="applyCondition"
-    @remove-condition="removeCondition" @add-initiative="addInitiative" @delete-initiative="deleteInitiative"
-    @increment-turn="incrementTurn" @decrement-turn="decrementTurn" @reset-turn="resetTurn"
-    @insert-init-command="insertInitCommand" />
+  <initiative-table :initiatives="initiatives" :turn="turn" :round="round" :columns="columns"
+    @apply-condition="applyCondition" @remove-condition="removeCondition" @add-initiative="addInitiative"
+    @delete-initiative="deleteInitiative" @increment-turn="incrementTurn" @decrement-turn="decrementTurn"
+    @reset-turn="resetTurn" @insert-init-command="insertInitCommand" />
   <v-container fluid>
     <v-row>
       <v-col cols="9">
@@ -55,6 +55,8 @@ import * as i from "@/components/initiative/initiativeHelpers";
 import { MonsterNameO5e as MonsterName, getMonsterListCached, getMonsterCached, MonsterO5e } from "@/utils/Open5e";
 
 const initiatives = ref<Initiatives>([]);
+
+const columns = i.buildInitiativeColumns({ hasInitiative: true, hasHp: true, hasConditions: true });
 
 const executor = new Executor(() => i.saveInits(initiatives.value, "encounter"));
 
