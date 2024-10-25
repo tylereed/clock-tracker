@@ -12,7 +12,7 @@
     <v-card-text>
       <v-tabs-window v-model="selectedTab">
         <v-tabs-window-item value="Initiative">
-          <initiative-tracker :initiatives="encounter" @set-initiatives="updateEncounter" />
+          <initiative-tracker ref="tracker" />
         </v-tabs-window-item>
         <v-tabs-window-item value="Party">
           <manage-party @send-to-initiative="addParty" />
@@ -37,13 +37,15 @@ import { Initiatives } from "@/types/Initiative";
 type TabTypes = "Initiative" | "Party" | "Monsters";
 const selectedTab = ref<TabTypes>("Initiative");
 
-const encounter = ref<Initiatives>([]);
+const tracker = ref<{ insertInitiatives: (inits: Initiatives, clear?: boolean) => void }>();
 
-function updateEncounter(inits: Initiatives) {
-  encounter.value = inits.sort((a, b) => b.order - a.order || (b.dex ?? 0) - (a.dex ?? 0));
-}
+// function updateEncounter(inits: Initiatives) {
+//   //encounter.value = inits.sort((a, b) => b.order - a.order || (b.dex ?? 0) - (a.dex ?? 0));
+// }
 
 function addParty(inits: Initiatives) {
-  updateEncounter([...encounter.value, ...inits]);
+  tracker.value?.insertInitiatives(inits);
+  selectedTab.value = "Initiative";
+  //updateEncounter([...encounter.value, ...inits]);
 }
 </script>
