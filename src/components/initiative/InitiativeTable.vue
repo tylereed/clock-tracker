@@ -103,8 +103,8 @@ const props = defineProps<{
   round?: number,
   columns: InitiativeColumns
 }>();
-const { initiatives, turn, round } = toRefs(props);
-const { hasInitiative, hasDex, hasName, hasAc, hasMaxHp, hasHp, hasConditions } = toRefs(props.columns);
+const { initiatives, turn, round, columns } = toRefs(props);
+const { hasInitiative, hasDex, hasName, hasAc, hasMaxHp, hasHp, hasConditions } = columns.value;
 const hasTurnOrder = computed(() => turn.value != null && round.value != null);
 
 const emit = defineEmits<{
