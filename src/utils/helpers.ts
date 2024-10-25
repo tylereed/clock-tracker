@@ -41,3 +41,10 @@ export function findPreviousSibling(element: HTMLElement, selector: string) {
   }
   return null;
 }
+
+export function first<T>(items: Iterable<T>): T | null {
+  for (const i of items) {
+    return i;
+  }
+  return null;
+}
