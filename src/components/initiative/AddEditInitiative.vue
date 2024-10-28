@@ -36,7 +36,7 @@ import Initiative, { Actions } from "@/types/Initiative";
 import { MonsterO5e } from "@/utils/Open5e";
 import v from "./InitiativeRules";
 
-const props = defineProps<{ monsterStats: MonsterO5e | null }>();
+const props = defineProps<{ monsterStats?: MonsterO5e | null }>();
 
 const emit = defineEmits<{
   (e: "addInit", init: Initiative): void,
