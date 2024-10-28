@@ -18,7 +18,7 @@
           <manage-party @send-to-initiative="addParty" />
         </v-tabs-window-item>
         <v-tabs-window-item value="Monsters">
-          <manage-monsters />
+          <manage-monsters @send-to-initiative="addMonsters" />
         </v-tabs-window-item>
       </v-tabs-window>
     </v-card-text>
@@ -39,13 +39,13 @@ const selectedTab = ref<TabTypes>("Initiative");
 
 const tracker = ref<{ insertInitiatives: (inits: Initiatives, clear?: boolean) => void }>();
 
-// function updateEncounter(inits: Initiatives) {
-//   //encounter.value = inits.sort((a, b) => b.order - a.order || (b.dex ?? 0) - (a.dex ?? 0));
-// }
-
 function addParty(inits: Initiatives) {
   tracker.value?.insertInitiatives(inits);
   selectedTab.value = "Initiative";
-  //updateEncounter([...encounter.value, ...inits]);
+}
+
+function addMonsters(inits: Initiatives) {
+  tracker.value?.insertInitiatives(inits, false);
+  selectedTab.value = "Initiative";
 }
 </script>

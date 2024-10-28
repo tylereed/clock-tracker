@@ -2,8 +2,8 @@
   <v-container fluid>
     <v-row>
       <v-col cols="11">
-        <v-combobox label="Party" v-model="search" @update:model-value="setSelected" :items="partyNames"
-          @keyup.enter="createNewParty" :hide-no-data="false">
+        <v-combobox :label="label" v-model="search" @update:model-value="setSelected" :items="groupNames"
+          @keyup.enter="createNewGroup" :hide-no-data="false">
           <template v-slot:no-data>
             <v-list-item>
               <v-list-item-title>
@@ -16,8 +16,8 @@
       </v-col>
       <v-col>
         <div class="pt-2">
-          <v-btn :disabled="partyNames.length <= 1">
-            <v-icon icon="mdi-delete-forever" color="error" @click="deleteSelectedParty" />
+          <v-btn :disabled="groupNames.length <= 1">
+            <v-icon icon="mdi-delete-forever" color="error" @click="deleteSelectedGroup" />
           </v-btn>
         </div>
       </v-col>
@@ -29,7 +29,7 @@
   <v-container fluid>
     <v-row>
       <v-col>
-        <v-btn variant="elevated" color="primary" @click="addPc">Add</v-btn>
+        <v-btn variant="elevated" color="primary" @click="addEntry">Add</v-btn>
       </v-col>
       <v-col>
         <v-btn variant="elevated" color="primary" @click="sendToInit">Send to Initiative</v-btn>
@@ -56,9 +56,14 @@ import { Executor } from "@/utils/Executor";
 import Initiative, { Initiatives, InitWithId } from "@/types/Initiative";
 import { first } from "@/utils/helpers";
 
-let pcId = 0;
-const PartyNamePrefix = "party-";
-const FullPrefix = i.makeKey(PartyNamePrefix)
+const props = defineProps<{
+	label: string,
+	groupNamePrefix: string,
+}>();
+
+let entryId = 0;
+const GroupNamePrefix = computed(() => props.groupNamePrefix + "-"); //"party-";
+const FullPrefix = computed(() => i.makeKey(props.groupNamePrefix));
 
 
 const emit = defineEmits<{
@@ -67,11 +72,11 @@ const emit = defineEmits<{
 
 const allInitiatives = ref<Map<string, Initiatives>>();
 const initiatives = ref<Initiatives>([]);
-const partyNames = computed(() => allInitiatives.value ? [...allInitiatives.value.keys()] : []);
+const groupNames = computed(() => allInitiatives.value ? [...allInitiatives.value.keys()] : []);
 const search = ref<string>("Default");
-const selectedParty = ref<string>("Default");
+const selectedGroup = ref<string>("Default");
 
-watch(selectedParty, (value) => {
+watch(selectedGroup, (value) => {
   if (value && allInitiatives.value) {
     initiatives.value = allInitiatives.value?.get(value) ?? [];
   } else {
@@ -81,21 +86,21 @@ watch(selectedParty, (value) => {
 
 const columns = i.buildInitiativeColumns({ hasDex: true });
 
-const executor = new Executor(() => i.saveInits(initiatives.value, `${PartyNamePrefix}${selectedParty.value}`));
+const executor = new Executor(() => i.saveInits(initiatives.value, `${GroupNamePrefix.value}${selectedGroup.value}`));
 
 onMounted(() => {
-  allInitiatives.value = new Map<string, Initiatives>(loadAllParties());
-  pcId = [...allInitiatives.value.values()].flatMap(x => x).map(x => x.order).reduce((x, y) => x > y ? x : y);
+  allInitiatives.value = new Map<string, Initiatives>(loadAllGroups());
+  entryId = [...allInitiatives.value.values()].flatMap(x => x).map(x => x.order).reduce((x, y) => x > y ? x : y);
 
-  const f = first(partyNames.value);
+  const f = first(groupNames.value);
   if (f) {
     setSelected(f);
   }
 });
 
-function newPc(): InitWithId {
+function newEntry(): InitWithId {
   return {
-    id: pcId++,
+    id: entryId++,
     order: 0,
     name: "",
     conditions: {},
@@ -105,48 +110,48 @@ function newPc(): InitWithId {
 function setSelected(selected?: string | null) {
   if (selected && allInitiatives.value?.has(selected)) {
     search.value = selected;
-    selectedParty.value = selected;
+    selectedGroup.value = selected;
   }
 }
 
-function createNewParty() {
+function createNewGroup() {
   if (!allInitiatives.value?.has(search.value)) {
-    const selectedPartyName = selectedParty.value;
-    const newPartyName = search.value;
-    const newParty = [newPc()];
+    const selectedGroupName = selectedGroup.value;
+    const newGroupName = search.value;
+    const newGroup = [newEntry()];
 
     executor.runCommand(() => {
-      allInitiatives.value!.set(newPartyName, [...newParty]);
-      setSelected(newPartyName);
+      allInitiatives.value!.set(newGroupName, [...newGroup]);
+      setSelected(newGroupName);
     },
       () => {
-        setSelected(selectedPartyName);
-        allInitiatives.value!.delete(newPartyName);
+        setSelected(selectedGroupName);
+        allInitiatives.value!.delete(newGroupName);
       });
   }
 }
 
-function deleteSelectedParty() {
-  if (selectedParty.value && allInitiatives.value?.has(selectedParty.value)) {
-    const toDeleteKey = selectedParty.value;
-    const oldParty = [...initiatives.value];
+function deleteSelectedGroup() {
+  if (selectedGroup.value && allInitiatives.value?.has(selectedGroup.value)) {
+    const toDeleteKey = selectedGroup.value;
+    const oldGroup = [...initiatives.value];
 
     executor.runCommand(() => {
       allInitiatives.value?.delete(toDeleteKey);
-      i.deleteInits(PartyNamePrefix + toDeleteKey);
-      setSelected(first(partyNames.value));
+      i.deleteInits(GroupNamePrefix.value + toDeleteKey);
+      setSelected(first(groupNames.value));
     },
       () => {
-        allInitiatives.value?.set(toDeleteKey, oldParty);
-        i.saveInits(oldParty, PartyNamePrefix + toDeleteKey);
+        allInitiatives.value?.set(toDeleteKey, oldGroup);
+        i.saveInits(oldGroup, GroupNamePrefix.value + toDeleteKey);
         setSelected(toDeleteKey);
       });
   }
 }
 
-function addPc() {
-  const toAdd = newPc();
-  const selected = selectedParty.value;
+function addEntry() {
+  const toAdd = newEntry();
+  const selected = selectedGroup.value;
 
   executor.runCommand(() => {
     setSelected(selected);
@@ -164,7 +169,7 @@ function sendToInit() {
 
 function deleteInitiative(id: number) {
   const removed = initiatives.value[id];
-  const selected = selectedParty.value;
+  const selected = selectedGroup.value;
 
   executor.runCommand(() => {
     setSelected(selected);
@@ -177,34 +182,34 @@ function deleteInitiative(id: number) {
 }
 
 function insertInitCommand(index: number, propName: keyof Initiative, newValue: any, oldValue: any) {
-  const selected = selectedParty.value;
+  const selected = selectedGroup.value;
   i.insertInitCommand(executor, initiatives.value, index, propName, newValue, oldValue,
     () => {
       setSelected(selected);
     });
 }
 
-function* loadAllParties(): Generator<readonly [string, Initiatives], void, unknown> {
+function* loadAllGroups(): Generator<readonly [string, Initiatives], void, unknown> {
   let returned = false;
 
-  for (const partyName of loadPartyNameKeys()) {
-    const party = i.loadInits(PartyNamePrefix + partyName);
+  for (const groupName of loadGroupNameKeys()) {
+    const group = i.loadInits(GroupNamePrefix.value + groupName);
     returned = true;
-    yield [partyName, party] as const;
+    yield [groupName, group] as const;
   }
 
   if (!returned) {
-    yield ["Default", [newPc()]] as const;
+    yield ["Default", [newEntry()]] as const;
   }
 }
 
-function* loadPartyNameKeys() {
+function* loadGroupNameKeys() {
   const count = localStorage.length;
-  const prefixLength = FullPrefix.length;
+  const prefixLength = FullPrefix.value.length;
 
   for (let i = 0; i < count; i++) {
     const key = localStorage.key(i);
-    if (key?.startsWith(FullPrefix)) {
+    if (key?.startsWith(FullPrefix.value)) {
       yield key.substring(prefixLength);
     }
   }
