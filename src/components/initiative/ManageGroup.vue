@@ -61,14 +61,13 @@ const props = defineProps<{
 	groupNamePrefix: string,
 }>();
 
-let entryId = 0;
-const GroupNamePrefix = computed(() => props.groupNamePrefix + "-"); //"party-";
-const FullPrefix = computed(() => i.makeKey(props.groupNamePrefix));
-
-
 const emit = defineEmits<{
   (e: "sendToInitiative", inits: Initiatives): void,
 }>();
+
+let entryId = 0;
+const GroupNamePrefix = computed(() => props.groupNamePrefix + "-"); //"party-";
+const FullPrefix = computed(() => i.makeKey(GroupNamePrefix.value));
 
 const allInitiatives = ref<Map<string, Initiatives>>();
 const initiatives = ref<Initiatives>([]);
