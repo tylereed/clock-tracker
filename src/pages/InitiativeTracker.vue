@@ -151,9 +151,19 @@ function addInitiative() {
 
 function clearInitiative() {
   const oldInits = [...initiatives.value];
+  const oldTurn = turn.value;
+  const oldRound = round.value;
 
-  executor.runCommand(() => { initiatives.value = [] },
-    () => { initiatives.value = oldInits });
+  executor.runCommand(() => {
+    initiatives.value = [];
+    turn.value = 0;
+    round.value = 1;
+  },
+    () => {
+      initiatives.value = oldInits;
+      turn.value = oldTurn;
+      round.value = oldRound;
+    });
 }
 
 function addMonster(monster: Initiative) {
