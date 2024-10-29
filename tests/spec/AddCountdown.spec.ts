@@ -3,8 +3,8 @@ import { describe, expect, test } from "vitest";
 import { createVuetify } from "vuetify";
 import * as components from "vuetify/components";
 import * as directives from "vuetify/directives";
-import AddCountDown from "../../src/components/timer/AddCountdown.vue";
-import { ErrorMessages } from "../../src/utils/validators";
+import AddCountDown from "@/components/timer/AddCountdown.vue";
+import { ErrorMessages } from "@/utils/validators";
 
 const vuetify = createVuetify({
   components,
