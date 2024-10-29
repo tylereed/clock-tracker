@@ -1,9 +1,15 @@
 <template>
   <div>
     <initiative-table :initiatives="initiatives" :turn="turn" :round="round" :columns="columns"
-      @apply-condition="applyCondition" @remove-condition="removeCondition" @add-initiative="addInitiative"
-      @delete-initiative="deleteInitiative" @increment-turn="incrementTurn" @decrement-turn="decrementTurn"
-      @reset-turn="resetTurn" @insert-init-command="insertInitCommand" />
+      @apply-condition="applyCondition" @remove-condition="removeCondition" @delete-initiative="deleteInitiative"
+      @increment-turn="incrementTurn" @decrement-turn="decrementTurn" @reset-turn="resetTurn"
+      @insert-init-command="insertInitCommand" />
+    <v-container fluid>
+      <v-row>
+        <v-col><v-btn @click="addInitiative" variant="elevated" color="primary">Add
+            Initiative</v-btn></v-col>
+        <v-col cols="8"><v-btn @click="clearInitiative" variant="outlined" color="error">Clear</v-btn></v-col>
+      </v-row></v-container>
     <monster-search @add-monster="addMonster" />
     <v-card-actions>
       <v-btn :disabled="!executor.canUndo.value" @click="() => executor.undo()">
@@ -141,6 +147,13 @@ function resetTurn() {
 const addInitiativeDisplay = ref(false);
 function addInitiative() {
   addInitiativeDisplay.value = true;
+}
+
+function clearInitiative() {
+  const oldInits = [...initiatives.value];
+
+  executor.runCommand(() => { initiatives.value = [] },
+    () => { initiatives.value = oldInits });
 }
 
 function addMonster(monster: Initiative) {

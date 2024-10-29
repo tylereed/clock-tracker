@@ -36,6 +36,7 @@
       </v-col>
     </v-row>
   </v-container>
+  <monster-search v-if="showMonster" @add-monster="addExistingMonster" />
   <v-card-actions>
     <v-btn :disabled="!executor.canUndo.value" @click="() => executor.undo()">
       <v-icon icon="mdi-undo" />
@@ -51,14 +52,16 @@ import { computed, onMounted, ref, watch } from "vue";
 
 import InitiativeTable from "@/components/initiative/InitiativeTable.vue";
 import * as i from "@/components/initiative/initiativeHelpers";
+import MonsterSearch from "./MonsterSearch.vue";
 
 import { Executor } from "@/utils/Executor";
 import Initiative, { Initiatives, InitWithId } from "@/types/Initiative";
 import { first } from "@/utils/helpers";
 
 const props = defineProps<{
-	label: string,
-	groupNamePrefix: string,
+  label: string,
+  groupNamePrefix: string,
+  showMonster?: boolean,
 }>();
 
 const emit = defineEmits<{
@@ -148,8 +151,8 @@ function deleteSelectedGroup() {
   }
 }
 
-function addEntry() {
-  const toAdd = newEntry();
+function addEntry(init?: InitWithId) {
+  const toAdd = init ?? newEntry();
   const selected = selectedGroup.value;
 
   executor.runCommand(() => {
@@ -160,6 +163,10 @@ function addEntry() {
       setSelected(selected);
       initiatives.value.pop();
     });
+}
+
+function addExistingMonster(monster: Initiative) {
+  addEntry({ ...monster, id: entryId++ })
 }
 
 function sendToInit() {

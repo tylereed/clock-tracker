@@ -68,8 +68,6 @@
       <v-col><v-btn @click="emit('decrementTurn')" :disabled="turn === 0 && round === 1">Previous</v-btn></v-col>
       <v-col><v-btn @click="emit('incrementTurn')" :disabled="initiatives.length === 0">Next</v-btn></v-col>
       <v-col><v-btn @click="emit('resetTurn')">Reset</v-btn></v-col>
-      <v-col><v-btn @click="emit('addInitiative')" variant="elevated" color="primary">Add
-          Initiative</v-btn></v-col>
     </v-row>
   </v-container>
 </template>
