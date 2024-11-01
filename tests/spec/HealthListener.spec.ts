@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
-import RollLexer from "@/generated/parsers/RollLexer";
-import RollParser from "@/generated/parsers/RollParser";
-import HealthListener from "@/listeners/HealthListener";
+import RollLexer from "../../src/generated/parsers/RollLexer";
+import RollParser from "../../src/generated/parsers/RollParser";
+import HealthListener from "../../src/listeners/HealthListener";
 import { CharStream, CommonTokenStream, ParseTreeListener, ParseTreeWalker } from "antlr4";
 
 describe("HealthListener", () => {

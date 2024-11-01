@@ -3,8 +3,8 @@ import { describe, expect, test } from "vitest";
 import { createVuetify } from "vuetify";
 import * as components from "vuetify/components";
 import * as directives from "vuetify/directives";
-import TimerVue from "@/components/timer/Timer.vue";
-import { Timer } from "@/types/Timer";
+import TimerVue from "../../src/components/timer/Timer.vue";
+import { Timer } from "../../src/types/Timer";
 
 interface ButtonStates {
   isStart: boolean,

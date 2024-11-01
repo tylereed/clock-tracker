@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import Dice from "@/utils/Dice";
+import Dice from "../../src/utils/Dice";
 
 describe("Dice", () => {
 

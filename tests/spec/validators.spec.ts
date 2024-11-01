@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import * as v from "@/utils/validators";
-import { ErrorMessages } from "@/utils/validators";
+import * as v from "../../src/utils/validators";
+import { ErrorMessages } from "../../src/utils/validators";
 
 describe("isRequiredRule", () => {
 

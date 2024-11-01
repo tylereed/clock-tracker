@@ -3,8 +3,8 @@ import { describe, expect, test } from "vitest";
 import { createVuetify } from "vuetify";
 import * as components from "vuetify/components";
 import * as directives from "vuetify/directives";
-import ClockVue from "@/components/clocks/Clock.vue";
-import { Clock } from "@/types/Clock";
+import ClockVue from "../../src/components/clocks/Clock.vue";
+import { Clock } from "../../src/types/Clock";
 
 global.ResizeObserver = require("resize-observer-polyfill");
 

@@ -203,7 +203,11 @@ function loadInits() {
 
 onMounted(() => {
   setInitiatives(loadInits());
-  initId = initiatives.value.map(x => x.id).reduce((x, y) => x > y ? x : y) + 1;
+  if (initiatives.value?.length) {
+    initId = initiatives.value.map(x => x.id).reduce((x, y) => x > y ? x : y) + 1;
+  } else {
+    initId = 1;
+  }
 });
 
 defineExpose({
