@@ -1,95 +1,16 @@
 <template>
-  <v-card class="ma-2">
-    <v-card-item><v-card-title>Initiative</v-card-title></v-card-item>
-    <v-card-text>
-      <v-container class="init-table" fluid>
-        <v-row class="font-weight-bold" dense>
-          <v-col>Round {{ round }}</v-col>
-          <v-col>Initiative</v-col>
-          <v-col cols="3">Name</v-col>
-          <v-col>AC</v-col>
-          <v-col>Max HP</v-col>
-          <v-col>HP</v-col>
-          <v-col cols="4">Conditions</v-col>
-        </v-row>
-        <v-row align="center" v-for="(init, i) in initiatives" :key="i" :class="getRowClass(i) + ' init-row'" dense
-          style="border-top: 1px solid darkgray;">
-          <v-col text-align="center"><v-icon v-show="i === turn" icon="mdi-circle-medium" /></v-col>
-          <v-col><v-text-field :hide-details="true" density="compact" v-model="init.order" :rules="r.OrderRules"
-              @update:focused="(focused) => updateUndoRedo(i, 'order', focused)"
-              @keyup.enter.stop="nextRow($event)" /></v-col>
-          <v-col cols="3"><v-text-field :hide-details="true" density="compact" v-model="init.name" :rules="r.NameRules"
-              @update:focused="(focused) => updateUndoRedo(i, 'name', focused)"
-              @keyup.enter.stop="nextRow($event)" /></v-col>
-          <v-col><v-text-field :hide-details="true" density="compact" v-model="init.ac" :rules="r.AcRules"
-              @update:focused="(focused) => updateUndoRedo(i, 'ac', focused)"
-              @keyup.enter.stop="nextRow($event)" /></v-col>
-          <v-col><v-text-field :hide-details="true" density="compact" v-model="init.maxHp" :rules="r.MaxHpRules"
-              @update:focused="(focused) => updateUndoRedo(i, 'maxHp', focused)"
-              @keyup.enter.stop="nextRow($event)" /></v-col>
-          <v-col>
-            <v-menu location="end center" :close-on-content-click="false" :open-on-focus="true" :offset="2">
-              <template v-slot:activator="{ props }">
-                <v-text-field v-bind="props" :hide-details="true" density="compact" v-model="init.hp"
-                  :rules="[validateHp]"
-                  @update:focused="(focused) => { updateUndoRedo(i, 'hp', focused); hpChange = 0; }"
-                  @keyup.enter.stop="nextRow($event)" />
-              </template>
-              <v-card>
-                <div align="center" class="ma-2">
-                  <v-btn class="ma-1" variant="outlined" color="primary" prepend-icon="mdi-flask"
-                    @click="changeHealth(i, '+')" :disabled="!healAndDamageValid">Heal</v-btn>
-                  <v-text-field class="ma-1" density="compact" v-model="hpChange" hide-details="auto"
-                    :rules="[validateHpChange]" />
-                  <v-btn class="ma-1" variant="outlined" color="error" prepend-icon="mdi-bandage"
-                    @click="changeHealth(i, '-')" :disabled="!healAndDamageValid">Damage</v-btn>
-                </div>
-              </v-card>
-            </v-menu>
-          </v-col>
-          <v-col cols="3">
-            <conditions-vue v-bind="init.conditions" @apply-condition="name => applyCondition(i, name)"
-              @remove-condition="name => removeCondition(i, name)" />
-          </v-col>
-          <v-col>
-            <v-btn @click.stop="deleteInitiative(i)" :class="getRowClass(i)">
-              <v-icon icon="mdi-delete-forever" color="error" />
-            </v-btn>
-          </v-col>
-          <template v-show="i === turn && init.actions">
-            <v-col cols="12">
-              <p v-for="attack in init.actions">
-                <b>{{ attack.name }}</b> {{ attack.desc }}
-              </p>
-            </v-col>
-          </template>
-        </v-row>
-        <v-row>
-          <v-col><v-btn @click="decrementTurn" :disabled="turn === 0 && round === 1">Previous</v-btn></v-col>
-          <v-col><v-btn @click="incrementTurn" :disabled="initiatives.length === 0">Next</v-btn></v-col>
-          <v-col><v-btn @click="resetTurn">Reset</v-btn></v-col>
-          <v-col><v-btn @click="addInitiative" variant="elevated" color="primary">Add
-              Initiative</v-btn></v-col>
-        </v-row>
-        <v-row>
-          <v-col cols="9">
-            <v-autocomplete v-model="monsterSearch" :items="monsters" :custom-filter="monsterNameFilter" return-object
-              auto-select-first item-title="name" item-value="slug">
-              <template v-slot:item="{ props, item }">
-                <v-list-item v-bind="props" :title="''">
-                  {{ item.title }} <v-chip density="comfortable" size="x-small">{{ item.raw.document__slug }}</v-chip>
-                </v-list-item>
-              </template>
-            </v-autocomplete>
-            <br />
-            <div><v-btn @click="showLicense = !showLicense">Monster Data License Information</v-btn></div>
-          </v-col>
-          <v-col cols="3">
-            <ts-expando-button class="mt-3" :disabled="!monsterSearch" :actions="addMonsterButtons" />
-          </v-col>
-        </v-row>
-      </v-container>
-    </v-card-text>
+  <div>
+    <initiative-table :initiatives="initiatives" :turn="turn" :round="round" :columns="columns"
+      @apply-condition="applyCondition" @remove-condition="removeCondition" @delete-initiative="deleteInitiative"
+      @increment-turn="incrementTurn" @decrement-turn="decrementTurn" @reset-turn="resetTurn"
+      @insert-init-command="insertInitCommand" />
+    <v-container fluid>
+      <v-row>
+        <v-col><v-btn @click="addInitiative" variant="elevated" color="primary">Add
+            Initiative</v-btn></v-col>
+        <v-col cols="8"><v-btn @click="clearInitiative" variant="outlined" color="error">Clear</v-btn></v-col>
+      </v-row></v-container>
+    <monster-search @add-monster="addMonster" />
     <v-card-actions>
       <v-btn :disabled="!executor.canUndo.value" @click="() => executor.undo()">
         <v-icon icon="mdi-undo" />
@@ -98,53 +19,29 @@
         <v-icon icon="mdi-redo" />
       </v-btn>
     </v-card-actions>
-  </v-card>
-
-  <v-dialog v-model="addInitiativeDisplay" width="50%" min-width="400px">
-    <add-edit-initiative class="pa-2 ma-6" :monster-stats="monsterStats" @add-init="addInit"
-      @close="addInitiativeDisplay = false" />
-  </v-dialog>
-  <v-dialog v-model="showLicense" width="75%" min-width="400px">
-    <license />
-  </v-dialog>
+    <v-dialog v-model="addInitiativeDisplay" width="50%" min-width="400px">
+      <add-edit-initiative class="pa-2 ma-6" @add-init="addInit" @close="addInitiativeDisplay = false" />
+    </v-dialog>
+  </div>
 </template>
 
-<style scoped>
-.alternate-row {
-  background: #c2cdd2;
-}
-
-.alternate-row-dark {
-  background: #424242;
-}
-</style>
-
 <script setup lang="ts">
-import { computed, onBeforeMount, reactive, ref } from "vue";
-import { useTheme } from "vuetify";
-import debounce from "debounce";
+import { onMounted, ref } from "vue";
 
 import AddEditInitiative from "@/components/initiative/AddEditInitiative.vue";
-import ConditionsVue from "@/components/initiative/Conditions.vue";
-import License from "@/components/initiative/License.vue";
-import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
-import r from "@/components/initiative/InitiativeRules";
+import InitiativeTable from "@/components/initiative/InitiativeTable.vue";
+import MonsterSearch from "@/components/initiative/MonsterSearch.vue";
 
 import Conditions from "@/types/Conditions";
-import Dice from "@/utils/Dice";
 import { Executor, Command } from "@/utils/Executor";
-import Initiative, { Actions } from "@/types/Initiative";
-import { MonsterNameO5e as MonsterName, getMonsterListCached, getMonsterCached, MonsterO5e } from "@/utils/Open5e";
-import * as v from "@/utils/validators";
-
-type InitWithId = Initiative & { id: number };
-type Initiatives = InitWithId[];
-
-const vTheme = useTheme();
+import Initiative, { Initiatives } from "@/types/Initiative";
+import * as i from "@/components/initiative/initiativeHelpers";
 
 const initiatives = ref<Initiatives>([]);
 
-const executor = new Executor(saveInits);
+const columns = i.buildInitiativeColumns({ hasInitiative: true, hasHp: true, hasConditions: true });
+
+const executor = new Executor(() => i.saveInits(initiatives.value, "encounter"));
 
 function addInit(init: Initiative) {
   insertInitiative(init);
@@ -153,15 +50,29 @@ function addInit(init: Initiative) {
 
 let initId = 0;
 function insertInitiative(init: Initiative) {
-  const newInit = { ...init, id: initId };
-  initId++;
+  const newInit = { ...init, id: initId++ };
 
   executor.runCommand(() => {
     setInitiatives([...initiatives.value, newInit]);
   }, (): void => {
-    initiatives.value = initiatives.value.filter(x => x.id !== newInit.id)
+    setInitiatives(initiatives.value.filter(x => x.id !== newInit.id));
   });
+}
 
+function insertInitiatives(inits: Initiatives, clear: boolean = false) {
+  const newInits = inits.map(x => ({ ...x, id: initId++ }));
+  const previous = [...initiatives.value];
+
+  executor.runCommand(() => {
+    if (clear) {
+      setInitiatives(newInits);
+    } else {
+      setInitiatives([...initiatives.value, ...newInits]);
+    }
+  },
+    () => {
+      setInitiatives(previous);
+    });
 }
 
 function resort() {
@@ -188,65 +99,6 @@ function deleteInitiative(index: number) {
     }
   });
 }
-
-function getRowClass(index: number) {
-  if (index % 2 === 1) {
-    if (vTheme.current.value.dark) {
-      return "alternate-row-dark";
-    }
-    return "alternate-row";
-  }
-}
-
-function nextRow(event: KeyboardEvent) {
-  const forward = !event.getModifierState("Shift");
-  const textfield = event.target as HTMLElement;
-  const parentRow = textfield.closest(".init-row") as HTMLElement;
-
-  if (forward) {
-    const nextRow = findSibling(parentRow, ".init-row") ?? parentRow?.closest(".init-table")?.querySelector(".init-row");
-    const nextInit = nextRow?.querySelector("input");
-    if (nextInit) {
-      nextInit.focus();
-    }
-  } else {
-    let previousRow = findPreviousSibling(parentRow, ".init-row");
-    if (!previousRow) {
-      const table = parentRow?.closest(".init-table");
-      const allRows = table?.querySelectorAll(".init-row");
-      if (allRows && allRows.length > 1) {
-        previousRow = allRows[allRows.length - 1] as HTMLElement;
-      }
-    }
-    const previousInit = previousRow?.querySelector("input");
-    if (previousInit) {
-      previousInit.focus();
-    }
-  }
-}
-
-function findSibling(element: HTMLElement, selector: string) {
-  let sibling = element?.nextElementSibling;
-  while (sibling != null) {
-    if (sibling.matches(selector)) {
-      return sibling as HTMLElement;
-    }
-    sibling = sibling.nextElementSibling;
-  }
-  return null;
-}
-
-function findPreviousSibling(element: HTMLElement, selector: string) {
-  let previous = element?.previousElementSibling;
-  while (previous != null) {
-    if (previous.matches(selector)) {
-      return previous as HTMLElement;
-    }
-    previous = previous.previousElementSibling;
-  }
-  return null;
-}
-
 
 const turn = ref(0);
 const round = ref(1);
@@ -293,138 +145,39 @@ function resetTurn() {
 }
 
 const addInitiativeDisplay = ref(false);
-const showLicense = ref(false);
-
-const monsterSearch = ref<MonsterName>();
-const monsterStats = ref<MonsterO5e | null>(null);
-
-onBeforeMount(async () => {
-  monsters.value = await getMonsterListCached();
-});
-
-const monsters = ref<MonsterName[]>([]);
-function monsterNameFilter(title: string, queryText: string): boolean {
-  return title.toLocaleLowerCase().includes(queryText.toLocaleLowerCase());
-}
-
-const addMonsterButtons = reactive([
-  { label: "Add Monster", action: addMonster },
-  { label: "Edit Monster", action: editMonster }
-]);
-
 function addInitiative() {
-  monsterStats.value = null;
   addInitiativeDisplay.value = true;
 }
 
-async function editMonster() {
-  if (monsterSearch.value) {
-    monsterStats.value = await getMonsterCached(monsterSearch.value.slug);
-    addInitiativeDisplay.value = true;
-  }
+function clearInitiative() {
+  const oldInits = [...initiatives.value];
+  const oldTurn = turn.value;
+  const oldRound = round.value;
+
+  executor.runCommand(() => {
+    initiatives.value = [];
+    turn.value = 0;
+    round.value = 1;
+  },
+    () => {
+      initiatives.value = oldInits;
+      turn.value = oldTurn;
+      round.value = oldRound;
+    });
 }
 
-let nameIndex = 0;
-async function addMonster() {
-  if (monsterSearch.value) {
-    const monster = await getMonsterCached(monsterSearch.value.slug);
-    const letter = String.fromCharCode(65 + nameIndex);
-    nameIndex++;
-    if (nameIndex > 25) {
-      nameIndex = 0;
-    }
-
-    const initMonster: Initiative = {
-      name: `${monster.name} ${letter}`,
-      order: 10 + Dice.calculateModifier(monster.dexterity),
-      dex: monster.dexterity,
-      ac: monster.armor_class,
-      maxHp: monster.hit_points,
-      hp: monster.hit_points,
-      conditions: {},
-      actions: [...buildActions(monster.actions)]
-    }
-
-    insertInitiative(initMonster);
-  }
-}
-
-function* buildActions(...args: ({ name: string, desc: string }[] | undefined)[]): Generator<Actions> {
-
-  for (const arg of args) {
-    if (arg) {
-      for (const a of arg) {
-        yield { name: a.name, desc: a.desc };
-      }
-    }
-  }
-}
-
-const oldValues = new Map<string, any>();
-function updateUndoRedo(index: number, propName: keyof Initiative, focused: boolean) {
-  if (focused) {
-    const value = initiatives.value[index][propName];
-    if (value !== "") {
-      oldValues.set(propName + index, value);
-    }
-  } else {
-    const newValue = initiatives.value[index][propName];
-    const oldValue = oldValues.get(propName + index);
-    insertInitCommand(index, propName, newValue, oldValue);
-  }
+function addMonster(monster: Initiative) {
+  insertInitiative(monster);
 }
 
 function insertInitCommand(index: number, propName: keyof Initiative, newValue: any, oldValue: any) {
-  const initiative = initiatives.value[index];
-
-  if (newValue == oldValue) {
-    return;
-  }
-
-  const command: Command = {
-    execute: () => {
-      const init = initiative as any;
-      init[propName] = newValue;
-      if (propName === "order") {
-        resort();
-      }
-    },
-    undo: () => {
-      const init = initiative as any;
-      init[propName] = oldValue;
+  i.insertInitCommand(executor, initiatives.value, index, propName, newValue, oldValue,
+    function () {
       if (propName === "order") {
         resort();
       }
     }
-  };
-  executor.pushUndo(command);
-  if (propName === "order") {
-    resort();
-  }
-}
-
-const hpChange = ref(0);
-const hpValid = ref(true);
-const hpChangeValid = ref(true);
-const healAndDamageValid = computed(() => hpValid.value && hpChangeValid.value);
-
-function changeHealth(index: number, type: "+" | "-") {
-  const change = +hpChange.value;
-  const oldValue = +(initiatives.value[index].hp ?? 0);
-  const newValue = type === "+" ?
-    Math.min(oldValue + change, initiatives.value[index].maxHp || Number.MAX_SAFE_INTEGER) :
-    Math.max(oldValue - change, 0);
-  initiatives.value[index].hp = newValue;
-  hpChange.value = 0;
-  insertInitCommand(index, "hp", newValue, oldValue);
-}
-
-function validateHp(value: string) {
-  return v.validate(hpValid, value, ...r.HpRules);
-}
-
-function validateHpChange(value: string) {
-  return v.validate(hpChangeValid, value, v.isRequiredRule, v.isWholeNumber);
+  );
 }
 
 function applyCondition(index: number, name: keyof Conditions) {
@@ -437,38 +190,28 @@ function removeCondition(index: number, name: keyof Conditions) {
     () => { initiatives.value[index].conditions[name] = true; });
 }
 
-const saveDebounced = debounce(function () {
-  try {
-    const toSave = [...initiatives.value];
-    const saveData = JSON.stringify(toSave);
-    localStorage.setItem("inits", saveData);
-  } catch (e) {
-    console.log(e);
-  }
-}, 500);
-function saveInits() {
-  saveDebounced();
-}
-
 function loadInits() {
-  try {
-    const initJson = localStorage.getItem("inits");
-    if (initJson) {
-      const restoredInits = JSON.parse(initJson) as Initiatives;
-      if (restoredInits.length > 0) {
-        for (const init of restoredInits) {
-          if (!init.conditions) {
-            init.conditions = {};
-          }
-        }
-
-        initiatives.value = restoredInits;
-      }
-    }
-  } catch (e) {
-    console.log(e);
+  let result = i.loadInits();
+  if (result.length) {
+    i.saveInits(result, "encounter");
+    i.deleteInits();
+  } else {
+    result = i.loadInits("encounter");
   }
+  return result;
 }
 
-loadInits();
+onMounted(() => {
+  setInitiatives(loadInits());
+  if (initiatives.value?.length) {
+    initId = initiatives.value.map(x => x.id).reduce((x, y) => x > y ? x : y) + 1;
+  } else {
+    initId = 1;
+  }
+});
+
+defineExpose({
+  insertInitiatives
+});
+
 </script>

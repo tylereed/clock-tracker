@@ -3,8 +3,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createVuetify } from "vuetify";
 import * as components from "vuetify/components";
 import * as directives from "vuetify/directives";
-import TimersPage from "../../src/pages/Timers.vue";
-import { Timer } from "../../src/types/Timer";
+import TimersPage from "../../../src/pages/Timers.vue";
+import { Timer } from "../../../src/types/Timer";
 
 global.ResizeObserver = require("resize-observer-polyfill");
 

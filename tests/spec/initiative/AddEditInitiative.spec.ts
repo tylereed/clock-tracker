@@ -3,10 +3,10 @@ import { describe, expect, test } from "vitest";
 import { createVuetify } from "vuetify";
 import * as components from "vuetify/components";
 import * as directives from "vuetify/directives";
-import AddEditInitiative from "../../src/components/initiative/AddEditInitiative.vue";
-import Initiative from "../../src/types/Initiative";
-import { MonsterO5e } from "../../src/utils/Open5e";
-import { ErrorMessages } from "../../src/utils/validators";
+import AddEditInitiative from "../../../src/components/initiative/AddEditInitiative.vue";
+import Initiative from "../../../src/types/Initiative";
+import { MonsterO5e } from "../../../src/utils/Open5e";
+import { ErrorMessages } from "../../../src/utils/validators";
 
 global.ResizeObserver = require("resize-observer-polyfill");
 

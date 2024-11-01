@@ -41,6 +41,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "jsdom",
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+    },
     coverage: {
       enabled: true,
       provider: "v8",

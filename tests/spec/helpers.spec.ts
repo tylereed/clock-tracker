@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import * as i from "../../src/utils/Iterables";
+import * as i from "../../src/utils/helpers";
 
 describe("Iterables", () => {
 

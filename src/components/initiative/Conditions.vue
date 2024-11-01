@@ -27,7 +27,7 @@
 import { computed } from "vue";
 
 import Conditions from "@/types/Conditions";
-import { chunk } from "@/utils/Iterables";
+import { chunk } from "@/utils/helpers";
 
 import blindedImage from "@/assets/conditions/blinded.png";
 import charmedImage from "@/assets/conditions/charmed.png";
