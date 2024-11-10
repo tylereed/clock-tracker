@@ -1,4 +1,5 @@
 import { DateTime } from "luxon";
+import debounce from "debounce";
 
 interface CachedObject<T> {
   readonly expires: DateTime;
@@ -23,12 +24,10 @@ export function BuildAsyncCache<T>(type: "localStorage", fetcher: (k: string) =>
 
 export interface Cache<T> {
   getCachedItem(key: string, clearCache?: boolean): T;
-  //getItemFromSource(key: string): T;
 }
 
 export interface AsyncCache<T> {
   getCachedItem(key: string, clearCache?: boolean): Promise<T>;
-  //getItemFromSource(key: string): T;
 }
 
 class LocalStorageAsyncCache<T> implements AsyncCache<T> {

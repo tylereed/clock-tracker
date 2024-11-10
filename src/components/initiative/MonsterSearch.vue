@@ -2,11 +2,18 @@
   <v-container fluid>
     <v-row>
       <v-col cols="9">
-        <v-autocomplete v-model="monsterSearch" :items="monsters" :custom-filter="monsterNameFilter" return-object
-          auto-select-first item-title="name" item-value="slug">
+        <v-autocomplete v-model="monsterSearch" v-model:search="searchInput" :items="monsters" return-object
+          auto-select-first item-title="name" item-value="slug" @update:search="doSearch">
           <template v-slot:item="{ props, item }">
             <v-list-item v-bind="props" :title="''">
               {{ item.title }} <v-chip density="comfortable" size="x-small">{{ item.raw.document__slug }}</v-chip>
+            </v-list-item>
+          </template>
+          <template v-slot:no-data>
+            <v-list-item>
+              <v-list-item-title>
+                {{ searchInput?.length >= 3 ? "No creatures found" : "Enter at least 3 characters to search" }}
+              </v-list-item-title>
             </v-list-item>
           </template>
         </v-autocomplete>
@@ -28,7 +35,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeMount, reactive, ref } from "vue";
+import { onBeforeMount, reactive, ref, watch } from "vue";
 
 import AddEditInitiative from "@/components/initiative/AddEditInitiative.vue";
 import License from "@/components/initiative/License.vue";
@@ -37,6 +44,7 @@ import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
 import Dice from "@/utils/Dice";
 import Initiative, { Actions } from "@/types/Initiative";
 import { MonsterNameO5e as MonsterName, getMonsterListCached, getMonsterCached, MonsterO5e } from "@/utils/Open5e";
+import debounce from "debounce";
 
 const emit = defineEmits<{
   (e: "addMonster", monster: Initiative): void
@@ -46,10 +54,21 @@ const addInitiativeDisplay = ref(false);
 const showLicense = ref(false);
 
 const monsterSearch = ref<MonsterName>();
+const searchInput = ref<string>("");
 const monsterStats = ref<MonsterO5e | null>(null);
 
+watch(monsterSearch, () => console.log(`monsterSearch: '${monsterSearch.value}'`));
+watch(searchInput, () => console.log(`searchInput: '${searchInput.value}'`));
+
+const getMonsterListCachedDebounced = debounce(getMonsterListCached, 300);
+async function doSearch(text: string) {
+  if (text.length >= 3) {
+    monsters.value = await getMonsterListCachedDebounced(text)!;
+  }
+}
+
 onBeforeMount(async () => {
-  monsters.value = await getMonsterListCached();
+  //monsters.value = await getMonsterListCached();
 });
 
 const monsters = ref<MonsterName[]>([]);
