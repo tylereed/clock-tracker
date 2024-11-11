@@ -4,14 +4,14 @@ import RollLexer from "@/generated/parsers/RollLexer";
 import RollParser from "@/generated/parsers/RollParser";
 
 export default class Dice {
-  #count: number;
-  #sides: number;
-  #modifier: number;
+  private count: number;
+  private sides: number;
+  private modifier: number;
 
   constructor(count: number, sides: number, modifier: number) {
-    this.#count = count;
-    this.#sides = sides;
-    this.#modifier = modifier;
+    this.count = count;
+    this.sides = sides;
+    this.modifier = modifier;
   }
 
   static D20 = {
@@ -30,6 +30,10 @@ export default class Dice {
   }
 
   static parse(input: string) {
+    if (!input) {
+      return;
+    }
+
     const chars = new CharStream(input, true);
     const lexer = new RollLexer(chars);
     const tokens = new CommonTokenStream(lexer);
@@ -38,36 +42,55 @@ export default class Dice {
     const tree = parser.roll();
     const listener = new HealthListener();
 
-    ParseTreeWalker.DEFAULT.walk(listener, tree);
+    try {
+      ParseTreeWalker.DEFAULT.walk(listener, tree);
+    } catch (e) {
+      console.error(e);
+      return;
+    }
 
     return listener.build();
   }
 
   get Count() {
-    return this.#count;
+    return this.count;
   }
 
   get Sides() {
-    return this.#sides;
+    return this.sides;
   }
 
   get Modifier() {
-    return this.#modifier;
+    return this.modifier;
   }
 
   get Min() {
-    return this.#count + this.#modifier;
+    return this.count + this.modifier;
   }
 
   get Max() {
-    return this.#count * this.#sides + this.#modifier;
+    return this.count * this.sides + this.modifier;
   }
-  
-  throw() {
-    let result = this.#modifier;
-    for (let i = 0; i < this.#count; i++) {
-      result += Math.floor(Math.random() * this.#sides) + 1;
+
+  throw(multiplier?: number) {
+    let result = this.modifier;
+
+    const dice: number[] = [];
+    if (multiplier) {
+      const count = Math.ceil(this.count * multiplier);
+      for (let i = 0; i < count; i++) {
+        dice.push(Math.floor(Math.random() * this.sides) + 1);
+      }
+      result += dice.sort((a, b) => b - a).slice(0, this.count).reduce((a, b) => a + b);
+    } else {
+      for (let i = 0; i < this.count; i++) {
+        result += Math.floor(Math.random() * this.sides) + 1;
+      }
     }
     return result;
+  }
+
+  toString(): string {
+    return `${this.count > 1 ? this.count : ""}d${this.sides}${this.modifier <= 0 ? "" : "+"}${this.modifier !== 0 ? this.modifier : ""}`
   }
 }
