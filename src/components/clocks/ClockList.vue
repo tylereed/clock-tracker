@@ -24,7 +24,7 @@
 </style>
 
 <script setup lang="ts">
-import { reactive } from "vue";
+import { reactive, toRefs } from "vue";
 import { useDisplay, useTheme } from "vuetify";
 
 import { Clock } from "@/types/Clock";
@@ -43,7 +43,7 @@ const e = defineEmits<{
 const emit = e;
 
 const props = defineProps<{ clocks: Clock[] }>();
-const clocks = props.clocks;
+const { clocks } = toRefs(props);
 
 interface MovableDropDisplay {
   display: "none" | "block",
@@ -62,7 +62,7 @@ const dropDisplayStyle = reactive<MovableDropDisplay>({
 function resizeClocks() {
   const clockSize = getClockSize();
 
-  for (const clock of clocks) {
+  for (const clock of clocks.value) {
     clock.size = clockSize;
   }
 }
@@ -92,7 +92,7 @@ function getDropLocation(e: MouseEvent) {
   const col = Math.round(e.pageX / colWidth);
   const row = Math.floor((e.pageY - (window.scrollY + clockList.getBoundingClientRect().top)) / childHeight);
 
-  const index = Math.min(row * numberCols + col, clocks.length);
+  const index = Math.min(row * numberCols + col, clocks.value.length);
 
   return { index, row, col, numberCols, clockList };
 }
@@ -102,7 +102,7 @@ function showDrop(e: DragEvent) {
   if (draggedClock && e.buttons > 0) {
     const { index, col, numberCols, clockList } = getDropLocation(e);
     if (index !== draggedClock.id && index - 1 !== draggedClock.id) {
-      const isLastCol = col == numberCols || index == clocks.length;
+      const isLastCol = col == numberCols || index == clocks.value.length;
       const dIndex = isLastCol ? index - 1 : index;
 
       const clockElement = clockList.children.item(dIndex)! as HTMLElement;

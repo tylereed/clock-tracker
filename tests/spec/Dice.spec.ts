@@ -31,6 +31,20 @@ describe("Dice", () => {
     }
   });
 
+  test.each([
+    [1, 6, 0],
+    [2, 12, -1],
+    [3, 10, 3]
+  ])("throws in range (2*%dd%d+%d)dl", (count, sides, modifier) => {
+    const target = new Dice(count, sides, modifier);
+
+    for (let i = 0; i < 100; i++) {
+      const actual = target.throw(2);
+      expect.soft(actual).toBeGreaterThanOrEqual(target.Min);
+      expect.soft(actual).toBeLessThanOrEqual(target.Max);
+    }
+  });
+
   test("D20.ofStat", () => {
     const expected = new Dice(1, 20, 4);
     const actual = Dice.D20.ofStat(19);

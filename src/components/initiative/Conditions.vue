@@ -1,22 +1,15 @@
 <template>
   <v-sheet class="d-flex align-center" style="background: transparent;">
-    <v-tooltip v-for="[name, image] in appliedConditions" :text="name">
-      <template v-slot:activator="{ props }">
-        <v-img v-bind="props" class="ma-2" width="32" height="32" inline :src="image" @click="removeCondition(name)" />
-      </template>
-    </v-tooltip>
+    <v-img v-for="[name, image] in appliedConditions" class="ma-2" width="32" height="32" inline :src="image"
+      @click="removeCondition(name)" v-tooltip="name" />
     <v-menu location="end center" :close-on-content-click="false">
       <template v-slot:activator="{ props }">
         <v-icon icon="mdi-plus-box" v-bind="props" class="ma-2" color="primary" />
       </template>
       <v-card elevated>
         <div v-for="items in chunkedConditions">
-          <v-tooltip v-for="[name, image] in items" :text="name">
-            <template v-slot:activator="{ props }">
-              <v-img v-bind="props" class="ma-2" width="32" height="32" inline :src="image"
-                @click="toggleCondition(name)" />
-            </template>
-          </v-tooltip>
+          <v-img v-for="[name, image] in items" class="ma-2" width="32" height="32" inline :src="image"
+            @click="toggleCondition(name)" v-tooltip="name" />
         </div>
       </v-card>
     </v-menu>
