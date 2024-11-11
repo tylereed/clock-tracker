@@ -97,7 +97,7 @@ describe("Clock Page", () => {
 
   test("bad clock save", () => {
     const mockLog = vi.fn();
-    console.log = mockLog;
+    console.error = mockLog;
     window.localStorage.setItem("clocks", "{ asdf }");
 
     const wrapper = mountClockPage();

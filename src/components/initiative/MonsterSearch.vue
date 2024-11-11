@@ -35,7 +35,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeMount, reactive, ref, watch } from "vue";
+import { reactive, ref } from "vue";
 import debounce from "debounce";
 
 import AddEditInitiative from "@/components/initiative/AddEditInitiative.vue";
@@ -55,36 +55,25 @@ const showLicense = ref(false);
 
 const monsterSearch = ref<MonsterName>();
 const searchInput = ref<string>("");
+const monsters = ref<MonsterName[]>([]);
 const monsterStats = ref<MonsterO5e | null>(null);
 
 const loading = ref(false);
 
 const doSearchDebounced = debounce(doSearch, 300);
 async function doSearch(text: string) {
-  if (text.length >= 3) {
+  if (text.length >= 3 && text !== monsterSearch.value?.name) {
+    loading.value = true;
     try {
-      loading.value = true;
       const result = await getMonsterListCached(text);
-      if (result) {
-        console.log("Found result for " + text + ", " + result.length);
-        monsters.value = result;
-        loading.value = false;
-      } else {
-        console.log("No results for " + text);
-      }
-    } catch (e) {
-      console.error(e);
+      monsters.value = result;
+    } finally {
       loading.value = false;
     }
   } else {
     monsters.value = [];
     loading.value = false;
   }
-}
-
-const monsters = ref<MonsterName[]>([]);
-function monsterNameFilter(title: string, queryText: string): boolean {
-  return title.toLocaleLowerCase().includes(queryText.toLocaleLowerCase());
 }
 
 const addMonsterButtons = reactive([

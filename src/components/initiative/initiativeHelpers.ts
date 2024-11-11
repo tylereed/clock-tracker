@@ -12,7 +12,7 @@ const saveDebounced = debounce(function (key: string, toSave: Initiatives) {
     const saveData = JSON.stringify(toSave);
     localStorage.setItem(key, saveData);
   } catch (e) {
-    console.log(e);
+    console.error(e);
   }
 }, 500);
 
@@ -38,7 +38,7 @@ export function loadInits(name?: string) {
       }
     }
   } catch (e) {
-    console.log(e);
+    console.error(e);
   }
   return [];
 }

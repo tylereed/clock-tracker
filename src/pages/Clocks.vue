@@ -240,7 +240,7 @@ function saveClocks() {
     const saveData = JSON.stringify(toSave);
     localStorage.setItem("clocks", saveData);
   } catch (e) {
-    console.log(e);
+    console.error(e);
   }
 }
 
@@ -254,7 +254,7 @@ function loadClocks() {
       }
     }
   } catch (e) {
-    console.log(e);
+    console.error(e);
   } finally {
     if (!clockTabs.value?.length) {
       clockTabs.value = [];
