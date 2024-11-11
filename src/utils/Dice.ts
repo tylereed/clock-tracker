@@ -72,8 +72,6 @@ export default class Dice {
     return this.count * this.sides + this.modifier;
   }
 
-  throw(): number;
-  throw(multiplier?: number): number;
   throw(multiplier?: number) {
     let result = this.modifier;
 
