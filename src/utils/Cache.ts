@@ -20,6 +20,7 @@ export function BuildAsyncCache<T>(type: "localStorage", fetcher: (k: string) =>
       return new LocalStorageAsyncCache(fetcher);
   }
 }
+
 export function clearCaches() {
   const now = DateTime.utc().toISO();
   const count = localStorage.length;

@@ -36,6 +36,7 @@
 
 <script setup lang="ts">
 import { onBeforeMount, reactive, ref, watch } from "vue";
+import debounce from "debounce";
 
 import AddEditInitiative from "@/components/initiative/AddEditInitiative.vue";
 import License from "@/components/initiative/License.vue";
@@ -44,7 +45,6 @@ import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
 import Dice from "@/utils/Dice";
 import Initiative, { Actions } from "@/types/Initiative";
 import { MonsterNameO5e as MonsterName, getMonsterListCached, getMonsterCached, MonsterO5e } from "@/utils/Open5e";
-import debounce from "debounce";
 
 const emit = defineEmits<{
   (e: "addMonster", monster: Initiative): void
@@ -58,9 +58,6 @@ const searchInput = ref<string>("");
 const monsterStats = ref<MonsterO5e | null>(null);
 
 const loading = ref(false);
-
-watch(monsterSearch, () => console.log(`monsterSearch: '${monsterSearch.value}'`));
-watch(searchInput, () => console.log(`searchInput: '${searchInput.value}'`));
 
 const doSearchDebounced = debounce(doSearch, 300);
 async function doSearch(text: string) {
@@ -84,10 +81,6 @@ async function doSearch(text: string) {
     loading.value = false;
   }
 }
-
-onBeforeMount(async () => {
-  //monsters.value = await getMonsterListCached();
-});
 
 const monsters = ref<MonsterName[]>([]);
 function monsterNameFilter(title: string, queryText: string): boolean {
