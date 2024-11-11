@@ -80,6 +80,8 @@ export type MonsterNameO5e = Pick<MonsterO5e, typeof asMonsterNameO5e[number]>;
 async function* fetchList<T>(endpoint: string) {
   let url: string | undefined = endpoint;
 
+  console.log(`fetching ${url}`);
+
   do {
     const response = await fetch(url);
     const json: Open5eListResponse<T> = await response.json();

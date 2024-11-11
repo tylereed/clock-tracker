@@ -2,8 +2,8 @@
   <v-container fluid>
     <v-row>
       <v-col cols="9">
-        <v-autocomplete v-model="monsterSearch" v-model:search="searchInput" :items="monsters" return-object
-          auto-select-first item-title="name" item-value="slug" @update:search="doSearch">
+        <v-autocomplete v-model="monsterSearch" v-model:search="searchInput" :loading="loading" :items="monsters"
+          return-object auto-select-first item-title="name" item-value="slug" @update:search="doSearchDebounced">
           <template v-slot:item="{ props, item }">
             <v-list-item v-bind="props" :title="''">
               {{ item.title }} <v-chip density="comfortable" size="x-small">{{ item.raw.document__slug }}</v-chip>
@@ -57,13 +57,31 @@ const monsterSearch = ref<MonsterName>();
 const searchInput = ref<string>("");
 const monsterStats = ref<MonsterO5e | null>(null);
 
+const loading = ref(false);
+
 watch(monsterSearch, () => console.log(`monsterSearch: '${monsterSearch.value}'`));
 watch(searchInput, () => console.log(`searchInput: '${searchInput.value}'`));
 
-const getMonsterListCachedDebounced = debounce(getMonsterListCached, 300);
+const doSearchDebounced = debounce(doSearch, 300);
 async function doSearch(text: string) {
   if (text.length >= 3) {
-    monsters.value = await getMonsterListCachedDebounced(text)!;
+    try {
+      loading.value = true;
+      const result = await getMonsterListCached(text);
+      if (result) {
+        console.log("Found result for " + text + ", " + result.length);
+        monsters.value = result;
+        loading.value = false;
+      } else {
+        console.log("No results for " + text);
+      }
+    } catch (e) {
+      console.error(e);
+      loading.value = false;
+    }
+  } else {
+    monsters.value = [];
+    loading.value = false;
   }
 }
 
