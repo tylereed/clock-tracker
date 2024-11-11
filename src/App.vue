@@ -15,4 +15,8 @@ import Clocks from "@/pages/Clocks.vue";
 import Timer from "@/pages/Timers.vue";
 import Encounters from "@/pages/Encounters.vue";
 import DarkModeToggle from "@/components/DarkModeToggle.vue";
+
+import { clearCaches } from "@/utils/Cache";
+
+clearCaches();
 </script>

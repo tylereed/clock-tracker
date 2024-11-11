@@ -2,11 +2,18 @@
   <v-container fluid>
     <v-row>
       <v-col cols="9">
-        <v-autocomplete v-model="monsterSearch" :items="monsters" :custom-filter="monsterNameFilter" return-object
-          auto-select-first item-title="name" item-value="slug">
+        <v-autocomplete v-model="monsterSearch" v-model:search="searchInput" :loading="loading" :items="monsters"
+          return-object auto-select-first item-title="name" item-value="slug" @update:search="doSearchDebounced">
           <template v-slot:item="{ props, item }">
             <v-list-item v-bind="props" :title="''">
               {{ item.title }} <v-chip density="comfortable" size="x-small">{{ item.raw.document__slug }}</v-chip>
+            </v-list-item>
+          </template>
+          <template v-slot:no-data>
+            <v-list-item>
+              <v-list-item-title>
+                {{ searchInput?.length >= 3 ? "No creatures found" : "Enter at least 3 characters to search" }}
+              </v-list-item-title>
             </v-list-item>
           </template>
         </v-autocomplete>
@@ -28,7 +35,8 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeMount, reactive, ref } from "vue";
+import { onBeforeMount, reactive, ref, watch } from "vue";
+import debounce from "debounce";
 
 import AddEditInitiative from "@/components/initiative/AddEditInitiative.vue";
 import License from "@/components/initiative/License.vue";
@@ -46,11 +54,33 @@ const addInitiativeDisplay = ref(false);
 const showLicense = ref(false);
 
 const monsterSearch = ref<MonsterName>();
+const searchInput = ref<string>("");
 const monsterStats = ref<MonsterO5e | null>(null);
 
-onBeforeMount(async () => {
-  monsters.value = await getMonsterListCached();
-});
+const loading = ref(false);
+
+const doSearchDebounced = debounce(doSearch, 300);
+async function doSearch(text: string) {
+  if (text.length >= 3) {
+    try {
+      loading.value = true;
+      const result = await getMonsterListCached(text);
+      if (result) {
+        console.log("Found result for " + text + ", " + result.length);
+        monsters.value = result;
+        loading.value = false;
+      } else {
+        console.log("No results for " + text);
+      }
+    } catch (e) {
+      console.error(e);
+      loading.value = false;
+    }
+  } else {
+    monsters.value = [];
+    loading.value = false;
+  }
+}
 
 const monsters = ref<MonsterName[]>([]);
 function monsterNameFilter(title: string, queryText: string): boolean {

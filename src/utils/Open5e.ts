@@ -73,13 +73,14 @@ export interface MonsterO5e {
   document__url: string;
 }
 
-const monsterNameO5eStrings = ["slug", "name", "document__slug"] as const;
-export type MonsterNameO5e = Pick<MonsterO5e, typeof monsterNameO5eStrings[number]>;
-
-const monsterInitiativeO5eString = ["name"] as const;
+const asMonsterNameO5e = ["slug", "name", "document__slug"] as const;
+const sMonsterNameO5e = asMonsterNameO5e.join(",");
+export type MonsterNameO5e = Pick<MonsterO5e, typeof asMonsterNameO5e[number]>;
 
 async function* fetchList<T>(endpoint: string) {
   let url: string | undefined = endpoint;
+
+  console.log(`fetching ${url}`);
 
   do {
     const response = await fetch(url);
@@ -98,9 +99,10 @@ const monsteListCache = BuildAsyncCache("localStorage", async (url) => {
   return result;
 });
 
-export async function getMonsterListCached(clearCache?: boolean) {
-  const parameters = "fields=" + monsterNameO5eStrings.join(",") + "&limit=5000";
-  const url = `${monsterApi}?${parameters}`;
+export async function getMonsterListCached(name?: string, clearCache?: boolean) {
+  const requiredParams = `fields=${sMonsterNameO5e}&limit=5000`;
+  const optionalParams = name ? `&name__icontains=${name}` : "";
+  const url = `${monsterApi}?${requiredParams}${optionalParams}`;
   return await monsteListCache.getCachedItem(url, clearCache);
 }
 
