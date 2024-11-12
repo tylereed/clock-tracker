@@ -12,12 +12,7 @@
       </v-row></v-container>
     <monster-search @add-monster="addMonster" />
     <v-card-actions>
-      <v-btn :disabled="!executor.canUndo.value" @click="() => executor.undo()">
-        <v-icon icon="mdi-undo" />
-      </v-btn>
-      <v-btn :disabled="!executor.canRedo.value" @click="() => executor.redo()">
-        <v-icon icon="mdi-redo" />
-      </v-btn>
+      <ts-undo-redo :executor="executor" />
     </v-card-actions>
     <v-dialog v-model="addInitiativeDisplay" width="50%" min-width="400px">
       <add-edit-initiative class="pa-2 ma-6" @add-init="addInit" @close="addInitiativeDisplay = false" />
@@ -31,6 +26,7 @@ import { onMounted, ref } from "vue";
 import AddEditInitiative from "@/components/initiative/AddEditInitiative.vue";
 import InitiativeTable from "@/components/initiative/InitiativeTable.vue";
 import MonsterSearch from "@/components/initiative/MonsterSearch.vue";
+import TsUndoRedo from "@/components/common/TsUndoRedo.vue";
 
 import Conditions from "@/types/Conditions";
 import { Executor, Command } from "@/utils/Executor";

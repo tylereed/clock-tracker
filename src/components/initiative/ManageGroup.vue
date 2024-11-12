@@ -38,12 +38,7 @@
   </v-container>
   <monster-search v-if="showMonster" @add-monster="addExistingMonster" />
   <v-card-actions>
-    <v-btn :disabled="!executor.canUndo.value" @click="() => executor.undo()">
-      <v-icon icon="mdi-undo" />
-    </v-btn>
-    <v-btn :disabled="!executor.canRedo.value" @click="() => executor.redo()">
-      <v-icon icon="mdi-redo" />
-    </v-btn>
+    <ts-undo-redo :executor="executor" />
   </v-card-actions>
 </template>
 
@@ -53,6 +48,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import InitiativeTable from "@/components/initiative/InitiativeTable.vue";
 import * as i from "@/components/initiative/initiativeHelpers";
 import MonsterSearch from "./MonsterSearch.vue";
+import TsUndoRedo from "@/components/common/TsUndoRedo.vue";
 
 import { Executor } from "@/utils/Executor";
 import Initiative, { Initiatives, InitWithId } from "@/types/Initiative";

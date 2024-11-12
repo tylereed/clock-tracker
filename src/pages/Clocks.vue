@@ -20,12 +20,7 @@
 
       <ts-expando-button :actions="addClockButtons" />
 
-      <v-btn :disabled="!executor.canUndo.value" @click="() => executor.undo()">
-        <v-icon icon="mdi-undo" />
-      </v-btn>
-      <v-btn :disabled="!executor.canRedo.value" @click="() => executor.redo()">
-        <v-icon icon="mdi-redo" />
-      </v-btn>
+      <ts-undo-redo :executor="executor" />
     </v-card-actions>
   </v-card>
 
@@ -41,6 +36,7 @@ import { computed, reactive, ref } from "vue";
 import AddClockVue from "@/components/clocks/AddEditClock.vue";
 import ClockList from "@/components/clocks/ClockList.vue";
 import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
+import TsUndoRedo from "@/components/common/TsUndoRedo.vue";
 import { createClock, getClockSize } from "@/components/clocks/helpers";
 
 import { Clock, ClockTab, NewClock } from "@/types/Clock";
