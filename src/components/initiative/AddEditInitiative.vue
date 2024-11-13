@@ -4,6 +4,12 @@
       <v-card-title>Add {{ isEdit ? "Monster" : "PC" }} Initiative</v-card-title>
       <v-card-text>
         <v-container>
+          <v-row v-if="isEdit">
+            <v-col>
+              <v-select v-model="selectedTemplate" label="Template" :items="['Squad']" />
+              <v-btn @click="applyTemplate">Apply Template</v-btn>
+            </v-col>
+          </v-row>
           <v-row>
             <v-col :cols="isEdit ? 9 : 12"><v-text-field label="Initiative" density="compact" v-model="newInit.order"
                 :rules="v.OrderRules" /></v-col>
@@ -34,12 +40,14 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref, toRefs } from "vue";
+import pluralize from "pluralize";
+//var pluralize = require("pluralize");
 
 import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
 
 import Dice from "@/utils/Dice";
 import Initiative, { Actions } from "@/types/Initiative";
-import { MonsterO5e } from "@/utils/Open5e";
+import { MonsterO5e, Size } from "@/utils/Open5e";
 import v from "./InitiativeRules";
 
 const props = defineProps<{ monsterStats?: MonsterO5e | null }>();
@@ -97,9 +105,9 @@ const healthRollActions = reactive([
   { label: "Roll", action: () => rollHealth() },
   { label: "Roll 1.5x", action: () => rollHealth(1.5) },
   { label: "Roll 2x", action: () => rollHealth(2) },
-  { label: "Min", action: () => newInit.value.maxHp = healthDice.value?.Min},
-  { label: "Max", action: () => newInit.value.maxHp = healthDice.value?.Max},
-  { label: "Average", action: () => newInit.value.maxHp = monsterStats.value?.hit_points}
+  { label: "Min", action: () => newInit.value.maxHp = healthDice.value?.Min },
+  { label: "Max", action: () => newInit.value.maxHp = healthDice.value?.Max },
+  { label: "Average", action: () => newInit.value.maxHp = monsterStats.value?.hit_points }
 ]);
 
 function rollHealth(multiplier?: number) {
@@ -129,4 +137,84 @@ function addInitiative() {
     emit("addInit", init);
   }
 }
+
+const selectedTemplate = ref("Squad");
+function applyTemplate() {
+  if (monsterStats.value && selectedTemplate.value === "Squad") {
+    applySquadTemplate(monsterStats.value);
+  }
+}
+
+function applySquadTemplate(stats: MonsterO5e) {
+  const template = { ...stats };
+
+  template.size = increaseSize(stats.size, 2);
+  template.type = "group of " + stats.type;
+  template.challenge_rating = Math.floor((stats.cr ?? 0) * 2 + 2).toString();
+
+  template.hit_points = stats.hit_points * 5;
+  if (stats.hit_dice) {
+    const hit_dice = Dice.parse(stats.hit_dice);
+    if (hit_dice) {
+      const squad_hit_dice = new Dice(5 * hit_dice.Count, hit_dice.Sides, hit_dice.Modifier);
+      template.hit_dice = squad_hit_dice.toString();
+    }
+  }
+
+  if (!template.special_abilities) {
+    template.special_abilities = [];
+  }
+
+  const creaturePlural: string = pluralize(stats.name);
+
+  template.special_abilities.push(
+    {
+      name: "Area Vulnerability",
+      desc: "The squad takes double damage from any effect that targets an area."
+    },
+    {
+      name: "Squad Dispersal",
+      desc: `When the squad is reduced to 0 hit points, it turns into 2 (1d4) ${creaturePlural}, each of which are bloodied.`
+    },
+    {
+      name: "Squad",
+      desc: `The squad is composed of 5 or more ${creaturePlural}. If it is subjected to a spell, attack, or other effect that affects only one target, it takes any damage but ignores other effects. It can share its space with ${stats.size} or smaller creatures or objects. The squad can move through any opening large enough for one ${stats.name} without squeezing.`
+    }
+  );
+}
+
+const sizes: Size[] = ["Tiny", "Small", "Medium", "Large", "Huge", "Gargantuan", "Titanic"];
+function increaseSize(size: Size, steps: number): Size {
+  let newSizeIndex = sizes.indexOf(size) + steps;
+  if (newSizeIndex >= sizes.length) {
+    newSizeIndex = sizes.length - 1;
+  }
+  return sizes[newSizeIndex];
+}
+
+function crToPb(cr: number) {
+  if (cr < 5) {
+    return 2;
+  }
+  if (cr < 9) {
+    return 3;
+  }
+  if (cr < 13) {
+    return 4;
+  }
+  if (cr < 17) {
+    return 5;
+  }
+  if (cr < 21) {
+    return 6;
+  }
+  if (cr < 25) {
+    return 7;
+  }
+  if (cr < 29) {
+    return 8;
+  }
+  return 9;
+}
+
 </script>
