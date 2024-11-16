@@ -214,6 +214,7 @@ describe("AddEditInitiative", () => {
       expect(html).toContain("Add Monster Initiative");
 
       const [
+        cmbTemplate,
         txtInitiative,
         txtName,
         txtDex,
@@ -233,6 +234,7 @@ describe("AddEditInitiative", () => {
 
 
       const [
+        cmbTemplate,
         txtInitiative,
         ,
         ,
@@ -241,6 +243,7 @@ describe("AddEditInitiative", () => {
       ] = wrapper.findAllComponents({ name: "VTextField" });
 
       const [
+        btnApplyTemplate,
         btnInitiative,
         btnHealth
       ] = wrapper.findAllComponents({ name: "VBtn" });
