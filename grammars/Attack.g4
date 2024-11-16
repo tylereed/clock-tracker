@@ -1,14 +1,21 @@
 grammar Attack;
 
-attack: attack_type ': ' TEXT+;
+attack:
+	attackType ': ' toHit ', ' (reach ', ')? targets ','? '.'? ' ' damage TEXT*?;
 
-attack_type: melee_ranged ' ' weapon_spell ' Attack';
+attackType: meleeRanged ' ' weaponSpell ' Attack';
 
-melee_ranged: MELEE | RANGED | MELEE ' or ' RANGED;
+meleeRanged: MELEE | RANGED | MELEE ' or ' RANGED;
 
-weapon_spell: WEAPON | SPELL;
+weaponSpell: WEAPON | SPELL;
 
-TEXT: .;
+toHit: '+' NUMBER ' to hit';
+
+reach: 'reach '? NUMBER ' ft.';
+
+targets: NUMBER_TEXT ' target' 's'?;
+
+damage: 'Hit: ' NUMBER ' (' DICE ') ' DAMAGE_TYPE ' damage';
 
 MELEE: 'Melee';
 
@@ -18,4 +25,36 @@ WEAPON: 'Weapon';
 
 SPELL: 'Spell';
 
-MARKUP: '_' -> skip;
+DICE: NUMBER? 'd' NUMBER (' '? ('+' | '-') ' '? NUMBER)?;
+
+DAMAGE_TYPE:
+	'acid'
+	| 'bludgeoning'
+	| 'cold'
+	| 'fire'
+	| 'force'
+	| 'lightning'
+	| 'necrotic'
+	| 'piercing'
+	| 'poison'
+	| 'psychic'
+	| 'radiant'
+	| 'slashing'
+	| 'thunder';
+
+NUMBER: [0-9]+;
+
+NUMBER_TEXT:
+	'one'
+	| 'two'
+	| 'three'
+	| 'four'
+	| 'five'
+	| 'six'
+	| 'seven'
+	| 'eight'
+	| 'nine';
+
+TEXT: .;
+
+MARKUP: ('_' | '<br>') -> skip;

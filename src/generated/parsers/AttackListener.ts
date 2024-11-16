@@ -4,9 +4,13 @@ import {ParseTreeListener} from "antlr4";
 
 
 import { AttackContext } from "./AttackParser.js";
-import { Attack_typeContext } from "./AttackParser.js";
-import { Melee_rangedContext } from "./AttackParser.js";
-import { Weapon_spellContext } from "./AttackParser.js";
+import { AttackTypeContext } from "./AttackParser.js";
+import { MeleeRangedContext } from "./AttackParser.js";
+import { WeaponSpellContext } from "./AttackParser.js";
+import { ToHitContext } from "./AttackParser.js";
+import { ReachContext } from "./AttackParser.js";
+import { TargetsContext } from "./AttackParser.js";
+import { DamageContext } from "./AttackParser.js";
 
 
 /**
@@ -25,34 +29,74 @@ export default class AttackListener extends ParseTreeListener {
 	 */
 	exitAttack?: (ctx: AttackContext) => void;
 	/**
-	 * Enter a parse tree produced by `AttackParser.attack_type`.
+	 * Enter a parse tree produced by `AttackParser.attackType`.
 	 * @param ctx the parse tree
 	 */
-	enterAttack_type?: (ctx: Attack_typeContext) => void;
+	enterAttackType?: (ctx: AttackTypeContext) => void;
 	/**
-	 * Exit a parse tree produced by `AttackParser.attack_type`.
+	 * Exit a parse tree produced by `AttackParser.attackType`.
 	 * @param ctx the parse tree
 	 */
-	exitAttack_type?: (ctx: Attack_typeContext) => void;
+	exitAttackType?: (ctx: AttackTypeContext) => void;
 	/**
-	 * Enter a parse tree produced by `AttackParser.melee_ranged`.
+	 * Enter a parse tree produced by `AttackParser.meleeRanged`.
 	 * @param ctx the parse tree
 	 */
-	enterMelee_ranged?: (ctx: Melee_rangedContext) => void;
+	enterMeleeRanged?: (ctx: MeleeRangedContext) => void;
 	/**
-	 * Exit a parse tree produced by `AttackParser.melee_ranged`.
+	 * Exit a parse tree produced by `AttackParser.meleeRanged`.
 	 * @param ctx the parse tree
 	 */
-	exitMelee_ranged?: (ctx: Melee_rangedContext) => void;
+	exitMeleeRanged?: (ctx: MeleeRangedContext) => void;
 	/**
-	 * Enter a parse tree produced by `AttackParser.weapon_spell`.
+	 * Enter a parse tree produced by `AttackParser.weaponSpell`.
 	 * @param ctx the parse tree
 	 */
-	enterWeapon_spell?: (ctx: Weapon_spellContext) => void;
+	enterWeaponSpell?: (ctx: WeaponSpellContext) => void;
 	/**
-	 * Exit a parse tree produced by `AttackParser.weapon_spell`.
+	 * Exit a parse tree produced by `AttackParser.weaponSpell`.
 	 * @param ctx the parse tree
 	 */
-	exitWeapon_spell?: (ctx: Weapon_spellContext) => void;
+	exitWeaponSpell?: (ctx: WeaponSpellContext) => void;
+	/**
+	 * Enter a parse tree produced by `AttackParser.toHit`.
+	 * @param ctx the parse tree
+	 */
+	enterToHit?: (ctx: ToHitContext) => void;
+	/**
+	 * Exit a parse tree produced by `AttackParser.toHit`.
+	 * @param ctx the parse tree
+	 */
+	exitToHit?: (ctx: ToHitContext) => void;
+	/**
+	 * Enter a parse tree produced by `AttackParser.reach`.
+	 * @param ctx the parse tree
+	 */
+	enterReach?: (ctx: ReachContext) => void;
+	/**
+	 * Exit a parse tree produced by `AttackParser.reach`.
+	 * @param ctx the parse tree
+	 */
+	exitReach?: (ctx: ReachContext) => void;
+	/**
+	 * Enter a parse tree produced by `AttackParser.targets`.
+	 * @param ctx the parse tree
+	 */
+	enterTargets?: (ctx: TargetsContext) => void;
+	/**
+	 * Exit a parse tree produced by `AttackParser.targets`.
+	 * @param ctx the parse tree
+	 */
+	exitTargets?: (ctx: TargetsContext) => void;
+	/**
+	 * Enter a parse tree produced by `AttackParser.damage`.
+	 * @param ctx the parse tree
+	 */
+	enterDamage?: (ctx: DamageContext) => void;
+	/**
+	 * Exit a parse tree produced by `AttackParser.damage`.
+	 * @param ctx the parse tree
+	 */
+	exitDamage?: (ctx: DamageContext) => void;
 }
 
