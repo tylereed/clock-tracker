@@ -9,7 +9,7 @@
     "test": "vitest",
     "coverage": "vitest run --coverage",
     "lint": "eslint . --fix --ignore-path .gitignore",
-    "antlr4-generate": "antlr4 -Dlanguage=TypeScript -lib grammars -o src/generated/parsers grammars/Roll.g4"
+    "antlr4-generate": "antlr4 -Dlanguage=TypeScript -lib grammars -o src/generated/parsers grammars/Roll.g4 grammars/Attack.g4"
   },
   "dependencies": {
     "@mdi/font": "7.4.47",
