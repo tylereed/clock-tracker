@@ -16,7 +16,7 @@ function applySquadTemplate(stats: MonsterO5e) {
 
   template.name = stats.name + " Squad";
   template.size = increaseSize(stats.size, 2);
-  template.type = "group of " + stats.type;
+  template.type = "Group of " + pluralize(stats.type);
   template.cr = Math.floor((stringToCr(stats.challenge_rating)) * 2 + 2);
   template.challenge_rating = template.cr.toString();
 
@@ -79,62 +79,61 @@ function increaseSize(size: Size, steps: number): Size {
 }
 
 function formatDescription(attack: Action) {
-  const sb = [];
+  let result = "";
+  //const sb = [];
 
   if (attack.isMelee && attack.isRanged) {
-    sb.push("Melee or Ranged");
+    result += "Melee or Ranged";
   } else if (attack.isMelee) {
-    sb.push("Melee");
+    result += "Melee";
   } else {
-    sb.push("Ranged");
+    result += "Ranged";
   }
 
-  sb.push(attack.isWeapon ? "Weapon" : "Spell");
+  result += attack.isWeapon ? " Weapon" : " Spell";
 
-  sb.push("Attack: +");
-  sb.push(attack.toHitBonus);
-  sb.push("to hit,");
+  result += " Attack: +";
+  result += attack.toHitBonus;
+  result += " to hit, ";
 
   if (attack.reach) {
-    sb.push("reach");
-    sb.push(attack.reach);
-    sb.push("ft.");
+    result += "reach ";
+    result += attack.reach;
+    result += " ft.";
   }
 
   if (attack.reach && attack.range) {
-    sb.push("or");
+    result += " or ";
   }
 
   if (attack.range) {
-    sb.push("range");
-    sb.push(attack.range);
+    result += "range ";
+    result += attack.range;
     if (attack.rangeMax) {
-      sb.push("/");
-      sb.push(attack.rangeMax);
+      result += "/";
+      result += attack.rangeMax;
     }
-    sb.push("ft.");
+    result += " ft.";
   }
 
-  sb.push(",");
+  result += ", ";
 
-  sb.push(intToWord(attack.numberTargets));
-  if (attack.numberTargets === 1) {
-    sb.push("target.");
-  } else {
-    sb.push("targets.");
-  }
+  result += intToWord(attack.numberTargets);
+  result += " ";
+  result += pluralize("target", attack.numberTargets);
+  result += ". ";
 
-  sb.push("Hit:");
-  sb.push(attack.damageAverage);
+  result += "Hit: ";
+  result += attack.damageAverage;
 
-  sb.push("(");
-  sb.push(attack.damageDice.toString());
-  sb.push(")");
-  sb.push(attack.damageType);
-  sb.push("damage");
-  sb.push(attack.extraText);
+  result += " (";
+  result += attack.damageDice.toString();
+  result += ") ";
+  result += attack.damageType;
+  result += " damage";
+  result += attack.extraText;
 
-  return sb.join(" ");
+  return result;
 }
 
 function stringToCr(text: string) {
@@ -144,7 +143,7 @@ function stringToCr(text: string) {
   return parseInt(text);
 }
 
-const intWords = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
+const intWords = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
 function intToWord(n: number) {
   return intWords[n];
 }
