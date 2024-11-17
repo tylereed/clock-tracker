@@ -1,5 +1,5 @@
 import AttackListener from "@/generated/parsers/AttackListener";
-import { AttackContext, AttackTypeContext, DamageContext, MeleeRangedContext, RangeContext, ReachContext, TargetsContext, ToHitContext, WeaponSpellContext } from "@/generated/parsers/AttackParser";
+import { AttackContext, DamageContext, MeleeRangedContext, RangeContext, ReachContext, TargetsContext, ToHitContext, WeaponSpellContext } from "@/generated/parsers/AttackParser";
 import { Action } from "@/utils/Attack";
 import Dice from "@/utils/Dice";
 
@@ -41,10 +41,6 @@ export default class ActionListener extends AttackListener {
     }
   }
 
-  // enterAttackType = (ctx: AttackTypeContext) => {
-  //   this.#action.attackType = ctx.meleeRanged().getText() + " " + ctx.weaponSpell().getText();
-  // };
-
   enterMeleeRanged = (ctx: MeleeRangedContext) => {
     const meleeRanged = ctx.getText();
     if (meleeRanged === "Melee") {
@@ -77,7 +73,7 @@ export default class ActionListener extends AttackListener {
   enterRange = (ctx: RangeContext) => {
     this.#action.range = parseInt(ctx.NUMBER(0).getText());
 
-    if (ctx.NUMBER_list.length > 1) {
+    if (ctx.NUMBER_list().length > 1) {
       this.#action.rangeMax = parseInt(ctx.NUMBER(1).getText());
     }
   };
@@ -93,7 +89,7 @@ export default class ActionListener extends AttackListener {
   };
 
   exitAttack = (ctx: AttackContext) => {
-    const extraText = ctx.TEXT_list().join("");
+    const extraText = ctx.extraText().getText();
     if (extraText) {
       this.#action.extraText = extraText;
     }

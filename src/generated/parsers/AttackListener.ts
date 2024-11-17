@@ -13,6 +13,7 @@ import { ReachContext } from "./AttackParser.js";
 import { RangeContext } from "./AttackParser.js";
 import { TargetsContext } from "./AttackParser.js";
 import { DamageContext } from "./AttackParser.js";
+import { ExtraTextContext } from "./AttackParser.js";
 
 
 /**
@@ -120,5 +121,15 @@ export default class AttackListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	exitDamage?: (ctx: DamageContext) => void;
+	/**
+	 * Enter a parse tree produced by `AttackParser.extraText`.
+	 * @param ctx the parse tree
+	 */
+	enterExtraText?: (ctx: ExtraTextContext) => void;
+	/**
+	 * Exit a parse tree produced by `AttackParser.extraText`.
+	 * @param ctx the parse tree
+	 */
+	exitExtraText?: (ctx: ExtraTextContext) => void;
 }
 

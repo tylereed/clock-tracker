@@ -57,6 +57,7 @@ export default class AttackParser extends Parser {
 	public static readonly RULE_range = 7;
 	public static readonly RULE_targets = 8;
 	public static readonly RULE_damage = 9;
+	public static readonly RULE_extraText = 10;
 	public static readonly literalNames: (string | null)[] = [ null, "':'", 
                                                             "' '", "', '", 
                                                             "','", "'.'", 
@@ -92,7 +93,7 @@ export default class AttackParser extends Parser {
 	// tslint:disable:no-trailing-whitespace
 	public static readonly ruleNames: string[] = [
 		"attack", "attackType", "meleeRanged", "weaponSpell", "toHit", "distance", 
-		"reach", "range", "targets", "damage",
+		"reach", "range", "targets", "damage", "extraText",
 	];
 	public get grammarFileName(): string { return "Attack.g4"; }
 	public get literalNames(): (string | null)[] { return AttackParser.literalNames; }
@@ -114,65 +115,52 @@ export default class AttackParser extends Parser {
 		this.enterRule(localctx, 0, AttackParser.RULE_attack);
 		let _la: number;
 		try {
-			let _alt: number;
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 20;
-			this.attackType();
-			this.state = 21;
-			this.match(AttackParser.T__0);
 			this.state = 22;
-			this.match(AttackParser.T__1);
+			this.attackType();
 			this.state = 23;
-			this.toHit();
+			this.match(AttackParser.T__0);
 			this.state = 24;
-			this.match(AttackParser.T__2);
+			this.match(AttackParser.T__1);
 			this.state = 25;
-			this.distance();
+			this.toHit();
 			this.state = 26;
 			this.match(AttackParser.T__2);
 			this.state = 27;
-			this.targets();
+			this.distance();
+			this.state = 28;
+			this.match(AttackParser.T__2);
 			this.state = 29;
+			this.targets();
+			this.state = 31;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			if (_la===4) {
 				{
-				this.state = 28;
+				this.state = 30;
 				this.match(AttackParser.T__3);
 				}
 			}
 
-			this.state = 32;
+			this.state = 34;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			if (_la===5) {
 				{
-				this.state = 31;
+				this.state = 33;
 				this.match(AttackParser.T__4);
 				}
 			}
 
-			this.state = 34;
+			this.state = 36;
 			this.match(AttackParser.T__1);
-			this.state = 35;
+			this.state = 37;
 			this.damage();
+			this.state = 38;
+			this.extraText();
 			this.state = 39;
-			this._errHandler.sync(this);
-			_alt = this._interp.adaptivePredict(this._input, 2, this._ctx);
-			while (_alt !== 1 && _alt !== ATN.INVALID_ALT_NUMBER) {
-				if (_alt === 1 + 1) {
-					{
-					{
-					this.state = 36;
-					this.match(AttackParser.TEXT);
-					}
-					}
-				}
-				this.state = 41;
-				this._errHandler.sync(this);
-				_alt = this._interp.adaptivePredict(this._input, 2, this._ctx);
-			}
+			this.match(AttackParser.EOF);
 			}
 		}
 		catch (re) {
@@ -196,13 +184,13 @@ export default class AttackParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 42;
+			this.state = 41;
 			this.meleeRanged();
-			this.state = 43;
+			this.state = 42;
 			this.match(AttackParser.T__1);
-			this.state = 44;
+			this.state = 43;
 			this.weaponSpell();
-			this.state = 45;
+			this.state = 44;
 			this.match(AttackParser.T__5);
 			}
 		}
@@ -225,31 +213,31 @@ export default class AttackParser extends Parser {
 		let localctx: MeleeRangedContext = new MeleeRangedContext(this, this._ctx, this.state);
 		this.enterRule(localctx, 4, AttackParser.RULE_meleeRanged);
 		try {
-			this.state = 52;
+			this.state = 51;
 			this._errHandler.sync(this);
-			switch ( this._interp.adaptivePredict(this._input, 3, this._ctx) ) {
+			switch ( this._interp.adaptivePredict(this._input, 2, this._ctx) ) {
 			case 1:
 				this.enterOuterAlt(localctx, 1);
 				{
-				this.state = 47;
+				this.state = 46;
 				this.match(AttackParser.MELEE);
 				}
 				break;
 			case 2:
 				this.enterOuterAlt(localctx, 2);
 				{
-				this.state = 48;
+				this.state = 47;
 				this.match(AttackParser.RANGED);
 				}
 				break;
 			case 3:
 				this.enterOuterAlt(localctx, 3);
 				{
-				this.state = 49;
+				this.state = 48;
 				this.match(AttackParser.MELEE);
-				this.state = 50;
+				this.state = 49;
 				this.match(AttackParser.T__6);
-				this.state = 51;
+				this.state = 50;
 				this.match(AttackParser.RANGED);
 				}
 				break;
@@ -277,7 +265,7 @@ export default class AttackParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 54;
+			this.state = 53;
 			_la = this._input.LA(1);
 			if(!(_la===23 || _la===24)) {
 			this._errHandler.recoverInline(this);
@@ -309,11 +297,11 @@ export default class AttackParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 56;
+			this.state = 55;
 			this.match(AttackParser.T__7);
-			this.state = 57;
+			this.state = 56;
 			this.match(AttackParser.NUMBER);
-			this.state = 58;
+			this.state = 57;
 			this.match(AttackParser.T__8);
 			}
 		}
@@ -336,31 +324,31 @@ export default class AttackParser extends Parser {
 		let localctx: DistanceContext = new DistanceContext(this, this._ctx, this.state);
 		this.enterRule(localctx, 10, AttackParser.RULE_distance);
 		try {
-			this.state = 66;
+			this.state = 65;
 			this._errHandler.sync(this);
-			switch ( this._interp.adaptivePredict(this._input, 4, this._ctx) ) {
+			switch ( this._interp.adaptivePredict(this._input, 3, this._ctx) ) {
 			case 1:
 				this.enterOuterAlt(localctx, 1);
 				{
-				this.state = 60;
+				this.state = 59;
 				this.reach();
 				}
 				break;
 			case 2:
 				this.enterOuterAlt(localctx, 2);
 				{
-				this.state = 61;
+				this.state = 60;
 				this.range();
 				}
 				break;
 			case 3:
 				this.enterOuterAlt(localctx, 3);
 				{
-				this.state = 62;
+				this.state = 61;
 				this.reach();
-				this.state = 63;
+				this.state = 62;
 				this.match(AttackParser.T__6);
-				this.state = 64;
+				this.state = 63;
 				this.range();
 				}
 				break;
@@ -388,19 +376,19 @@ export default class AttackParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 69;
+			this.state = 68;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			if (_la===10) {
 				{
-				this.state = 68;
+				this.state = 67;
 				this.match(AttackParser.T__9);
 				}
 			}
 
-			this.state = 71;
+			this.state = 70;
 			this.match(AttackParser.NUMBER);
-			this.state = 72;
+			this.state = 71;
 			this.match(AttackParser.T__10);
 			}
 		}
@@ -426,23 +414,23 @@ export default class AttackParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 74;
+			this.state = 73;
 			this.match(AttackParser.T__11);
-			this.state = 75;
+			this.state = 74;
 			this.match(AttackParser.NUMBER);
-			this.state = 78;
+			this.state = 77;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			if (_la===13) {
 				{
-				this.state = 76;
+				this.state = 75;
 				this.match(AttackParser.T__12);
-				this.state = 77;
+				this.state = 76;
 				this.match(AttackParser.NUMBER);
 				}
 			}
 
-			this.state = 80;
+			this.state = 79;
 			this.match(AttackParser.T__10);
 			}
 		}
@@ -468,16 +456,16 @@ export default class AttackParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 82;
+			this.state = 81;
 			this.match(AttackParser.NUMBER_TEXT);
-			this.state = 83;
+			this.state = 82;
 			this.match(AttackParser.T__13);
-			this.state = 85;
+			this.state = 84;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			if (_la===15) {
 				{
-				this.state = 84;
+				this.state = 83;
 				this.match(AttackParser.T__14);
 				}
 			}
@@ -505,21 +493,21 @@ export default class AttackParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 87;
+			this.state = 86;
 			this.match(AttackParser.T__15);
-			this.state = 88;
+			this.state = 87;
 			this.match(AttackParser.T__1);
-			this.state = 89;
+			this.state = 88;
 			this.match(AttackParser.NUMBER);
-			this.state = 90;
+			this.state = 89;
 			this.match(AttackParser.T__16);
-			this.state = 91;
+			this.state = 90;
 			this.match(AttackParser.DICE);
-			this.state = 92;
+			this.state = 91;
 			this.match(AttackParser.T__17);
-			this.state = 93;
+			this.state = 92;
 			this.match(AttackParser.DAMAGE_TYPE);
-			this.state = 94;
+			this.state = 93;
 			this.match(AttackParser.T__18);
 			}
 		}
@@ -537,34 +525,78 @@ export default class AttackParser extends Parser {
 		}
 		return localctx;
 	}
+	// @RuleVersion(0)
+	public extraText(): ExtraTextContext {
+		let localctx: ExtraTextContext = new ExtraTextContext(this, this._ctx, this.state);
+		this.enterRule(localctx, 20, AttackParser.RULE_extraText);
+		try {
+			let _alt: number;
+			this.enterOuterAlt(localctx, 1);
+			{
+			this.state = 98;
+			this._errHandler.sync(this);
+			_alt = this._interp.adaptivePredict(this._input, 7, this._ctx);
+			while (_alt !== 1 && _alt !== ATN.INVALID_ALT_NUMBER) {
+				if (_alt === 1 + 1) {
+					{
+					{
+					this.state = 95;
+					this.match(AttackParser.TEXT);
+					}
+					}
+				}
+				this.state = 100;
+				this._errHandler.sync(this);
+				_alt = this._interp.adaptivePredict(this._input, 7, this._ctx);
+			}
+			this.state = 101;
+			this.match(AttackParser.T__4);
+			}
+		}
+		catch (re) {
+			if (re instanceof RecognitionException) {
+				localctx.exception = re;
+				this._errHandler.reportError(this, re);
+				this._errHandler.recover(this, re);
+			} else {
+				throw re;
+			}
+		}
+		finally {
+			this.exitRule();
+		}
+		return localctx;
+	}
 
-	public static readonly _serializedATN: number[] = [4,1,29,97,2,0,7,0,2,
-	1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,2,7,7,7,2,8,7,8,2,9,7,9,1,
-	0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,3,0,30,8,0,1,0,3,0,33,8,0,1,0,1,0,1,0,
-	5,0,38,8,0,10,0,12,0,41,9,0,1,1,1,1,1,1,1,1,1,1,1,2,1,2,1,2,1,2,1,2,3,2,
-	53,8,2,1,3,1,3,1,4,1,4,1,4,1,4,1,5,1,5,1,5,1,5,1,5,1,5,3,5,67,8,5,1,6,3,
-	6,70,8,6,1,6,1,6,1,6,1,7,1,7,1,7,1,7,3,7,79,8,7,1,7,1,7,1,8,1,8,1,8,3,8,
-	86,8,8,1,9,1,9,1,9,1,9,1,9,1,9,1,9,1,9,1,9,1,9,1,39,0,10,0,2,4,6,8,10,12,
-	14,16,18,0,1,1,0,23,24,96,0,20,1,0,0,0,2,42,1,0,0,0,4,52,1,0,0,0,6,54,1,
-	0,0,0,8,56,1,0,0,0,10,66,1,0,0,0,12,69,1,0,0,0,14,74,1,0,0,0,16,82,1,0,
-	0,0,18,87,1,0,0,0,20,21,3,2,1,0,21,22,5,1,0,0,22,23,5,2,0,0,23,24,3,8,4,
-	0,24,25,5,3,0,0,25,26,3,10,5,0,26,27,5,3,0,0,27,29,3,16,8,0,28,30,5,4,0,
-	0,29,28,1,0,0,0,29,30,1,0,0,0,30,32,1,0,0,0,31,33,5,5,0,0,32,31,1,0,0,0,
-	32,33,1,0,0,0,33,34,1,0,0,0,34,35,5,2,0,0,35,39,3,18,9,0,36,38,5,29,0,0,
-	37,36,1,0,0,0,38,41,1,0,0,0,39,40,1,0,0,0,39,37,1,0,0,0,40,1,1,0,0,0,41,
-	39,1,0,0,0,42,43,3,4,2,0,43,44,5,2,0,0,44,45,3,6,3,0,45,46,5,6,0,0,46,3,
-	1,0,0,0,47,53,5,21,0,0,48,53,5,22,0,0,49,50,5,21,0,0,50,51,5,7,0,0,51,53,
-	5,22,0,0,52,47,1,0,0,0,52,48,1,0,0,0,52,49,1,0,0,0,53,5,1,0,0,0,54,55,7,
-	0,0,0,55,7,1,0,0,0,56,57,5,8,0,0,57,58,5,27,0,0,58,59,5,9,0,0,59,9,1,0,
-	0,0,60,67,3,12,6,0,61,67,3,14,7,0,62,63,3,12,6,0,63,64,5,7,0,0,64,65,3,
-	14,7,0,65,67,1,0,0,0,66,60,1,0,0,0,66,61,1,0,0,0,66,62,1,0,0,0,67,11,1,
-	0,0,0,68,70,5,10,0,0,69,68,1,0,0,0,69,70,1,0,0,0,70,71,1,0,0,0,71,72,5,
-	27,0,0,72,73,5,11,0,0,73,13,1,0,0,0,74,75,5,12,0,0,75,78,5,27,0,0,76,77,
-	5,13,0,0,77,79,5,27,0,0,78,76,1,0,0,0,78,79,1,0,0,0,79,80,1,0,0,0,80,81,
-	5,11,0,0,81,15,1,0,0,0,82,83,5,28,0,0,83,85,5,14,0,0,84,86,5,15,0,0,85,
-	84,1,0,0,0,85,86,1,0,0,0,86,17,1,0,0,0,87,88,5,16,0,0,88,89,5,2,0,0,89,
-	90,5,27,0,0,90,91,5,17,0,0,91,92,5,25,0,0,92,93,5,18,0,0,93,94,5,26,0,0,
-	94,95,5,19,0,0,95,19,1,0,0,0,8,29,32,39,52,66,69,78,85];
+	public static readonly _serializedATN: number[] = [4,1,29,104,2,0,7,0,2,
+	1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,2,7,7,7,2,8,7,8,2,9,7,9,2,
+	10,7,10,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,3,0,32,8,0,1,0,3,0,35,8,0,1,
+	0,1,0,1,0,1,0,1,0,1,1,1,1,1,1,1,1,1,1,1,2,1,2,1,2,1,2,1,2,3,2,52,8,2,1,
+	3,1,3,1,4,1,4,1,4,1,4,1,5,1,5,1,5,1,5,1,5,1,5,3,5,66,8,5,1,6,3,6,69,8,6,
+	1,6,1,6,1,6,1,7,1,7,1,7,1,7,3,7,78,8,7,1,7,1,7,1,8,1,8,1,8,3,8,85,8,8,1,
+	9,1,9,1,9,1,9,1,9,1,9,1,9,1,9,1,9,1,10,5,10,97,8,10,10,10,12,10,100,9,10,
+	1,10,1,10,1,10,1,98,0,11,0,2,4,6,8,10,12,14,16,18,20,0,1,1,0,23,24,102,
+	0,22,1,0,0,0,2,41,1,0,0,0,4,51,1,0,0,0,6,53,1,0,0,0,8,55,1,0,0,0,10,65,
+	1,0,0,0,12,68,1,0,0,0,14,73,1,0,0,0,16,81,1,0,0,0,18,86,1,0,0,0,20,98,1,
+	0,0,0,22,23,3,2,1,0,23,24,5,1,0,0,24,25,5,2,0,0,25,26,3,8,4,0,26,27,5,3,
+	0,0,27,28,3,10,5,0,28,29,5,3,0,0,29,31,3,16,8,0,30,32,5,4,0,0,31,30,1,0,
+	0,0,31,32,1,0,0,0,32,34,1,0,0,0,33,35,5,5,0,0,34,33,1,0,0,0,34,35,1,0,0,
+	0,35,36,1,0,0,0,36,37,5,2,0,0,37,38,3,18,9,0,38,39,3,20,10,0,39,40,5,0,
+	0,1,40,1,1,0,0,0,41,42,3,4,2,0,42,43,5,2,0,0,43,44,3,6,3,0,44,45,5,6,0,
+	0,45,3,1,0,0,0,46,52,5,21,0,0,47,52,5,22,0,0,48,49,5,21,0,0,49,50,5,7,0,
+	0,50,52,5,22,0,0,51,46,1,0,0,0,51,47,1,0,0,0,51,48,1,0,0,0,52,5,1,0,0,0,
+	53,54,7,0,0,0,54,7,1,0,0,0,55,56,5,8,0,0,56,57,5,27,0,0,57,58,5,9,0,0,58,
+	9,1,0,0,0,59,66,3,12,6,0,60,66,3,14,7,0,61,62,3,12,6,0,62,63,5,7,0,0,63,
+	64,3,14,7,0,64,66,1,0,0,0,65,59,1,0,0,0,65,60,1,0,0,0,65,61,1,0,0,0,66,
+	11,1,0,0,0,67,69,5,10,0,0,68,67,1,0,0,0,68,69,1,0,0,0,69,70,1,0,0,0,70,
+	71,5,27,0,0,71,72,5,11,0,0,72,13,1,0,0,0,73,74,5,12,0,0,74,77,5,27,0,0,
+	75,76,5,13,0,0,76,78,5,27,0,0,77,75,1,0,0,0,77,78,1,0,0,0,78,79,1,0,0,0,
+	79,80,5,11,0,0,80,15,1,0,0,0,81,82,5,28,0,0,82,84,5,14,0,0,83,85,5,15,0,
+	0,84,83,1,0,0,0,84,85,1,0,0,0,85,17,1,0,0,0,86,87,5,16,0,0,87,88,5,2,0,
+	0,88,89,5,27,0,0,89,90,5,17,0,0,90,91,5,25,0,0,91,92,5,18,0,0,92,93,5,26,
+	0,0,93,94,5,19,0,0,94,19,1,0,0,0,95,97,5,29,0,0,96,95,1,0,0,0,97,100,1,
+	0,0,0,98,99,1,0,0,0,98,96,1,0,0,0,99,101,1,0,0,0,100,98,1,0,0,0,101,102,
+	5,5,0,0,102,21,1,0,0,0,8,31,34,51,65,68,77,84,98];
 
 	private static __ATN: ATN;
 	public static get _ATN(): ATN {
@@ -600,11 +632,11 @@ export class AttackContext extends ParserRuleContext {
 	public damage(): DamageContext {
 		return this.getTypedRuleContext(DamageContext, 0) as DamageContext;
 	}
-	public TEXT_list(): TerminalNode[] {
-	    	return this.getTokens(AttackParser.TEXT);
+	public extraText(): ExtraTextContext {
+		return this.getTypedRuleContext(ExtraTextContext, 0) as ExtraTextContext;
 	}
-	public TEXT(i: number): TerminalNode {
-		return this.getToken(AttackParser.TEXT, i);
+	public EOF(): TerminalNode {
+		return this.getToken(AttackParser.EOF, 0);
 	}
     public get ruleIndex(): number {
     	return AttackParser.RULE_attack;
@@ -854,6 +886,33 @@ export class DamageContext extends ParserRuleContext {
 	public exitRule(listener: AttackListener): void {
 	    if(listener.exitDamage) {
 	 		listener.exitDamage(this);
+		}
+	}
+}
+
+
+export class ExtraTextContext extends ParserRuleContext {
+	constructor(parser?: AttackParser, parent?: ParserRuleContext, invokingState?: number) {
+		super(parent, invokingState);
+    	this.parser = parser;
+	}
+	public TEXT_list(): TerminalNode[] {
+	    	return this.getTokens(AttackParser.TEXT);
+	}
+	public TEXT(i: number): TerminalNode {
+		return this.getToken(AttackParser.TEXT, i);
+	}
+    public get ruleIndex(): number {
+    	return AttackParser.RULE_extraText;
+	}
+	public enterRule(listener: AttackListener): void {
+	    if(listener.enterExtraText) {
+	 		listener.enterExtraText(this);
+		}
+	}
+	public exitRule(listener: AttackListener): void {
+	    if(listener.exitExtraText) {
+	 		listener.exitExtraText(this);
 		}
 	}
 }

@@ -1,4 +1,3 @@
-import { fail } from "assert";
 import { describe, expect, test } from "vitest";
 
 import { Action, parse } from "../../src/utils/Attack";
@@ -13,10 +12,13 @@ function assertActionEqual(a: Action | undefined, expected: Action) {
   expect.soft(actual.isSpell, "isSpell").toBe(expected.isSpell);
   expect.soft(actual.toHitBonus, "toHitBonus").toBe(expected.toHitBonus);
   expect.soft(actual.reach, "reach").toBe(expected.reach);
+  expect.soft(actual.range).toBe(expected.range);
+  expect.soft(actual.rangeMax).toBe(expected.rangeMax);
   expect.soft(actual.numberTargets, "numberTargets").toBe(expected.numberTargets);
   expect.soft(actual.damageAverage, "damageAverage").toBe(expected.damageAverage);
   expect.soft(actual.damageDice, "damageDice").toStrictEqual(expected.damageDice);
   expect.soft(actual.damageType, "damageType").toBe(expected.damageType);
+  expect.soft(actual.extraText, "extraText").toBe(expected.extraText);
 }
 
 describe("AttackAction", () => {
@@ -34,7 +36,7 @@ describe("AttackAction", () => {
         damageAverage: 12,
         damageDice: new Dice(2, 6, 5),
         damageType: "piercing",
-        extraText: " and the target takes 1 acid damage at the start of its next turn unless the target immediately uses its reaction to wipe off the spit."
+        extraText: "."
       }],
     ["Ranged Weapon Attack: +3 to hit, range 20/60 ft., one target. Hit: 5 (2d4) acid damage and the target takes 1 acid damage at the start of its next turn unless the target immediately uses its reaction to wipe off the spit.",
       {
@@ -48,7 +50,8 @@ describe("AttackAction", () => {
         numberTargets: 1,
         damageAverage: 5,
         damageDice: new Dice(2, 4, 0),
-        damageType: "acid"
+        damageType: "acid",
+        extraText: " and the target takes 1 acid damage at the start of its next turn unless the target immediately uses its reaction to wipe off the spit."
       }],
     ["Melee or Ranged Weapon Attack: +3 to hit, reach 5 ft. or range 20/60 ft., one target. Hit: 4 (1d6 + 1) piercing damage.",
       {
@@ -63,7 +66,8 @@ describe("AttackAction", () => {
         numberTargets: 1,
         damageAverage: 4,
         damageDice: new Dice(1, 6, 1),
-        damageType: "piercing"
+        damageType: "piercing",
+        extraText: "."
       }],
     ["_Ranged Spell Attack:_ +6 to hit, range 60 ft., one target. _Hit:_ 6 (1d4+4) radiant damage.",
       {
@@ -76,7 +80,8 @@ describe("AttackAction", () => {
         numberTargets: 1,
         damageAverage: 6,
         damageDice: new Dice(1, 4, 4),
-        damageType: "radiant"
+        damageType: "radiant",
+        extraText: "."
       }],
     ["Melee Spell Attack: +5 to hit, reach 5 ft., one target. Hit: 10 (3d6) psychic damage.",
       {
@@ -89,7 +94,8 @@ describe("AttackAction", () => {
         numberTargets: 1,
         damageAverage: 10,
         damageDice: new Dice(3, 6, 0),
-        damageType: "psychic"
+        damageType: "psychic",
+        extraText: "."
       }],
     // ["",
     //   {
