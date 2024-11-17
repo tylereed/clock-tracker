@@ -3,15 +3,16 @@ import Dice from "./Dice";
 import { CharStream, CommonTokenStream, ParseTreeWalker } from "antlr4";
 import AttackLexer from "@/generated/parsers/AttackLexer";
 import AttackParser from "@/generated/parsers/AttackParser";
-import AttackListener from "@/generated/parsers/AttackListener";
 
-interface Action {
+export interface Action {
   isMelee: boolean;
   isRanged: boolean;
   isWeapon: boolean;
   isSpell: boolean;
   toHitBonus: number;
-  reach: number;
+  reach?: number;
+  range?: number;
+  rangeMax?: number;
   numberTargets: number;
   damageAverage: number;
   damageDice: Dice;
@@ -20,7 +21,6 @@ interface Action {
 
 export function parse(text: string): Action | undefined {
 
-  
   const chars = new CharStream(text, true);
   const lexer = new AttackLexer(chars);
   const tokens = new CommonTokenStream(lexer);
