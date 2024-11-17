@@ -72,6 +72,10 @@ export default class Dice {
     return this.count * this.sides + this.modifier;
   }
 
+  get Average() {
+    return Math.floor((this.sides + 1) / 2 * this.count + this.modifier);
+  }
+
   throw(multiplier?: number) {
     let result = this.modifier;
 

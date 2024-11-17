@@ -41,10 +41,10 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, toRefs } from "vue";
 import pluralize from "pluralize";
-//var pluralize = require("pluralize");
 
 import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
 
+import { Action, parse as parseAttack } from "@/utils/Attack";
 import Dice from "@/utils/Dice";
 import Initiative, { Actions } from "@/types/Initiative";
 import { MonsterO5e, Size } from "@/utils/Open5e";
@@ -63,21 +63,27 @@ type NewInitiative = Omit<Initiative, "hp">;
 const isFormValid = ref(false);
 const isEdit = ref(false);
 const newInit = ref<NewInitiative>({} as NewInitiative);
+let defaultHealth = 0;
+
+function setMonster(monster: MonsterO5e) {
+  initiativeDice.value = Dice.D20.ofStat(monster.dexterity);
+  healthDice.value = Dice.parse(monster.hit_dice);
+  defaultHealth = monster.hit_points;
+  newInit.value = {
+    name: monster.name,
+    order: 10 + Dice.calculateModifier(monster.dexterity),
+    dex: monster.dexterity,
+    ac: monster.armor_class,
+    maxHp: monster.hit_points,
+    conditions: {},
+    actions: [...buildActions(monster.actions)]
+  };
+}
 
 onMounted(() => {
   if (monsterStats.value) {
     isEdit.value = true;
-    initiativeDice.value = Dice.D20.ofStat(monsterStats.value.dexterity);
-    healthDice.value = Dice.parse(monsterStats.value.hit_dice);
-    newInit.value = {
-      name: monsterStats.value.name,
-      order: 10 + Dice.calculateModifier(monsterStats.value.dexterity),
-      dex: monsterStats.value.dexterity,
-      ac: monsterStats.value.armor_class,
-      maxHp: monsterStats.value.hit_points,
-      conditions: {},
-      actions: [...buildActions(monsterStats.value.actions)]
-    };
+    setMonster(monsterStats.value);
   } else {
     isEdit.value = false;
     newInit.value = {} as NewInitiative;
@@ -107,7 +113,7 @@ const healthRollActions = reactive([
   { label: "Roll 2x", action: () => rollHealth(2) },
   { label: "Min", action: () => newInit.value.maxHp = healthDice.value?.Min },
   { label: "Max", action: () => newInit.value.maxHp = healthDice.value?.Max },
-  { label: "Average", action: () => newInit.value.maxHp = monsterStats.value?.hit_points }
+  { label: "Average", action: () => newInit.value.maxHp = defaultHealth }
 ]);
 
 function rollHealth(multiplier?: number) {
@@ -148,21 +154,39 @@ function applyTemplate() {
 function applySquadTemplate(stats: MonsterO5e) {
   const template = { ...stats };
 
+  template.name = stats.name + " Squad";
   template.size = increaseSize(stats.size, 2);
   template.type = "group of " + stats.type;
-  template.challenge_rating = Math.floor((stats.cr ?? 0) * 2 + 2).toString();
+  template.cr = Math.floor((stringToCr(stats.challenge_rating)) * 2 + 2);
+  template.challenge_rating = template.cr.toString();
 
   template.hit_points = stats.hit_points * 5;
   if (stats.hit_dice) {
     const hit_dice = Dice.parse(stats.hit_dice);
     if (hit_dice) {
-      const squad_hit_dice = new Dice(5 * hit_dice.Count, hit_dice.Sides, hit_dice.Modifier);
+      const squad_hit_dice = new Dice(5 * hit_dice.Count, hit_dice.Sides, 5 * hit_dice.Modifier);
       template.hit_dice = squad_hit_dice.toString();
     }
   }
 
   if (!template.special_abilities) {
     template.special_abilities = [];
+  }
+
+  template.actions = [];
+  const pbDiff = crToPb(template.cr) - crToPb(stats.cr);
+  if (stats.actions) {
+    for (let statAction of stats.actions) {
+      const templateActionDesc = parseAttack(statAction.desc);
+      if (templateActionDesc && (templateActionDesc.isWeapon || templateActionDesc.isSpell)) {
+        templateActionDesc.extraText = " or half damage if the squad is bloodied" + (templateActionDesc.extraText ?? "");
+        const dice = new Dice(5 * templateActionDesc.damageDice.Count, templateActionDesc.damageDice.Sides, templateActionDesc.damageDice.Modifier);
+        templateActionDesc.damageAverage = dice.Average;
+        templateActionDesc.damageDice = dice;
+        templateActionDesc.toHitBonus += pbDiff;
+        template.actions.push({ name: pluralize(statAction.name), desc: formatDescription(templateActionDesc) });
+      }
+    }
   }
 
   const creaturePlural: string = pluralize(stats.name);
@@ -181,6 +205,8 @@ function applySquadTemplate(stats: MonsterO5e) {
       desc: `The squad is composed of 5 or more ${creaturePlural}. If it is subjected to a spell, attack, or other effect that affects only one target, it takes any damage but ignores other effects. It can share its space with ${stats.size} or smaller creatures or objects. The squad can move through any opening large enough for one ${stats.name} without squeezing.`
     }
   );
+
+  setMonster(template);
 }
 
 const sizes: Size[] = ["Tiny", "Small", "Medium", "Large", "Huge", "Gargantuan", "Titanic"];
@@ -192,7 +218,81 @@ function increaseSize(size: Size, steps: number): Size {
   return sizes[newSizeIndex];
 }
 
-function crToPb(cr: number) {
+function formatDescription(attack: Action) {
+  const sb = [];
+
+  if (attack.isMelee && attack.isRanged) {
+    sb.push("Melee or Ranged");
+  } else if (attack.isMelee) {
+    sb.push("Melee");
+  } else {
+    sb.push("Ranged");
+  }
+
+  sb.push(attack.isWeapon ? "Weapon" : "Spell");
+
+  sb.push("Attack: +");
+  sb.push(attack.toHitBonus);
+  sb.push("to hit,");
+
+  if (attack.reach) {
+    sb.push("reach");
+    sb.push(attack.reach);
+    sb.push("ft.");
+  }
+
+  if (attack.reach && attack.range) {
+    sb.push("or");
+  }
+
+  if (attack.range) {
+    sb.push("range");
+    sb.push(attack.range);
+    if (attack.rangeMax) {
+      sb.push("/");
+      sb.push(attack.rangeMax);
+    }
+    sb.push("ft.");
+  }
+
+  sb.push(",");
+
+  sb.push(intToWord(attack.numberTargets));
+  if (attack.numberTargets === 1) {
+    sb.push("target.");
+  } else {
+    sb.push("targets.");
+  }
+
+  sb.push("Hit:");
+  sb.push(attack.damageAverage);
+
+  sb.push("(");
+  sb.push(attack.damageDice.toString());
+  sb.push(")");
+  sb.push(attack.damageType);
+  sb.push("damage");
+  sb.push(attack.extraText);
+
+  return sb.join(" ");
+}
+
+function stringToCr(text: string) {
+  if (text === "1/8") return 1 / 8;
+  if (text === "1/4") return 1 / 4;
+  if (text === "1/2") return 1 / 2;
+  return parseInt(text);
+}
+
+const intWords = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
+function intToWord(n: number) {
+  return intWords[n];
+}
+
+function crToPb(cr?: number) {
+  if (cr == null) {
+    return 0;
+  }
   if (cr < 5) {
     return 2;
   }

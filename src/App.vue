@@ -1,18 +1,18 @@
 <template>
   <v-app>
     <v-main>
-      <!-- <timer />
+      <timer />
       <clocks />
       <encounters />
 
-      <dark-mode-toggle class="position-absolute top-0 right-0 mr-3" /> -->
+      <dark-mode-toggle class="position-absolute top-0 right-0 mr-3" />
 
-      <v-textarea v-model="text" />
+      <!-- <v-textarea v-model="text" />
       <v-btn @click="parse">Parse</v-btn>
 
       <v-textarea v-model="succeeded" />
 
-      <v-textarea v-model="failed" />
+      <v-textarea v-model="failed" /> -->
     </v-main>
   </v-app>
 </template>
