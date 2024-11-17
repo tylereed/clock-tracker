@@ -33,7 +33,8 @@ describe("AttackAction", () => {
         numberTargets: 1,
         damageAverage: 12,
         damageDice: new Dice(2, 6, 5),
-        damageType: "piercing"
+        damageType: "piercing",
+        extraText: " and the target takes 1 acid damage at the start of its next turn unless the target immediately uses its reaction to wipe off the spit."
       }],
     ["Ranged Weapon Attack: +3 to hit, range 20/60 ft., one target. Hit: 5 (2d4) acid damage and the target takes 1 acid damage at the start of its next turn unless the target immediately uses its reaction to wipe off the spit.",
       {

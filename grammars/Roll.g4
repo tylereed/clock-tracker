@@ -10,4 +10,4 @@ modifier: ('+' | '-') NUMBER;
 
 NUMBER: [0-9]+;
 
-WHITESPACE: (' ' | '\r' | '\n' | '\t') -> skip;
+WHITESPACE: [ \r\n\t]+ -> skip;

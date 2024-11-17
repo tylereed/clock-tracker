@@ -8,7 +8,9 @@ import { AttackTypeContext } from "./AttackParser.js";
 import { MeleeRangedContext } from "./AttackParser.js";
 import { WeaponSpellContext } from "./AttackParser.js";
 import { ToHitContext } from "./AttackParser.js";
+import { DistanceContext } from "./AttackParser.js";
 import { ReachContext } from "./AttackParser.js";
+import { RangeContext } from "./AttackParser.js";
 import { TargetsContext } from "./AttackParser.js";
 import { DamageContext } from "./AttackParser.js";
 
@@ -69,6 +71,16 @@ export default class AttackListener extends ParseTreeListener {
 	 */
 	exitToHit?: (ctx: ToHitContext) => void;
 	/**
+	 * Enter a parse tree produced by `AttackParser.distance`.
+	 * @param ctx the parse tree
+	 */
+	enterDistance?: (ctx: DistanceContext) => void;
+	/**
+	 * Exit a parse tree produced by `AttackParser.distance`.
+	 * @param ctx the parse tree
+	 */
+	exitDistance?: (ctx: DistanceContext) => void;
+	/**
 	 * Enter a parse tree produced by `AttackParser.reach`.
 	 * @param ctx the parse tree
 	 */
@@ -78,6 +90,16 @@ export default class AttackListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	exitReach?: (ctx: ReachContext) => void;
+	/**
+	 * Enter a parse tree produced by `AttackParser.range`.
+	 * @param ctx the parse tree
+	 */
+	enterRange?: (ctx: RangeContext) => void;
+	/**
+	 * Exit a parse tree produced by `AttackParser.range`.
+	 * @param ctx the parse tree
+	 */
+	exitRange?: (ctx: RangeContext) => void;
 	/**
 	 * Enter a parse tree produced by `AttackParser.targets`.
 	 * @param ctx the parse tree

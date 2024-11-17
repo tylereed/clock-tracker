@@ -1,22 +1,11 @@
 import AttackListener from "@/generated/parsers/AttackListener";
-import { AttackContext, AttackTypeContext, DamageContext, MeleeRangedContext, ReachContext, TargetsContext, ToHitContext, WeaponSpellContext } from "@/generated/parsers/AttackParser";
+import { AttackContext, AttackTypeContext, DamageContext, MeleeRangedContext, RangeContext, ReachContext, TargetsContext, ToHitContext, WeaponSpellContext } from "@/generated/parsers/AttackParser";
+import { Action } from "@/utils/Attack";
 import Dice from "@/utils/Dice";
 
 export default class ActionListener extends AttackListener {
 
-  #action: {
-    isMelee: boolean;
-    isRanged: boolean;
-    isWeapon: boolean;
-    isSpell: boolean;
-    toHitBonus: number;
-    reach: number;
-    numberTargets: number;
-    damageAverage: number;
-    damageDice: Dice;
-    damageType: string;
-    extraText?: string;
-  };
+  #action: Action;
 
   constructor() {
     super();
@@ -26,7 +15,6 @@ export default class ActionListener extends AttackListener {
       isWeapon: false,
       isSpell: false,
       toHitBonus: 0,
-      reach: 0,
       numberTargets: 0,
       damageAverage: 0,
       damageDice: new Dice(0, 0, 0),
@@ -84,6 +72,14 @@ export default class ActionListener extends AttackListener {
 
   enterReach = (ctx: ReachContext) => {
     this.#action.reach = parseInt(ctx.NUMBER().getText());
+  };
+
+  enterRange = (ctx: RangeContext) => {
+    this.#action.range = parseInt(ctx.NUMBER(0).getText());
+
+    if (ctx.NUMBER_list.length > 1) {
+      this.#action.rangeMax = parseInt(ctx.NUMBER(1).getText());
+    }
   };
 
   enterTargets = (ctx: TargetsContext) => {

@@ -17,6 +17,7 @@ export interface Action {
   damageAverage: number;
   damageDice: Dice;
   damageType: string;
+  extraText?: string;
 }
 
 export function parse(text: string): Action | undefined {
