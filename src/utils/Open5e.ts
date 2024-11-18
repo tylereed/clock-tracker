@@ -22,10 +22,12 @@ interface Action extends Ability {
   damage_dice?: string;
 }
 
+export type Size = "Tiny" | "Small" | "Medium" | "Large" | "Huge" | "Gargantuan" | "Titanic";
+
 export interface MonsterO5e {
   slug: string;
   name: string;
-  size: string;
+  size: Size;
   type: string;
   subtype: string;
   group?: string;

@@ -1,7 +1,13 @@
 grammar Roll;
 
-roll : NUMBER? 'd' NUMBER ('+' NUMBER)? ;
+roll: count? 'd' sides modifier?;
 
-NUMBER : [0-9]+ ;
+count: NUMBER;
 
-WHITESPACE : ' \r\n\t' -> skip;
+sides: NUMBER;
+
+modifier: ('+' | '-') NUMBER;
+
+NUMBER: [0-9]+;
+
+WHITESPACE: [ \r\n\t]+ -> skip;

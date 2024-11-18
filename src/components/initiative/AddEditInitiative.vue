@@ -4,6 +4,14 @@
       <v-card-title>Add {{ isEdit ? "Monster" : "PC" }} Initiative</v-card-title>
       <v-card-text>
         <v-container>
+          <v-row v-if="isEdit">
+            <v-col cols="9">
+              <v-select v-model="selectedTemplate" density="compact" label="Template" :items="['Squad']" />
+            </v-col>
+            <v-col cols="3">
+              <v-btn @click="applyTemplate">Apply Template</v-btn>
+            </v-col>
+          </v-row>
           <v-row>
             <v-col :cols="isEdit ? 9 : 12"><v-text-field label="Initiative" density="compact" v-model="newInit.order"
                 :rules="v.OrderRules" /></v-col>
@@ -41,6 +49,7 @@ import Dice from "@/utils/Dice";
 import Initiative, { Actions } from "@/types/Initiative";
 import { MonsterO5e } from "@/utils/Open5e";
 import v from "./InitiativeRules";
+import * as t from "./templates";
 
 const props = defineProps<{ monsterStats?: MonsterO5e | null }>();
 const { monsterStats } = toRefs(props);
@@ -55,21 +64,27 @@ type NewInitiative = Omit<Initiative, "hp">;
 const isFormValid = ref(false);
 const isEdit = ref(false);
 const newInit = ref<NewInitiative>({} as NewInitiative);
+let defaultHealth = 0;
+
+function setMonster(monster: MonsterO5e) {
+  initiativeDice.value = Dice.D20.ofStat(monster.dexterity);
+  healthDice.value = Dice.parse(monster.hit_dice);
+  defaultHealth = monster.hit_points;
+  newInit.value = {
+    name: monster.name,
+    order: 10 + Dice.calculateModifier(monster.dexterity),
+    dex: monster.dexterity,
+    ac: monster.armor_class,
+    maxHp: monster.hit_points,
+    conditions: {},
+    actions: [...buildActions(monster.actions)]
+  };
+}
 
 onMounted(() => {
   if (monsterStats.value) {
     isEdit.value = true;
-    initiativeDice.value = Dice.D20.ofStat(monsterStats.value.dexterity);
-    healthDice.value = Dice.parse(monsterStats.value.hit_dice);
-    newInit.value = {
-      name: monsterStats.value.name,
-      order: 10 + Dice.calculateModifier(monsterStats.value.dexterity),
-      dex: monsterStats.value.dexterity,
-      ac: monsterStats.value.armor_class,
-      maxHp: monsterStats.value.hit_points,
-      conditions: {},
-      actions: [...buildActions(monsterStats.value.actions)]
-    };
+    setMonster(monsterStats.value);
   } else {
     isEdit.value = false;
     newInit.value = {} as NewInitiative;
@@ -97,9 +112,9 @@ const healthRollActions = reactive([
   { label: "Roll", action: () => rollHealth() },
   { label: "Roll 1.5x", action: () => rollHealth(1.5) },
   { label: "Roll 2x", action: () => rollHealth(2) },
-  { label: "Min", action: () => newInit.value.maxHp = healthDice.value?.Min},
-  { label: "Max", action: () => newInit.value.maxHp = healthDice.value?.Max},
-  { label: "Average", action: () => newInit.value.maxHp = monsterStats.value?.hit_points}
+  { label: "Min", action: () => newInit.value.maxHp = healthDice.value?.Min },
+  { label: "Max", action: () => newInit.value.maxHp = healthDice.value?.Max },
+  { label: "Average", action: () => newInit.value.maxHp = defaultHealth }
 ]);
 
 function rollHealth(multiplier?: number) {
@@ -129,4 +144,15 @@ function addInitiative() {
     emit("addInit", init);
   }
 }
+
+const selectedTemplate = ref("Squad");
+function applyTemplate() {
+  if (selectedTemplate.value && monsterStats.value) {
+    const template = t.applyTemplate(selectedTemplate.value, monsterStats.value);
+    if (template) {
+      setMonster(template);
+    }
+  }
+}
+
 </script>

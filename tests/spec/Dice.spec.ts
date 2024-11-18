@@ -83,10 +83,15 @@ describe("Dice", () => {
     expect(actual).toBe(expected);
   });
 
-  test("parse", () => {
-    const expected = new Dice(2, 20, 5);
+  test.each([
+    ["2d20+5", 2, 20, 5],
+    ["2d20 +5", 2, 20, 5],
+    ["2d20+ 5", 2, 20, 5],
+    ["2d20 + 5", 2, 20, 5]
+  ])("parse %s", (text, count, sides, modifier) => {
+    const expected = new Dice(count, sides, modifier);
 
-    const actual = Dice.parse("2d20+5");
+    const actual = Dice.parse(text);
 
     expect(actual).toStrictEqual(expected);
   });

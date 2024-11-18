@@ -1,7 +1,8 @@
 T__0=1
 T__1=2
-NUMBER=3
-WHITESPACE=4
+T__2=3
+NUMBER=4
+WHITESPACE=5
 'd'=1
 '+'=2
-' \r\n\t'=4
+'-'=3

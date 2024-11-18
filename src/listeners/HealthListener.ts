@@ -1,5 +1,5 @@
 import Dice from "@/utils/Dice";
-import { RollContext } from "@/generated/parsers/RollParser";
+import { CountContext, ModifierContext, RollContext, SidesContext } from "@/generated/parsers/RollParser";
 import RollListener from "@/generated/parsers/RollListener";
 
 export default class HealthListener extends RollListener {
@@ -9,34 +9,22 @@ export default class HealthListener extends RollListener {
   constructor() {
     super();
     this.#roll = {
-      count: 0,
+      count: 1,
       sides: 0,
       modifier: 0
     };
   }
 
-  enterRoll = (ctx: RollContext) => {
-    const max = ctx.getChildCount();
-    let nextChild;
+  enterCount = (ctx: CountContext) => {
+    this.#roll.count = parseInt(ctx.NUMBER().getText());
+  };
 
-    if (ctx.getChild(0).getText() === "d") {
-      this.#roll.count = 1;
-      nextChild = 1;
-    } else {
-      this.#roll.count = +ctx.getChild(0).getText();
-      nextChild = 2;
-    }
+  enterSides = (ctx: SidesContext) => {
+    this.#roll.sides = parseInt(ctx.NUMBER().getText());
+  };
 
-    this.#roll.sides = +ctx.getChild(nextChild).getText();
-
-    if (++nextChild >= max) {
-      return;
-    }
-
-    if (ctx.getChild(nextChild).getText() === '+') {
-      this.#roll.modifier = +ctx.getChild(nextChild+1).getText();
-    }
-
+  enterModifier = (ctx: ModifierContext) => {
+    this.#roll.modifier = parseInt(ctx.getText());
   };
 
   build(): Dice {
