@@ -45,6 +45,8 @@ function applySquadTemplate(stats: MonsterO5e) {
         templateActionDesc.damageDice = dice;
         templateActionDesc.toHitBonus += pbDiff;
         template.actions.push({ name: pluralize(statAction.name), desc: formatDescription(templateActionDesc) });
+      } else {
+        template.actions.push({ ...statAction });
       }
     }
   }

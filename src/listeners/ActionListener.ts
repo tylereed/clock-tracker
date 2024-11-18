@@ -23,7 +23,7 @@ export default class ActionListener extends AttackListener {
   }
 
   build() {
-    return { ... this.#action };
+    return { ...this.#action };
   }
 
   wordToInt(word: string): number {
@@ -89,7 +89,7 @@ export default class ActionListener extends AttackListener {
   };
 
   exitAttack = (ctx: AttackContext) => {
-    const extraText = ctx.extraText().getText();
+    const extraText = ctx.extraText()?.getText();
     if (extraText) {
       this.#action.extraText = extraText;
     }
