@@ -36,7 +36,7 @@ import RollParser from "./generated/parsers/RollParser";
 import HealthListener from "./listeners/HealthListener";
 import { forOfStatement } from "@babel/types";
 import { fail } from "assert";
-import ActionListener from "./listeners/ActionListener";
+import AttackActionListener from "./listeners/AttackActionListener";
 import { parse as parseAttack } from "@/utils/Attack";
 
 const text = ref("Melee Weapon Attack: +7 to hit, reach 5 ft., one target. Hit: 12 (2d6 + 5) piercing damage.");

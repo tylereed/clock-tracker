@@ -11,6 +11,11 @@ export function applyTemplate(template: string, stats: MonsterO5e) {
   throw "Unknown template: " + template;
 }
 
+function increaseSquadDamage(dice: Dice) {
+  const damageDice = new Dice(5 * dice.Count, dice.Sides, dice.Modifier);
+  return [damageDice.Average, damageDice] as const;
+}
+
 function applySquadTemplate(stats: MonsterO5e) {
   const template = { ...stats };
 
@@ -40,9 +45,15 @@ function applySquadTemplate(stats: MonsterO5e) {
       const templateActionDesc = parseAttack(statAction.desc);
       if (templateActionDesc && (templateActionDesc.isWeapon || templateActionDesc.isSpell)) {
         templateActionDesc.extraText = " or half damage if the squad is bloodied" + (templateActionDesc.extraText ?? "");
-        const dice = new Dice(5 * templateActionDesc.damageDice.Count, templateActionDesc.damageDice.Sides, templateActionDesc.damageDice.Modifier);
-        templateActionDesc.damageAverage = dice.Average;
-        templateActionDesc.damageDice = dice;
+
+        [templateActionDesc.damageAverage, templateActionDesc.damageDice] = increaseSquadDamage(templateActionDesc.damageDice);
+        if (templateActionDesc.plusDamageDice) {
+          [templateActionDesc.plusDamageAverage, templateActionDesc.plusDamageDice] = increaseSquadDamage(templateActionDesc.plusDamageDice);
+        }
+        if (templateActionDesc.twoHandedDamageDice) {
+          [templateActionDesc.twoHandedDamageAverage, templateActionDesc.twoHandedDamageDice] = increaseSquadDamage(templateActionDesc.twoHandedDamageDice);
+        }
+
         templateActionDesc.toHitBonus += pbDiff;
         template.actions.push({ name: pluralize(statAction.name), desc: formatDescription(templateActionDesc) });
       } else {
@@ -80,9 +91,21 @@ function increaseSize(size: Size, steps: number): Size {
   return sizes[newSizeIndex];
 }
 
+function formatDamage(prefix: string, damageAverage: number, damageDice: Dice, damageType: string) {
+  let text = prefix;
+  text += damageAverage;
+
+  text += " (";
+  text += damageDice.toString();
+  text += ") ";
+  text += damageType;
+  text += " damage";
+
+  return text;
+}
+
 function formatDescription(attack: Action) {
   let result = "";
-  //const sb = [];
 
   if (attack.isMelee && attack.isRanged) {
     result += "Melee or Ranged";
@@ -125,14 +148,25 @@ function formatDescription(attack: Action) {
   result += pluralize("target", attack.numberTargets);
   result += ". ";
 
-  result += "Hit: ";
-  result += attack.damageAverage;
+  result += formatDamage("Hit: ", attack.damageAverage, attack.damageDice, attack.damageType);
 
-  result += " (";
-  result += attack.damageDice.toString();
-  result += ") ";
-  result += attack.damageType;
-  result += " damage";
+  let plusDamage: string | null = null;
+  if (attack.plusDamageAverage && attack.plusDamageDice && attack.plusDamageType) {
+    plusDamage = formatDamage(" plus ", attack.plusDamageAverage, attack.plusDamageDice, attack.plusDamageType);
+    result += plusDamage;
+  }
+
+  if (attack.twoHandedDamageAverage && attack.twoHandedDamageDice && attack.twoHandedDamageType) {
+    result += formatDamage(", or ", attack.twoHandedDamageAverage, attack.twoHandedDamageDice, attack.twoHandedDamageType);
+    if (plusDamage) {
+      result += plusDamage;
+    }
+    result += " if used with two hands";
+    if (attack.isMelee && attack.isRanged) {
+      result += " to make a melee attack";
+    }
+  }
+
   result += attack.extraText;
 
   return result;

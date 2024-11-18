@@ -1,7 +1,7 @@
 grammar Attack;
 
 attack:
-	attackType ':' ' ' toHit ', ' distance ', ' targets ','? '.'? ' ' damage extraText EOF;
+	attackType ':' ' ' toHit ', ' distance ', ' targets ','? '.'? ' ' hit extraText EOF;
 
 attackType: meleeRanged ' ' weaponSpell ' Attack';
 
@@ -17,9 +17,18 @@ reach: 'reach '? NUMBER ' ft.';
 
 range: 'range ' NUMBER ('/' NUMBER)? ' ft.';
 
-targets: NUMBER_TEXT ' target' 's'?;
+targets: NUMBER_TEXT ' ' ('target' | 'targets');
+
+hit: damage plusDamage? versatileDamage?;
 
 damage: 'Hit:' ' ' NUMBER ' (' DICE ') ' DAMAGE_TYPE ' damage';
+
+plusDamage:
+	' plus' ' ' NUMBER ' (' DICE ') ' DAMAGE_TYPE ' damage';
+
+versatileDamage: (' or ' | ', or ') NUMBER ' (' DICE ') ' DAMAGE_TYPE ' damage' (
+		plusDamage
+	)? ' if used with two hands' ' to make a melee attack'?;
 
 extraText: TEXT*? '.';
 
@@ -74,6 +83,8 @@ TEXT: (
 		| RANGED
 		| MELEE
 		| ' '
-		| ' target'
-		| 's'
+		| 'target'
+		| 'targets'
+		| ' damage'
+		| ' plus'
 	);

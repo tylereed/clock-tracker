@@ -12,7 +12,10 @@ import { DistanceContext } from "./AttackParser.js";
 import { ReachContext } from "./AttackParser.js";
 import { RangeContext } from "./AttackParser.js";
 import { TargetsContext } from "./AttackParser.js";
+import { HitContext } from "./AttackParser.js";
 import { DamageContext } from "./AttackParser.js";
+import { PlusDamageContext } from "./AttackParser.js";
+import { VersatileDamageContext } from "./AttackParser.js";
 import { ExtraTextContext } from "./AttackParser.js";
 
 
@@ -112,6 +115,16 @@ export default class AttackListener extends ParseTreeListener {
 	 */
 	exitTargets?: (ctx: TargetsContext) => void;
 	/**
+	 * Enter a parse tree produced by `AttackParser.hit`.
+	 * @param ctx the parse tree
+	 */
+	enterHit?: (ctx: HitContext) => void;
+	/**
+	 * Exit a parse tree produced by `AttackParser.hit`.
+	 * @param ctx the parse tree
+	 */
+	exitHit?: (ctx: HitContext) => void;
+	/**
 	 * Enter a parse tree produced by `AttackParser.damage`.
 	 * @param ctx the parse tree
 	 */
@@ -121,6 +134,26 @@ export default class AttackListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	exitDamage?: (ctx: DamageContext) => void;
+	/**
+	 * Enter a parse tree produced by `AttackParser.plusDamage`.
+	 * @param ctx the parse tree
+	 */
+	enterPlusDamage?: (ctx: PlusDamageContext) => void;
+	/**
+	 * Exit a parse tree produced by `AttackParser.plusDamage`.
+	 * @param ctx the parse tree
+	 */
+	exitPlusDamage?: (ctx: PlusDamageContext) => void;
+	/**
+	 * Enter a parse tree produced by `AttackParser.versatileDamage`.
+	 * @param ctx the parse tree
+	 */
+	enterVersatileDamage?: (ctx: VersatileDamageContext) => void;
+	/**
+	 * Exit a parse tree produced by `AttackParser.versatileDamage`.
+	 * @param ctx the parse tree
+	 */
+	exitVersatileDamage?: (ctx: VersatileDamageContext) => void;
 	/**
 	 * Enter a parse tree produced by `AttackParser.extraText`.
 	 * @param ctx the parse tree

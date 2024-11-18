@@ -1,9 +1,9 @@
 import AttackListener from "@/generated/parsers/AttackListener";
-import { AttackContext, DamageContext, MeleeRangedContext, RangeContext, ReachContext, TargetsContext, ToHitContext, WeaponSpellContext } from "@/generated/parsers/AttackParser";
+import { AttackContext, DamageContext, MeleeRangedContext, PlusDamageContext, RangeContext, ReachContext, TargetsContext, ToHitContext, VersatileDamageContext, WeaponSpellContext } from "@/generated/parsers/AttackParser";
 import { Action } from "@/utils/Attack";
 import Dice from "@/utils/Dice";
 
-export default class ActionListener extends AttackListener {
+export default class AttackActionListener extends AttackListener {
 
   #action: Action;
 
@@ -87,6 +87,18 @@ export default class ActionListener extends AttackListener {
     this.#action.damageDice = Dice.parse(ctx.DICE().getText())!;
     this.#action.damageType = ctx.DAMAGE_TYPE().getText();
   };
+
+  enterPlusDamage = (ctx: PlusDamageContext) => {
+    this.#action.plusDamageAverage = parseInt(ctx.NUMBER().getText());
+    this.#action.plusDamageDice = Dice.parse(ctx.DICE().getText())!;
+    this.#action.plusDamageType = ctx.DAMAGE_TYPE().getText();
+  };
+
+  enterVersatileDamage = (ctx: VersatileDamageContext) => {
+    this.#action.twoHandedDamageAverage = parseInt(ctx.NUMBER().getText());
+    this.#action.twoHandedDamageDice = Dice.parse(ctx.DICE().getText())!;
+    this.#action.twoHandedDamageType = ctx.DAMAGE_TYPE().getText();
+  }
 
   exitAttack = (ctx: AttackContext) => {
     const extraText = ctx.extraText()?.getText();

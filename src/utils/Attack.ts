@@ -1,8 +1,9 @@
-import ActionListener from "@/listeners/ActionListener";
-import Dice from "./Dice";
 import { CharStream, CommonTokenStream, ParseTreeWalker } from "antlr4";
+
+import AttackActionListener from "@/listeners/AttackActionListener";
 import AttackLexer from "@/generated/parsers/AttackLexer";
 import AttackParser from "@/generated/parsers/AttackParser";
+import Dice from "./Dice";
 
 export interface Action {
   isMelee: boolean;
@@ -17,6 +18,12 @@ export interface Action {
   damageAverage: number;
   damageDice: Dice;
   damageType: string;
+  plusDamageAverage?: number;
+  plusDamageDice?: Dice;
+  plusDamageType?: string;
+  twoHandedDamageAverage?: number;
+  twoHandedDamageDice?: Dice;
+  twoHandedDamageType?: string;
   extraText?: string;
 }
 
@@ -28,7 +35,7 @@ export function parse(text: string): Action | undefined {
   const parser = new AttackParser(tokens);
 
   const tree = parser.attack();
-  const listener = new ActionListener();
+  const listener = new AttackActionListener();
 
   try {
     ParseTreeWalker.DEFAULT.walk(listener, tree);
