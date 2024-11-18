@@ -5,8 +5,10 @@
       <v-card-text>
         <v-container>
           <v-row v-if="isEdit">
-            <v-col>
-              <v-select v-model="selectedTemplate" label="Template" :items="['Squad']" />
+            <v-col cols="9">
+              <v-select v-model="selectedTemplate" density="compact" label="Template" :items="['Squad']" />
+            </v-col>
+            <v-col cols="3">
               <v-btn @click="applyTemplate">Apply Template</v-btn>
             </v-col>
           </v-row>

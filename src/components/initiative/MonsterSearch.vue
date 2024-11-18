@@ -25,7 +25,7 @@
       </v-col>
     </v-row>
   </v-container>
-  <v-dialog v-model="addInitiativeDisplay" width="50%" min-width="400px">
+  <v-dialog v-model="addInitiativeDisplay" width="60%" min-width="400px">
     <add-edit-initiative class="pa-2 ma-6" :monster-stats="monsterStats" @add-init="addInit"
       @close="addInitiativeDisplay = false" />
   </v-dialog>
