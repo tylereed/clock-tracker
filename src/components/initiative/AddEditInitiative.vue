@@ -6,7 +6,7 @@
         <v-container>
           <v-row v-if="isEdit">
             <v-col cols="9">
-              <v-select v-model="selectedTemplate" density="compact" label="Template" :items="['Squad']" />
+              <v-select v-model="selectedTemplate" density="compact" label="Template" :items="templates" />
             </v-col>
             <v-col cols="3">
               <v-btn @click="applyTemplate">Apply Template</v-btn>
@@ -49,6 +49,7 @@ import Dice from "@/utils/Dice";
 import Initiative, { Actions } from "@/types/Initiative";
 import { MonsterO5e } from "@/utils/Open5e";
 import v from "./InitiativeRules";
+import { TemplateType } from "./templates";
 import * as t from "./templates";
 
 const props = defineProps<{ monsterStats?: MonsterO5e | null }>();
@@ -145,7 +146,8 @@ function addInitiative() {
   }
 }
 
-const selectedTemplate = ref("Squad");
+const templates = ref(t.templates);
+const selectedTemplate = ref<TemplateType>("Squad");
 function applyTemplate() {
   if (selectedTemplate.value && monsterStats.value) {
     const template = t.applyTemplate(selectedTemplate.value, monsterStats.value);
