@@ -19,7 +19,7 @@ export function applyTemplate(template: TemplateType, stats: MonsterO5e): Monste
 }
 
 function increaseSquadDamage(dice: Dice) {
-  const damageDice = new Dice(5 * dice.Count, dice.Sides, dice.Modifier);
+  const damageDice = new Dice(5 * dice.Count, dice.Sides, 5 * dice.Modifier);
   return [damageDice.Average, damageDice] as const;
 }
 
@@ -224,6 +224,14 @@ function crToPb(cr?: number | string) {
   return 9;
 }
 
+function notMagic(ability: { name: string, desc: string }): boolean {
+  return ability.desc.indexOf("magic") === -1 &&
+    ability.desc.indexOf("spell") === -1 &&
+    ability.name !== "Spellcasting" &&
+    ability.name.indexOf("-Level") === -1 &&
+    ability.name.indexOf("Cantrip") === -1;
+}
+
 function appendList(current: string, toAppend: string) {
   if (!current) {
     return toAppend;
@@ -256,6 +264,12 @@ function appplySkeletonTemplate(stats: MonsterO5e) {
     template.charisma_save = Dice.calculateModifier(template.charisma) + pb;
   }
 
+  const nonMagicActions = stats.actions?.filter(notMagic) ?? [];
+  template.actions = nonMagicActions;
+
+  const nonMagicBonusActions = stats.bonus_actions?.filter(notMagic) ?? [];
+  template.bonus_actions = nonMagicBonusActions;
+
   template.skills = {};
 
   template.damage_vulnerabilities = appendList(stats.damage_vulnerabilities, "bludgeoning");
@@ -268,16 +282,18 @@ function appplySkeletonTemplate(stats: MonsterO5e) {
   } else {
     const result = stats.senses.match(/darkvision (\d+) (ft\.|')/)!;
     if (parseInt(result[1]) < 60) {
-      template.senses = stats.senses.replace(/darkvision \d+ (ft\.|')/, 'darkvision 60 ft.');
+      template.senses = stats.senses.replace(/darkvision \d+ (ft\.|')/, "darkvision 60 ft.");
     }
   }
 
   template.languages = "understands the languages it knew in life but can't speak";
 
+  const magiclessAbilities = stats.special_abilities?.filter(notMagic) ?? [];
   template.special_abilities = [
+    ...magiclessAbilities,
     {
       name: "Undead Nature",
-      desc: "A skeleton doesnt require air, sustenance, or sleep."
+      desc: "A skeleton doesn't require air, sustenance, or sleep."
     }
   ];
 
