@@ -322,6 +322,8 @@ function applyZombieTemplate(stats: MonsterO5e) {
   const template = { ...stats };
 
   template.name = stats.name + " Zombie";
+  const newName = template.name.toLocaleLowerCase();
+
   template.type = "Undead";
   template.dexterity = Math.min(stats.dexterity, 6);
   template.intelligence = Math.min(stats.intelligence, 3);
@@ -342,10 +344,6 @@ function applyZombieTemplate(stats: MonsterO5e) {
     }
     template.speed[speedKey] = s;
   }
-
-  template.speed = {
-    "walk": Math.max(Math.min((stats.speed["walk"] ?? 0) - 10, 30), 0)
-  };
 
   const strMod = Dice.calculateModifier(template.strength);
   const dexMod = Dice.calculateModifier(template.dexterity);
@@ -380,21 +378,25 @@ function applyZombieTemplate(stats: MonsterO5e) {
     damageAverage: grabAttackDice.Average,
     damageDice: grabAttackDice,
     damageType: "bludgeoning",
-    extraText: ` and the target is grappled if its Medium or smaller (escape DC ${dc}) and until the grapple ends the zombie can't grab another target.`
+    extraText: ` and the target is grappled if its Medium or smaller (escape DC ${dc}) and until the grapple ends the ${newName} can't grab another target.`
   };
   const grabAction = { name: "Grab", desc: formatDescription(grabAttack) };
 
   const [multiattack] = stats.actions?.filter(a => a.name === "Multiattack") ?? [];
   if (multiattack) {
-    multiattack.desc += " The zombie can replace one weapon attack with a bite or grab."
+    multiattack.desc += ` The ${newName} can replace one weapon attack with a bite or grab.`
   }
 
-  const filteredActions = stats.actions?.filter(a => h.and(() => notMagic(a), () => a.desc.indexOf("Ranged") === -1 && a.name !== "Bite" && a.name !== "Grab")) ?? [];
+  const filteredActions = stats.actions?.filter(a => h.and(() => notMagic(a), () => a.desc.indexOf("Ranged") === -1)) ?? [];
+  const oldName = new RegExp(`${stats.name}(?! zombie)`, "gi");
+  for (let a of filteredActions) {
+    a.desc.replaceAll(oldName, newName);
+  }
   template.actions = [
-    ...filteredActions,
-    biteAction,
-    grabAction,
+    ...filteredActions
   ];
+  addOrReplaceIfBetter(template.actions, biteAction, biteAttack);
+  addOrReplaceIfBetter(template.actions, grabAction, grabAttack);
 
   template.legendary_actions = [];
   template.bonus_actions = [];
@@ -420,4 +422,27 @@ function applyZombieTemplate(stats: MonsterO5e) {
   ];
 
   return template;
+}
+
+function addOrReplaceIfBetter(actions: { name: string; desc: string }[], newAction: { name: string; desc: string; }, newAttack: Action) {
+  const index = actions.findIndex(a => a.name === newAction.name);
+  if (index === -1) {
+    actions.push(newAction);
+    return;
+  }
+
+  const oldAction = actions[index];
+  const oldAttack = parseAttack(oldAction.desc);
+
+  const oldDamage = oldAttack?.damageAverage ?? 0;
+  const oldPlus = oldAttack?.plusDamageAverage ?? 0;
+
+  const newDamage = newAttack.damageAverage;
+  const newPlus = newAttack.plusDamageAverage ?? 0;
+  if (oldDamage + oldPlus < newDamage + newPlus) {
+    actions[index] = newAction;
+    return;
+  }
+
+  // Old attack is stronger, so leave it
 }
