@@ -4,15 +4,22 @@ import { Action, parse as parseAttack } from "@/utils/Attack";
 import Dice from "@/utils/Dice";
 import { MonsterO5e, Size } from "@/utils/Open5e";
 
-export function applyTemplate(template: string, stats: MonsterO5e) {
-  if (template === "Squad") {
-    return applySquadTemplate(stats);
+export const templates = ["Squad", "Skeleton"] as const;
+export type TemplateType = typeof templates[number];
+
+export function applyTemplate(template: TemplateType, stats: MonsterO5e): MonsterO5e {
+  switch (template) {
+    case "Squad":
+      return applySquadTemplate(stats);
+    case "Skeleton":
+      return appplySkeletonTemplate(stats);
+    default:
+      throw "Unknown template: " + template;
   }
-  throw "Unknown template: " + template;
 }
 
 function increaseSquadDamage(dice: Dice) {
-  const damageDice = new Dice(5 * dice.Count, dice.Sides, dice.Modifier);
+  const damageDice = new Dice(5 * dice.Count, dice.Sides, 5 * dice.Modifier);
   return [damageDice.Average, damageDice] as const;
 }
 
@@ -184,7 +191,12 @@ function intToWord(n: number) {
   return intWords[n];
 }
 
-function crToPb(cr?: number) {
+function crToPb(cr: string): number;
+function crToPb(cr?: number): number;
+function crToPb(cr?: number | string) {
+  if (typeof cr === "string") {
+    cr = stringToCr(cr);
+  }
   if (cr == null) {
     return 0;
   }
@@ -210,4 +222,82 @@ function crToPb(cr?: number) {
     return 8;
   }
   return 9;
+}
+
+function notMagic(ability: { name: string, desc: string }): boolean {
+  return ability.desc.indexOf("magic") === -1 &&
+    ability.desc.indexOf("spell") === -1 &&
+    ability.name !== "Spellcasting" &&
+    ability.name.indexOf("-Level") === -1 &&
+    ability.name.indexOf("Cantrip") === -1;
+}
+
+function appendList(current: string, toAppend: string) {
+  if (!current) {
+    return toAppend;
+  }
+
+  if (current.indexOf(toAppend) > -1) {
+    return current;
+  }
+
+  return `${current}, ${toAppend}`;
+}
+
+function appplySkeletonTemplate(stats: MonsterO5e) {
+  const template = { ...stats };
+
+  template.name = stats.name + " Skeleton";
+  template.type = "Undead";
+  template.intelligence = Math.min(stats.intelligence, 6);
+  template.wisdom = Math.min(stats.wisdom, 8);
+  template.charisma = Math.min(stats.charisma, 5);
+
+  const pb = crToPb(template.challenge_rating);
+  if (stats.intelligence_save != null) {
+    template.intelligence_save = Dice.calculateModifier(template.intelligence) + pb;
+  }
+  if (stats.wisdom_save != null) {
+    template.wisdom_save = Dice.calculateModifier(template.wisdom) + pb;
+  }
+  if (stats.charisma_save != null) {
+    template.charisma_save = Dice.calculateModifier(template.charisma) + pb;
+  }
+
+  const nonMagicActions = stats.actions?.filter(notMagic) ?? [];
+  template.actions = nonMagicActions;
+
+  const nonMagicBonusActions = stats.bonus_actions?.filter(notMagic) ?? [];
+  template.bonus_actions = nonMagicBonusActions;
+
+  template.skills = {};
+
+  template.damage_vulnerabilities = appendList(stats.damage_vulnerabilities, "bludgeoning");
+  template.damage_immunities = appendList(stats.damage_immunities, "poison");
+  template.condition_immunities = appendList(stats.condition_immunities, "fatigue, poisoned");
+
+  // looks like it always has Passive Perception listed
+  if (stats.senses.indexOf("darkvision") === -1) {
+    template.senses = "darkvision 60 ft., " + stats.senses;
+  } else {
+    const result = stats.senses.match(/darkvision (\d+) (ft\.|')/)!;
+    if (parseInt(result[1]) < 60) {
+      template.senses = stats.senses.replace(/darkvision \d+ (ft\.|')/, "darkvision 60 ft.");
+    }
+  }
+
+  template.languages = "understands the languages it knew in life but can't speak";
+
+  const magiclessAbilities = stats.special_abilities?.filter(notMagic) ?? [];
+  template.special_abilities = [
+    ...magiclessAbilities,
+    {
+      name: "Undead Nature",
+      desc: "A skeleton doesn't require air, sustenance, or sleep."
+    }
+  ];
+
+  template.spell_list = [];
+
+  return template;
 }

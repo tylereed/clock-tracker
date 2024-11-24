@@ -64,7 +64,7 @@ export interface MonsterO5e {
   reactions?: Ability[];
   legendary_desc?: string;
   legendary_actions?: Ability[];
-  special_abilities: Ability[];
+  special_abilities?: Ability[];
   spell_list: string[];
   page_no?: number;
   environments: string[];
