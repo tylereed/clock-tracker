@@ -4,19 +4,25 @@ import { Action, parse as parseAttack } from "@/utils/Attack";
 import Dice from "@/utils/Dice";
 import * as h from "@/utils/helpers";
 import { MonsterO5e, Size } from "@/utils/Open5e";
-import { J } from "vitest/dist/chunks/reporters.anwo7Y6a";
 
 export const templates = ["Squad", "Skeleton", "Zombie"] as const;
 export type TemplateType = typeof templates[number];
 
-export function applyTemplate(template: TemplateType, stats: MonsterO5e): MonsterO5e {
+export interface ZombieOptions {
+  undeadFortitude: boolean,
+  infectiousBite: boolean,
+  vileDischarge: boolean,
+  vigorMortis: boolean
+};
+
+export function applyTemplate(template: TemplateType, stats: MonsterO5e, options?: ZombieOptions): MonsterO5e {
   switch (template) {
     case "Squad":
       return applySquadTemplate(stats);
     case "Skeleton":
       return appplySkeletonTemplate(stats);
     case "Zombie":
-      return applyZombieTemplate(stats);
+      return applyZombieTemplate(stats, options as ZombieOptions);
     default:
       throw "Unknown template: " + template;
   }
@@ -266,6 +272,41 @@ function modifyDarkvision(senses: string, distance: number) {
   return senses; // already has darkvision at or better than distance
 }
 
+function addOrReplaceIfBetter(actions: { name: string; desc: string }[], newAction: { name: string; desc: string; }, newAttack: Action) {
+  const index = actions.findIndex(a => a.name === newAction.name);
+  if (index === -1) {
+    actions.push(newAction);
+    return;
+  }
+
+  const oldAction = actions[index];
+  const oldAttack = parseAttack(oldAction.desc);
+
+  const oldDamage = oldAttack?.damageAverage ?? 0;
+  const oldPlus = oldAttack?.plusDamageAverage ?? 0;
+
+  const newDamage = newAttack.damageAverage;
+  const newPlus = newAttack.plusDamageAverage ?? 0;
+  if (oldDamage + oldPlus < newDamage + newPlus) {
+    actions[index] = newAction;
+    return;
+  }
+
+  // Old attack is stronger, so leave it
+}
+
+function addPlusDamage(action: Action, plus: Dice, damageType: string) {
+
+  if (action.plusDamageAverage ?? 0 > plus.Average) {
+    // existing plus damage is better.  Leave it.
+    return;
+  }
+
+  action.plusDamageAverage = plus.Average;
+  action.plusDamageDice = plus;
+  action.plusDamageType = damageType;
+}
+
 
 function appplySkeletonTemplate(stats: MonsterO5e) {
   const template = { ...stats };
@@ -317,8 +358,38 @@ function appplySkeletonTemplate(stats: MonsterO5e) {
   return template;
 }
 
+function* buildZombieAbilities(options: Partial<ZombieOptions>, dc: number) {
 
-function applyZombieTemplate(stats: MonsterO5e) {
+  if (options.undeadFortitude) {
+    yield {
+      "name": "Undead Fortitude (1/Day)",
+      "desc": "If the zombie is reduced to 0 hit points by damage that isnt radiant or from a critical hit, its instead reduced to 1 hit point, falls prone, and is stunned until the end of its next turn, appearing to be dead."
+    };
+  }
+
+  if (options.infectiousBite) {
+    yield {
+      name: "Infectious Bite",
+      desc: "A creature bitten by the zombie takes 2 (1d4) ongoing necrotic damage until it regains hit points or a creature makes a DC 15 Medicine check to treat the wound. If a beast, dragon, giant, humanoid, or monstrosity dies while suffering from this effect, it becomes a zombie after 1 minute, gaining the zombie template."
+    };
+  }
+
+  if (options.vileDischarge) {
+    yield {
+      name: "Vile Discharge",
+      desc: `The zombie's melee attacks deal an extra 2 (1d4) poison damage. Additionally, when it's reduced to 0 hit points, it explodes. Creatures within 5 feet make a Dexterity saving throw against the zombie's maneuver DC (${dc}), taking 5 (2d4) poison damage on a failure.`
+    };
+  }
+
+  if (options.vigorMortis) {
+    yield {
+      name: "Vigor Mortis",
+      desc: "The zombie can take the Dash action as a bonus action. It can't do so again until it moves 0 feet on one of its turns."
+    }
+  }
+}
+
+function applyZombieTemplate(stats: MonsterO5e, options: ZombieOptions) {
   const template = { ...stats };
 
   template.name = stats.name + " Zombie";
@@ -339,7 +410,7 @@ function applyZombieTemplate(stats: MonsterO5e) {
 
   for (let speedKey in stats.speed) {
     let s = stats.speed[speedKey] - 10;
-    if (speedKey = "walk") {
+    if (speedKey === "walk") {
       s = Math.min(30, s);
     }
     template.speed[speedKey] = s;
@@ -364,6 +435,14 @@ function applyZombieTemplate(stats: MonsterO5e) {
     damageDice: biteAttackDice,
     damageType: "piercing"
   }
+  if (options.infectiousBite) {
+    const [infectiousExtra] = [...buildZombieAbilities({ infectiousBite: options.infectiousBite }, dc)];
+    addPlusDamage(biteAttack, new Dice(1, 4, 0), "necrotic");
+    biteAttack.extraText = ". " + infectiousExtra.desc;
+  }
+  if (options.vileDischarge) {
+    addPlusDamage(biteAttack, new Dice(1, 4, 0), "poison");
+  }
   const biteAction = { name: "Bite", desc: formatDescription(biteAttack) };
 
   const grabAttackDice = new Dice(1 + sizeIncrease, 6, strMod);
@@ -380,6 +459,9 @@ function applyZombieTemplate(stats: MonsterO5e) {
     damageType: "bludgeoning",
     extraText: ` and the target is grappled if its Medium or smaller (escape DC ${dc}) and until the grapple ends the ${newName} can't grab another target.`
   };
+  if (options.vileDischarge) {
+    addPlusDamage(grabAttack, new Dice(1, 4, 0), "poison");
+  }
   const grabAction = { name: "Grab", desc: formatDescription(grabAttack) };
 
   const [multiattack] = stats.actions?.filter(a => a.name === "Multiattack") ?? [];
@@ -389,8 +471,15 @@ function applyZombieTemplate(stats: MonsterO5e) {
 
   const filteredActions = stats.actions?.filter(a => h.and(() => notMagic(a), () => a.desc.indexOf("Ranged") === -1)) ?? [];
   const oldName = new RegExp(`${stats.name}(?! zombie)`, "gi");
-  for (let a of filteredActions) {
-    a.desc.replaceAll(oldName, newName);
+  for (let action of filteredActions) {
+    action.desc.replaceAll(oldName, newName);
+    if (options.vileDischarge) {
+      const toUpdate = parseAttack(action.desc);
+      if (toUpdate?.isMelee) {
+        addPlusDamage(toUpdate, new Dice(1, 4, 0), "poison");
+        action.desc = formatDescription(toUpdate);
+      }
+    }
   }
   template.actions = [
     ...filteredActions
@@ -411,10 +500,7 @@ function applyZombieTemplate(stats: MonsterO5e) {
   template.languages = "understands the languages it knew in life but can't speak";
 
   template.special_abilities = [
-    {
-      "name": "Undead Fortitude (1/Day)",
-      "desc": "If the zombie is reduced to 0 hit points by damage that isnt radiant or from a critical hit, its instead reduced to 1 hit point, falls prone, and is stunned until the end of its next turn, appearing to be dead."
-    },
+    ...buildZombieAbilities(options, dc),
     {
       name: "Undead Nature",
       desc: "A zombie doesn't require air, sustenance, or sleep."
@@ -422,27 +508,4 @@ function applyZombieTemplate(stats: MonsterO5e) {
   ];
 
   return template;
-}
-
-function addOrReplaceIfBetter(actions: { name: string; desc: string }[], newAction: { name: string; desc: string; }, newAttack: Action) {
-  const index = actions.findIndex(a => a.name === newAction.name);
-  if (index === -1) {
-    actions.push(newAction);
-    return;
-  }
-
-  const oldAction = actions[index];
-  const oldAttack = parseAttack(oldAction.desc);
-
-  const oldDamage = oldAttack?.damageAverage ?? 0;
-  const oldPlus = oldAttack?.plusDamageAverage ?? 0;
-
-  const newDamage = newAttack.damageAverage;
-  const newPlus = newAttack.plusDamageAverage ?? 0;
-  if (oldDamage + oldPlus < newDamage + newPlus) {
-    actions[index] = newAction;
-    return;
-  }
-
-  // Old attack is stronger, so leave it
 }

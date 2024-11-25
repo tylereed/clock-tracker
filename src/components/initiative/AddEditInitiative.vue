@@ -12,6 +12,20 @@
               <v-btn @click="applyTemplate">Apply Template</v-btn>
             </v-col>
           </v-row>
+          <v-row v-if="selectedTemplate === 'Zombie'">
+            <v-col>
+              <v-checkbox label="Undead Fortitude" density="compact" v-model="undeadFortitude" />
+            </v-col>
+            <v-col>
+              <v-checkbox label="Infectious Bite" density="compact" v-model="infectiousBite" />
+            </v-col>
+            <v-col>
+              <v-checkbox label="Vile Discharge" density="compact" v-model="vileDischarge" />
+            </v-col>
+            <v-col>
+              <v-checkbox label="Vigor Mortis" density="compact" v-model="vigorMortis" />
+            </v-col>
+          </v-row>
           <v-row>
             <v-col :cols="isEdit ? 9 : 12"><v-text-field label="Initiative" density="compact" v-model="newInit.order"
                 :rules="v.OrderRules" /></v-col>
@@ -41,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref, toRefs } from "vue";
+import { onMounted, reactive, ref, toRefs, watch } from "vue";
 
 import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
 
@@ -146,15 +160,42 @@ function addInitiative() {
   }
 }
 
+const undeadFortitude = ref(true);
+const infectiousBite = ref(false);
+const vileDischarge = ref(false);
+const vigorMortis = ref(false);
+
+function getOptions(type: TemplateType) {
+  switch (type) {
+    case "Zombie":
+      return {
+        undeadFortitude: undeadFortitude.value,
+        infectiousBite: infectiousBite.value,
+        vileDischarge: vileDischarge.value,
+        vigorMortis: vigorMortis.value
+      };
+  }
+}
+
 const templates = ref(t.templates);
 const selectedTemplate = ref<TemplateType>("Squad");
 function applyTemplate() {
   if (selectedTemplate.value && monsterStats.value) {
-    const template = t.applyTemplate(selectedTemplate.value, monsterStats.value);
+    const options = getOptions(selectedTemplate.value);
+    const template = t.applyTemplate(selectedTemplate.value, monsterStats.value, options);
     if (template) {
       setMonster(template);
     }
   }
 }
+
+watch(selectedTemplate, value => {
+  if (value === "Zombie") {
+    undeadFortitude.value = true;
+    infectiousBite.value = false;
+    vileDischarge.value = false;
+    vigorMortis.value = false;
+  }
+});
 
 </script>
