@@ -38,6 +38,7 @@ export default class Dice {
     const lexer = new RollLexer(chars);
     const tokens = new CommonTokenStream(lexer);
     const parser = new RollParser(tokens);
+    parser.removeErrorListeners();
 
     const tree = parser.roll();
     const listener = new HealthListener();

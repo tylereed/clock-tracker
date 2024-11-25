@@ -33,6 +33,7 @@ export function parse(text: string): Action | undefined {
   const lexer = new AttackLexer(chars);
   const tokens = new CommonTokenStream(lexer);
   const parser = new AttackParser(tokens);
+  parser.removeErrorListeners();
 
   const tree = parser.attack();
   const listener = new AttackActionListener();
