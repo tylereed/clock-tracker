@@ -20,6 +20,15 @@ export function* chunk<T>(size: number, items: Iterable<T>) {
   }
 }
 
+export function and(...funcs: (() => boolean)[]) {
+  for (let f of funcs) {
+    if (!f.apply(undefined)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export function findSibling(element: HTMLElement, selector: string) {
   let sibling = element?.nextElementSibling;
   while (sibling != null) {
