@@ -5,7 +5,7 @@ import Dice from "@/utils/Dice";
 import * as h from "@/utils/helpers";
 import { MonsterO5e, Size } from "@/utils/Open5e";
 
-export const templates = ["Squad", "Skeleton", "Zombie"] as const;
+export const templates = ["Squad", "Skeleton", "Zombie", "Merfolk"] as const;
 export type TemplateType = typeof templates[number];
 
 export interface ZombieOptions {
@@ -23,6 +23,8 @@ export function applyTemplate(template: TemplateType, stats: MonsterO5e, options
       return appplySkeletonTemplate(stats);
     case "Zombie":
       return applyZombieTemplate(stats, options as ZombieOptions);
+    case "Merfolk":
+      return applyMerfolkTemplate(stats);
     default:
       throw "Unknown template: " + template;
   }
@@ -506,6 +508,61 @@ function applyZombieTemplate(stats: MonsterO5e, options: ZombieOptions) {
       desc: "A zombie doesn't require air, sustenance, or sleep."
     }
   ];
+
+  return template;
+}
+
+function applyMerfolkTemplate(stats: MonsterO5e) {
+  const template = { ...stats };
+
+  template.name = "Merfolk " + stats.name;
+
+  template.speed = {
+    walk: 10,
+    swim: 40
+  };
+
+  template.senses = modifyDarkvision(stats.senses, 30);
+
+  template.languages = "Aquan, Common";
+
+  template.special_abilities ??= [];
+  template.special_abilities.push({
+    name: "Amphibious",
+    desc: "The merfolk can breathe air and water."
+  });
+
+  const strMod = Dice.calculateModifier(template.strength);
+  const damageDice = new Dice(1, 6, strMod);
+  const versatileDice = new Dice(1, 8, strMod);
+
+  const trident: Action = {
+    isMelee: true,
+    isRanged: true,
+    isWeapon: true,
+    isSpell: false,
+    toHitBonus: crToPb(template.challenge_rating) + strMod,
+    reach: 5,
+    range: 20,
+    rangeMax: 60,
+    numberTargets: 1,
+    damageAverage: damageDice.Average,
+    damageDice: damageDice,
+    damageType: "piercing",
+    twoHandedDamageAverage: versatileDice.Average,
+    twoHandedDamageDice: versatileDice,
+    twoHandedDamageType: "piercing"
+  };
+  template.actions ??= [];
+  addOrReplaceIfBetter(template.actions, { name: "Trident", desc: formatDescription(trident) }, trident);
+
+  if (stringToCr(stats.challenge_rating) >= 2) {
+    template.bonus_actions ??= [];
+    template.bonus_actions.push({
+      name: "Trident",
+      desc: "The merfolk makes a trident attack"
+    });
+  }
 
   return template;
 }
