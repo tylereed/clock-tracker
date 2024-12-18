@@ -12,7 +12,7 @@
               <v-btn @click="applyTemplate">Apply Template</v-btn>
             </v-col>
           </v-row>
-          <v-row v-if="selectedTemplate === 'Zombie'">
+          <v-row v-show="selectedTemplate === 'Zombie'">
             <v-col>
               <v-checkbox label="Undead Fortitude" density="compact" v-model="undeadFortitude" />
             </v-col>
@@ -24,6 +24,11 @@
             </v-col>
             <v-col>
               <v-checkbox label="Vigor Mortis" density="compact" v-model="vigorMortis" />
+            </v-col>
+          </v-row>
+          <v-row v-show="selectedTemplate === 'Merfolk'">
+            <v-col>
+              <v-checkbox label="Include Trident" density="compact" v-model="includeTrident" />
             </v-col>
           </v-row>
           <v-row>
@@ -165,7 +170,9 @@ const infectiousBite = ref(false);
 const vileDischarge = ref(false);
 const vigorMortis = ref(false);
 
-function getOptions(type: TemplateType) {
+const includeTrident = ref(true);
+
+function getOptions(type: TemplateType): t.TemplateOptions | undefined {
   switch (type) {
     case "Zombie":
       return {
@@ -174,6 +181,10 @@ function getOptions(type: TemplateType) {
         vileDischarge: vileDischarge.value,
         vigorMortis: vigorMortis.value
       };
+    case "Merfolk":
+      return {
+        includeTrident: includeTrident.value
+      }
   }
 }
 
@@ -195,6 +206,9 @@ watch(selectedTemplate, value => {
     infectiousBite.value = false;
     vileDischarge.value = false;
     vigorMortis.value = false;
+  }
+  if (value === "Merfolk") {
+    includeTrident.value = true;
   }
 });
 

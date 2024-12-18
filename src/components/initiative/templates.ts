@@ -8,14 +8,20 @@ import { MonsterO5e, Size } from "@/utils/Open5e";
 export const templates = ["Squad", "Skeleton", "Zombie", "Merfolk"] as const;
 export type TemplateType = typeof templates[number];
 
-export interface ZombieOptions {
+export type TemplateOptions = ZombieOptions | MerfolkOptions;
+
+interface ZombieOptions {
   undeadFortitude: boolean,
   infectiousBite: boolean,
   vileDischarge: boolean,
   vigorMortis: boolean
 };
 
-export function applyTemplate(template: TemplateType, stats: MonsterO5e, options?: ZombieOptions): MonsterO5e {
+interface MerfolkOptions {
+  includeTrident: boolean
+}
+
+export function applyTemplate(template: TemplateType, stats: MonsterO5e, options?: ZombieOptions | MerfolkOptions): MonsterO5e {
   switch (template) {
     case "Squad":
       return applySquadTemplate(stats);
@@ -24,7 +30,7 @@ export function applyTemplate(template: TemplateType, stats: MonsterO5e, options
     case "Zombie":
       return applyZombieTemplate(stats, options as ZombieOptions);
     case "Merfolk":
-      return applyMerfolkTemplate(stats);
+      return applyMerfolkTemplate(stats, options as MerfolkOptions);
     default:
       throw "Unknown template: " + template;
   }
@@ -512,7 +518,7 @@ function applyZombieTemplate(stats: MonsterO5e, options: ZombieOptions) {
   return template;
 }
 
-function applyMerfolkTemplate(stats: MonsterO5e) {
+function applyMerfolkTemplate(stats: MonsterO5e, options: MerfolkOptions) {
   const template = { ...stats };
 
   template.name = "Merfolk " + stats.name;
@@ -536,32 +542,36 @@ function applyMerfolkTemplate(stats: MonsterO5e) {
   const damageDice = new Dice(1, 6, strMod);
   const versatileDice = new Dice(1, 8, strMod);
 
-  const trident: Action = {
-    isMelee: true,
-    isRanged: true,
-    isWeapon: true,
-    isSpell: false,
-    toHitBonus: crToPb(template.challenge_rating) + strMod,
-    reach: 5,
-    range: 20,
-    rangeMax: 60,
-    numberTargets: 1,
-    damageAverage: damageDice.Average,
-    damageDice: damageDice,
-    damageType: "piercing",
-    twoHandedDamageAverage: versatileDice.Average,
-    twoHandedDamageDice: versatileDice,
-    twoHandedDamageType: "piercing"
-  };
-  template.actions ??= [];
-  addOrReplaceIfBetter(template.actions, { name: "Trident", desc: formatDescription(trident) }, trident);
+  if (options.includeTrident) {
+    const trident: Action = {
+      isMelee: true,
+      isRanged: true,
+      isWeapon: true,
+      isSpell: false,
+      toHitBonus: crToPb(template.challenge_rating) + strMod,
+      reach: 5,
+      range: 20,
+      rangeMax: 60,
+      numberTargets: 1,
+      damageAverage: damageDice.Average,
+      damageDice: damageDice,
+      damageType: "piercing",
+      twoHandedDamageAverage: versatileDice.Average,
+      twoHandedDamageDice: versatileDice,
+      twoHandedDamageType: "piercing"
+    };
+    template.actions ??= [];
+    addOrReplaceIfBetter(template.actions, { name: "Trident", desc: formatDescription(trident) }, trident);
+  }
 
-  if (stringToCr(stats.challenge_rating) >= 2) {
-    template.bonus_actions ??= [];
-    template.bonus_actions.push({
-      name: "Trident",
-      desc: "The merfolk makes a trident attack"
-    });
+  if (stringToCr(stats.challenge_rating) >= 2 && template.actions?.findIndex(a => a.name === "Trident")) {
+    if (stringToCr(stats.challenge_rating) >= 2) {
+      template.bonus_actions ??= [];
+      template.bonus_actions.push({
+        name: "Trident",
+        desc: "The merfolk makes a trident attack"
+      });
+    }
   }
 
   return template;
