@@ -4,6 +4,9 @@
       <v-col cols="9">
         <v-autocomplete v-model="monsterSearch" v-model:search="searchInput" :loading="loading" :items="monsters"
           return-object auto-select-first item-title="name" item-value="slug" @update:search="doSearchDebounced">
+          <template v-slot:append>
+            <show-stats :disabled="!monsterSearch" :id="monsterSearch?.slug!" />
+          </template>
           <template v-slot:item="{ props, item }">
             <v-list-item v-bind="props" :title="''">
               {{ item.title }} <v-chip density="comfortable" size="x-small">{{ item.raw.document__slug }}</v-chip>
@@ -40,8 +43,9 @@ import debounce from "debounce";
 
 import AddEditInitiative from "@/components/initiative/AddEditInitiative.vue";
 import License from "@/components/initiative/License.vue";
-import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
+import ShowStats from "./ShowStats.vue";
 
+import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
 import Dice from "@/utils/Dice";
 import Initiative, { Actions } from "@/types/Initiative";
 import { MonsterNameO5e as MonsterName, getMonsterListCached, getMonsterCached, MonsterO5e } from "@/utils/Open5e";
@@ -104,6 +108,7 @@ async function addMonster() {
     }
 
     const initMonster: Initiative = {
+      open5eId: monster.slug,
       name: `${monster.name} ${letter}`,
       order: 10 + Dice.calculateModifier(monster.dexterity),
       dex: monster.dexterity,

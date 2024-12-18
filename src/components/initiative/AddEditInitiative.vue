@@ -32,8 +32,11 @@
             <v-col v-if="isEdit" cols="3">
               <v-btn @click="rollInitiative" v-tooltip:top="initiativeDice.toString()">Roll</v-btn>
             </v-col>
-            <v-col cols="12"><v-text-field label="Name" density="compact" v-model="newInit.name"
+            <v-col cols="isEdit ? 11 : 12"><v-text-field label="Name" density="compact" v-model="newInit.name"
                 :rules="v.NameRules" /></v-col>
+            <v-col cols="1" v-if="monsterStats">
+              <show-stats :id="monsterStats.slug" />
+            </v-col>
             <v-col cols="12"><v-text-field label="Dex Score" density="compact" v-model="newInit.dex"
                 :rules="v.DexRules" /></v-col>
             <v-col cols="12"><v-text-field label="AC" density="compact" v-model="newInit.ac"
@@ -57,6 +60,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, toRefs, watch } from "vue";
 
+import ShowStats from "./ShowStats.vue";
 import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
 
 import Dice from "@/utils/Dice";
@@ -86,6 +90,7 @@ function setMonster(monster: MonsterO5e) {
   healthDice.value = Dice.parse(monster.hit_dice);
   defaultHealth = monster.hit_points;
   newInit.value = {
+    open5eId: monster.slug,
     name: monster.name,
     order: 10 + Dice.calculateModifier(monster.dexterity),
     dex: monster.dexterity,
@@ -146,6 +151,7 @@ function asInt(item?: number | string) {
 function addInitiative() {
   if (isFormValid.value) {
     const init: Initiative = {
+      open5eId: newInit.value.open5eId,
       order: +newInit.value.order,
       name: newInit.value.name,
       dex: asInt(newInit.value.dex),

@@ -1,6 +1,7 @@
 import Conditions from "./Conditions";
 
 export default interface Initiative {
+  open5eId?: string;
   name: string;
   order: number;
   dex?: number;

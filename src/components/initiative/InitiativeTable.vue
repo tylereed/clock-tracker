@@ -54,7 +54,8 @@
           @remove-condition="name => emit('removeCondition', i, name)" />
       </v-col>
       <v-col cols="1">
-        <v-btn @click.stop="emit('deleteInitiative', i)" :class="getRowClass(i)">
+        <show-stats class="mr-1" v-if="init.open5eId" :id="init.open5eId" :class="getRowClass(i)" />
+        <v-btn icon @click.stop="emit('deleteInitiative', i)" :class="getRowClass(i)">
           <v-icon icon="mdi-delete-forever" color="error" />
         </v-btn>
       </v-col>
@@ -87,12 +88,13 @@ import { computed, ref, toRefs } from "vue";
 import ConditionsVue from "@/components/initiative/Conditions.vue";
 import { useTheme } from "vuetify";
 
+import ShowStats from "./ShowStats.vue";
+
 import Conditions from "@/types/Conditions";
 import { findSibling, findPreviousSibling } from "@/utils/helpers";
 import Initiative, { InitiativeColumns, Initiatives } from "@/types/Initiative";
 import r from "@/components/initiative/InitiativeRules";
 import * as v from "@/utils/validators";
-
 const vTheme = useTheme();
 
 const props = defineProps<{
