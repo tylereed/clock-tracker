@@ -245,6 +245,7 @@ describe("AddEditInitiative", () => {
       const [
         btnApplyTemplate,
         btnInitiative,
+        btnOpenLink,
         btnHealth
       ] = wrapper.findAllComponents({ name: "VBtn" });
 
