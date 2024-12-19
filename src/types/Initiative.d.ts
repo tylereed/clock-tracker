@@ -9,8 +9,12 @@ export default interface Initiative {
   maxHp?: number;
   hp?: number;
   conditions: Conditions;
+  traits?: Actions[];
   actions?: Actions[];
-  bonusAction?: Actions[];
+  bonusActions?: Actions[];
+  reactions?: Actions[];
+  legendaryActions?: Actions[];
+  saves?: { str: number, dex: number, con: number, int: number, wis: number, cha: number };
 }
 
 export interface Actions {

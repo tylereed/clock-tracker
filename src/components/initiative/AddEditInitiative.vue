@@ -64,9 +64,10 @@ import ShowStats from "./ShowStats.vue";
 import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
 
 import Dice from "@/utils/Dice";
-import Initiative, { Actions } from "@/types/Initiative";
+import Initiative from "@/types/Initiative";
 import { MonsterO5e } from "@/utils/Open5e";
 import v from "./InitiativeRules";
+import { monsterO5eToInitiative } from "./initiativeHelpers";
 import { TemplateType } from "./templates";
 import * as t from "./templates";
 
@@ -89,16 +90,7 @@ function setMonster(monster: MonsterO5e) {
   initiativeDice.value = Dice.D20.ofStat(monster.dexterity);
   healthDice.value = Dice.parse(monster.hit_dice);
   defaultHealth = monster.hit_points;
-  newInit.value = {
-    open5eId: monster.slug,
-    name: monster.name,
-    order: 10 + Dice.calculateModifier(monster.dexterity),
-    dex: monster.dexterity,
-    ac: monster.armor_class,
-    maxHp: monster.hit_points,
-    conditions: {},
-    actions: [...buildActions(monster.actions)]
-  };
+  newInit.value = monsterO5eToInitiative(monster);
 }
 
 onMounted(() => {
@@ -110,17 +102,6 @@ onMounted(() => {
     newInit.value = {} as NewInitiative;
   }
 });
-
-function* buildActions(...args: ({ name: string, desc: string }[] | undefined)[]): Generator<Actions> {
-
-  for (const arg of args) {
-    if (arg) {
-      for (const a of arg) {
-        yield { name: a.name, desc: a.desc };
-      }
-    }
-  }
-}
 
 const initiativeDice = ref<Dice>(Dice.D20.ofModifier(0));
 function rollInitiative() {
@@ -160,7 +141,7 @@ function addInitiative() {
       hp: asInt(newInit.value.maxHp),
       conditions: {},
       actions: newInit.value.actions,
-      bonusAction: newInit.value.bonusAction
+      bonusActions: newInit.value.bonusActions
     };
     emit("addInit", init);
   }

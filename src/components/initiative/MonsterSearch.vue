@@ -46,8 +46,8 @@ import License from "@/components/initiative/License.vue";
 import ShowStats from "./ShowStats.vue";
 
 import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
-import Dice from "@/utils/Dice";
-import Initiative, { Actions } from "@/types/Initiative";
+import Initiative from "@/types/Initiative";
+import { monsterO5eToInitiative } from "./initiativeHelpers";
 import { MonsterNameO5e as MonsterName, getMonsterListCached, getMonsterCached, MonsterO5e } from "@/utils/Open5e";
 
 const emit = defineEmits<{
@@ -107,30 +107,9 @@ async function addMonster() {
       nameIndex = 0;
     }
 
-    const initMonster: Initiative = {
-      open5eId: monster.slug,
-      name: `${monster.name} ${letter}`,
-      order: 10 + Dice.calculateModifier(monster.dexterity),
-      dex: monster.dexterity,
-      ac: monster.armor_class,
-      maxHp: monster.hit_points,
-      hp: monster.hit_points,
-      conditions: {},
-      actions: [...buildActions(monster.actions)]
-    }
+    const initMonster = monsterO5eToInitiative(monster, `${monster.name} ${letter}`);
 
     emit("addMonster", initMonster);
-  }
-}
-
-function* buildActions(...args: ({ name: string, desc: string }[] | undefined)[]): Generator<Actions> {
-
-  for (const arg of args) {
-    if (arg) {
-      for (const a of arg) {
-        yield { name: a.name, desc: a.desc };
-      }
-    }
   }
 }
 
