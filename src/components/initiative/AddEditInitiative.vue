@@ -131,18 +131,7 @@ function asInt(item?: number | string) {
 
 function addInitiative() {
   if (isFormValid.value) {
-    const init: Initiative = {
-      open5eId: newInit.value.open5eId,
-      order: +newInit.value.order,
-      name: newInit.value.name,
-      dex: asInt(newInit.value.dex),
-      ac: asInt(newInit.value.ac),
-      maxHp: asInt(newInit.value.maxHp),
-      hp: asInt(newInit.value.maxHp),
-      conditions: {},
-      actions: newInit.value.actions,
-      bonusActions: newInit.value.bonusActions
-    };
+    const init: Initiative = { ...newInit.value, hp: newInit.value.maxHp };
     emit("addInit", init);
   }
 }
