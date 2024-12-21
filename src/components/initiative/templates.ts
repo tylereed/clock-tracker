@@ -5,7 +5,7 @@ import Dice from "@/utils/Dice";
 import * as h from "@/utils/helpers";
 import { MonsterO5e, Size } from "@/utils/Open5e";
 
-export const templates = ["Squad", "Skeleton", "Zombie", "Merfolk"] as const;
+export const templates = ["Squad", "Skeleton", "Zombie", "Merfolk", "Sahuagin"] as const;
 export type TemplateType = typeof templates[number];
 
 export type TemplateOptions = ZombieOptions | MerfolkOptions;
@@ -31,6 +31,8 @@ export function applyTemplate(template: TemplateType, stats: MonsterO5e, options
       return applyZombieTemplate(stats, options as ZombieOptions);
     case "Merfolk":
       return applyMerfolkTemplate(stats, options as MerfolkOptions);
+    case "Sahuagin":
+      return applySahuaginTemplate(stats);
     default:
       throw "Unknown template: " + template;
   }
@@ -573,6 +575,71 @@ function applyMerfolkTemplate(stats: MonsterO5e, options: MerfolkOptions) {
       });
     }
   }
+
+  return template;
+}
+
+
+function applySahuaginTemplate(stats: MonsterO5e) {
+  const template = { ...stats };
+
+  template.name = "Sahuagin " + stats.name;
+
+  if (template.speed?.swim ?? 0 < 40) {
+    template.speed.swim = 40;
+  }
+
+  template.senses = modifyDarkvision(stats.senses, 120);
+
+  template.languages = "Sahuagin";
+
+  template.special_abilities ??= [];
+  template.special_abilities.push(
+    {
+      name: "Blood Frenzy",
+      desc: "The sahuagin has advantage on melee attack rolls against creatures that don't have all their hit points."
+    },
+    {
+      name: "Limited Amphibiousness",
+      desc: "The sahuagin can breathe air and water. When breathing air, it must immerse itself in water once every 4 hours or begin to suffocate."
+    },
+    {
+      name: "Shark Telepathy",
+      desc: "The sahuagin can command any shark within 120 feet of it using magical telepathy."
+    });
+
+  const strBonus = Dice.calculateModifier(template.strength);
+  const pb = crToPb(template.cr);
+
+  template.actions ??= [];
+  const clawDice = new Dice(1, 8, strBonus);
+  const clawAction: Action = {
+    isMelee: true,
+    isRanged: false,
+    isWeapon: true,
+    isSpell: false,
+    toHitBonus: pb + strBonus,
+    numberTargets: 1,
+    damageAverage: clawDice.Average,
+    damageDice: clawDice,
+    damageType: "slashing"
+  };
+  addOrReplaceIfBetter(template.actions, { name: "Claw", desc: formatDescription(clawAction) }, clawAction);
+
+  template.bonus_actions ??= [];
+  const biteDice = new Dice(1, 4, strBonus);
+  const biteAction: Action = {
+    isMelee: true,
+    isRanged: false,
+    isWeapon: true,
+    isSpell: false,
+    toHitBonus: pb + strBonus,
+    numberTargets: 1,
+    damageAverage: biteDice.Average,
+    damageDice: biteDice,
+    damageType: "piercing"
+  };
+  addOrReplaceIfBetter(template.bonus_actions, { name: "Bite", desc: formatDescription(biteAction) }, biteAction);
 
   return template;
 }
