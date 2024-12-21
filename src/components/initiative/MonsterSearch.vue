@@ -3,7 +3,10 @@
     <v-row>
       <v-col cols="9">
         <v-autocomplete v-model="monsterSearch" v-model:search="searchInput" :loading="loading" :items="monsters"
-          return-object auto-select-first item-title="name" item-value="slug" @update:search="doSearchDebounced">
+          return-object auto-select-first item-title="name" item-value="slug" @update:search="doSearch">
+          <template v-slot:append>
+            <show-stats :disabled="!monsterSearch" :id="monsterSearch?.slug!" />
+          </template>
           <template v-slot:item="{ props, item }">
             <v-list-item v-bind="props" :title="''">
               {{ item.title }} <v-chip density="comfortable" size="x-small">{{ item.raw.document__slug }}</v-chip>
@@ -40,10 +43,11 @@ import debounce from "debounce";
 
 import AddEditInitiative from "@/components/initiative/AddEditInitiative.vue";
 import License from "@/components/initiative/License.vue";
-import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
+import ShowStats from "./ShowStats.vue";
 
-import Dice from "@/utils/Dice";
-import Initiative, { Actions } from "@/types/Initiative";
+import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
+import Initiative from "@/types/Initiative";
+import { monsterO5eToInitiative } from "./initiativeHelpers";
 import { MonsterNameO5e as MonsterName, getMonsterListCached, getMonsterCached, MonsterO5e } from "@/utils/Open5e";
 
 const emit = defineEmits<{
@@ -103,29 +107,9 @@ async function addMonster() {
       nameIndex = 0;
     }
 
-    const initMonster: Initiative = {
-      name: `${monster.name} ${letter}`,
-      order: 10 + Dice.calculateModifier(monster.dexterity),
-      dex: monster.dexterity,
-      ac: monster.armor_class,
-      maxHp: monster.hit_points,
-      hp: monster.hit_points,
-      conditions: {},
-      actions: [...buildActions(monster.actions)]
-    }
+    const initMonster = monsterO5eToInitiative(monster, `${monster.name} ${letter}`);
 
     emit("addMonster", initMonster);
-  }
-}
-
-function* buildActions(...args: ({ name: string, desc: string }[] | undefined)[]): Generator<Actions> {
-
-  for (const arg of args) {
-    if (arg) {
-      for (const a of arg) {
-        yield { name: a.name, desc: a.desc };
-      }
-    }
   }
 }
 

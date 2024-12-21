@@ -11,8 +11,7 @@
       <v-col v-if="hasConditions" cols="3">Conditions</v-col>
       <v-col cols="1"></v-col>
     </v-row>
-    <v-row align="center" v-for="(init, i) in initiatives" :key="i" :class="getRowClass(i) + ' init-row'" dense
-      style="border-top: 1px solid darkgray;">
+    <v-row align="center" v-for="(init, i) in initiatives" :key="i" :class="getRowClass(i)" dense>
       <v-col v-if="hasTurnOrder" text-align="center"><v-icon v-show="i === turn" icon="mdi-circle-medium" /></v-col>
       <v-col v-if="hasInitiative">
         <v-text-field :hide-details="true" density="compact" v-model="init.order" :rules="r.OrderRules"
@@ -54,17 +53,52 @@
           @remove-condition="name => emit('removeCondition', i, name)" />
       </v-col>
       <v-col cols="1">
-        <v-btn @click.stop="emit('deleteInitiative', i)" :class="getRowClass(i)">
+        <show-stats class="mr-1" v-if="init.open5eId" :id="init.open5eId" style="background-color: transparent" />
+        <v-btn icon @click.stop="emit('deleteInitiative', i)" style="background-color: transparent">
           <v-icon icon="mdi-delete-forever" color="error" />
         </v-btn>
       </v-col>
-      <v-col cols="12" v-show="i === turn && init.actions">
-        <p v-for="attack in init.actions">
-          <b>{{ attack.name }}</b> {{ attack.desc }}
+      <v-col cols="12" v-if="init.actions?.length || init.bonusActions?.length" v-show="i === turn">
+        <template v-if="init.actions?.length">
+          <p><b>Actions</b></p>
+          <p v-for="attack in init.actions">
+            <b>{{ attack.name }}</b> {{ attack.desc }}
+          </p>
+        </template>
+        <template v-if="init.bonusActions?.length">
+          <p><b>Bonus Actions</b></p>
+          <p v-for="bonus in init.bonusActions">
+            <b>{{ bonus.name }}</b> {{ bonus.desc }}
+          </p>
+        </template>
+      </v-col>
+      <v-col cols="12" v-if="init.saves" v-show="i !== turn">
+        <v-row>
+          <v-col><b>Saves</b></v-col>
+          <v-col><b>STR</b>:&nbsp;{{ init.saves.str }}</v-col>
+          <v-col><b>DEX</b>:&nbsp;{{ init.saves.dex }}</v-col>
+          <v-col><b>CON</b>:&nbsp;{{ init.saves.con }}</v-col>
+          <v-col><b>INT</b>:&nbsp;{{ init.saves.int }}</v-col>
+          <v-col><b>WIS</b>:&nbsp;{{ init.saves.wis }}</v-col>
+          <v-col><b>CHA</b>:&nbsp;{{ init.saves.cha }}</v-col>
+          <v-col cols="5" />
+        </v-row>
+      </v-col>
+      <v-col cols="12" v-if="init.traits?.length">
+        <p>
+          <b>Traits</b>
+          <v-chip v-for="trait in init.traits" size="small" class="mx-1" v-tooltip:bottom="trait.desc">{{ trait.name
+            }}</v-chip>
+        </p>
+      </v-col>
+      <v-col cols="12" v-if="init.legendaryActions?.length" v-show="i !== turn">
+        <p><b>Legendary Actions</b></p>
+        <p v-for="legendary in init.legendaryActions">
+          <b>{{ legendary.name }}</b> {{ legendary.desc }}
         </p>
       </v-col>
     </v-row>
-    <v-row v-if="hasTurnOrder">
+    <v-row v-show="hasTurnOrder">
       <v-col><v-btn @click="emit('decrementTurn')" :disabled="turn === 0 && round === 1">Previous</v-btn></v-col>
       <v-col><v-btn @click="emit('incrementTurn')" :disabled="initiatives.length === 0">Next</v-btn></v-col>
       <v-col><v-btn @click="emit('resetTurn')">Reset</v-btn></v-col>
@@ -87,12 +121,13 @@ import { computed, ref, toRefs } from "vue";
 import ConditionsVue from "@/components/initiative/Conditions.vue";
 import { useTheme } from "vuetify";
 
+import ShowStats from "./ShowStats.vue";
+
 import Conditions from "@/types/Conditions";
 import { findSibling, findPreviousSibling } from "@/utils/helpers";
 import Initiative, { InitiativeColumns, Initiatives } from "@/types/Initiative";
 import r from "@/components/initiative/InitiativeRules";
 import * as v from "@/utils/validators";
-
 const vTheme = useTheme();
 
 const props = defineProps<{
@@ -117,12 +152,20 @@ const emit = defineEmits<{
 }>();
 
 function getRowClass(index: number) {
+  const classes = ["init-row", "border-background", "border-t-md"];
+
   if (index % 2 === 1) {
     if (vTheme.current.value.dark) {
-      return "alternate-row-dark";
+      classes.push("alternate-row-dark");
     }
-    return "alternate-row";
+    classes.push("alternate-row");
   }
+
+  if (index === turn.value) {
+    classes.push("elevation-10");
+  }
+
+  return classes;
 }
 
 const oldValues = new Map<string, any>();
