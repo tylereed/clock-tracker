@@ -91,6 +91,10 @@ async function* fetchList<T>(endpoint: string) {
   } while (url);
 }
 
+export function buildWebUrl(item: "monsters", slug: string) {
+  return `https://open5e.com/${item}/${slug}`;
+}
+
 const monsteListCache = BuildAsyncCache("localStorage", async (url) => {
   const result: MonsterNameO5e[] = [];
   for await (let monster of fetchList<MonsterNameO5e>(url)) {

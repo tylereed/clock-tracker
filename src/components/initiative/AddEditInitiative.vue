@@ -32,8 +32,11 @@
             <v-col v-if="isEdit" cols="3">
               <v-btn @click="rollInitiative" v-tooltip:top="initiativeDice.toString()">Roll</v-btn>
             </v-col>
-            <v-col cols="12"><v-text-field label="Name" density="compact" v-model="newInit.name"
+            <v-col cols="isEdit ? 11 : 12"><v-text-field label="Name" density="compact" v-model="newInit.name"
                 :rules="v.NameRules" /></v-col>
+            <v-col cols="1" v-if="monsterStats">
+              <show-stats :id="monsterStats.slug" />
+            </v-col>
             <v-col cols="12"><v-text-field label="Dex Score" density="compact" v-model="newInit.dex"
                 :rules="v.DexRules" /></v-col>
             <v-col cols="12"><v-text-field label="AC" density="compact" v-model="newInit.ac"
@@ -57,12 +60,14 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, toRefs, watch } from "vue";
 
+import ShowStats from "./ShowStats.vue";
 import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
 
 import Dice from "@/utils/Dice";
-import Initiative, { Actions } from "@/types/Initiative";
+import Initiative from "@/types/Initiative";
 import { MonsterO5e } from "@/utils/Open5e";
 import v from "./InitiativeRules";
+import { monsterO5eToInitiative } from "./initiativeHelpers";
 import { TemplateType } from "./templates";
 import * as t from "./templates";
 
@@ -85,15 +90,7 @@ function setMonster(monster: MonsterO5e) {
   initiativeDice.value = Dice.D20.ofStat(monster.dexterity);
   healthDice.value = Dice.parse(monster.hit_dice);
   defaultHealth = monster.hit_points;
-  newInit.value = {
-    name: monster.name,
-    order: 10 + Dice.calculateModifier(monster.dexterity),
-    dex: monster.dexterity,
-    ac: monster.armor_class,
-    maxHp: monster.hit_points,
-    conditions: {},
-    actions: [...buildActions(monster.actions)]
-  };
+  newInit.value = monsterO5eToInitiative(monster);
 }
 
 onMounted(() => {
@@ -105,17 +102,6 @@ onMounted(() => {
     newInit.value = {} as NewInitiative;
   }
 });
-
-function* buildActions(...args: ({ name: string, desc: string }[] | undefined)[]): Generator<Actions> {
-
-  for (const arg of args) {
-    if (arg) {
-      for (const a of arg) {
-        yield { name: a.name, desc: a.desc };
-      }
-    }
-  }
-}
 
 const initiativeDice = ref<Dice>(Dice.D20.ofModifier(0));
 function rollInitiative() {
@@ -146,15 +132,12 @@ function asInt(item?: number | string) {
 function addInitiative() {
   if (isFormValid.value) {
     const init: Initiative = {
+      ...newInit.value,
       order: +newInit.value.order,
-      name: newInit.value.name,
       dex: asInt(newInit.value.dex),
       ac: asInt(newInit.value.ac),
       maxHp: asInt(newInit.value.maxHp),
-      hp: asInt(newInit.value.maxHp),
-      conditions: {},
-      actions: newInit.value.actions,
-      bonusAction: newInit.value.bonusAction
+      hp: asInt(newInit.value.maxHp)
     };
     emit("addInit", init);
   }

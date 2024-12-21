@@ -1,7 +1,9 @@
 import debounce from "debounce";
 
 import { Command, Executor } from "@/utils/Executor";
-import Initiative, { InitiativeColumns, Initiatives } from "@/types/Initiative";
+import Initiative, { Actions, InitiativeColumns, Initiatives } from "@/types/Initiative";
+import { MonsterO5e } from "@/utils/Open5e";
+import Dice from "@/utils/Dice";
 
 export function makeKey(name?: string) {
   return name ? "inits-" + name : "inits";
@@ -86,4 +88,45 @@ export function buildInitiativeColumns(columns: Partial<InitiativeColumns>) {
   };
 
   return { ...defaultColumns, ...columns };
+}
+
+function* buildActions(...args: ({ name: string, desc: string }[] | undefined)[]): Generator<Actions> {
+
+  for (const arg of args) {
+    if (arg) {
+      for (const a of arg) {
+        yield { name: a.name, desc: a.desc };
+      }
+    }
+  }
+}
+
+function getSave(monster: any, stat: keyof MonsterO5e) {
+  return monster[stat + "_save"] ?? Dice.calculateModifier(monster[stat]);
+}
+
+export function monsterO5eToInitiative(monster: MonsterO5e, nameOverride?: string): Initiative {
+  return {
+    open5eId: monster.slug,
+    name: nameOverride ?? monster.name,
+    order: 10 + Dice.calculateModifier(monster.dexterity),
+    dex: monster.dexterity,
+    ac: monster.armor_class,
+    maxHp: monster.hit_points,
+    hp: monster.hit_points,
+    conditions: {},
+    traits: [...buildActions(monster.special_abilities)],
+    actions: [...buildActions(monster.actions)],
+    bonusActions: [...buildActions(monster.bonus_actions)],
+    reactions: [...buildActions(monster.reactions)],
+    legendaryActions: [...buildActions(monster.legendary_actions)],
+    saves: {
+      str: getSave(monster, "strength"),
+      dex: getSave(monster, "dexterity"),
+      con: getSave(monster, "constitution"),
+      int: getSave(monster, "intelligence"),
+      wis: getSave(monster, "wisdom"),
+      cha: getSave(monster, "charisma")
+    }
+  };
 }
