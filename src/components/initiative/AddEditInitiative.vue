@@ -31,6 +31,11 @@
               <v-checkbox label="Include Trident" density="compact" v-model="includeTrident" />
             </v-col>
           </v-row>
+          <v-row v-show="selectedTemplate === 'Half-Dragon'">
+            <v-col>
+              <v-select v-model="selectedDragonType" density="compact" label="Dragon Type" :items="halfDragonTypes" />
+            </v-col>
+          </v-row>
           <v-row>
             <v-col :cols="isEdit ? 9 : 12"><v-text-field label="Initiative" density="compact" v-model="newInit.order"
                 :rules="v.OrderRules" /></v-col>
@@ -73,7 +78,7 @@ import Initiative from "@/types/Initiative";
 import { MonsterO5e } from "@/utils/Open5e";
 import v from "./InitiativeRules";
 import { monsterO5eToInitiative } from "./initiativeHelpers";
-import { TemplateType } from "./templates";
+import { TemplateType, DragonType } from "./templates";
 import * as t from "./templates";
 
 const props = defineProps<{ monsterStats?: MonsterO5e | null }>();
@@ -155,6 +160,9 @@ const vigorMortis = ref(false);
 
 const includeTrident = ref(true);
 
+const halfDragonTypes = ref(t.dragonTypes);
+const selectedDragonType = ref<DragonType>("Amethyst");
+
 function getOptions(type: TemplateType): t.TemplateOptions | undefined {
   switch (type) {
     case "Zombie":
@@ -168,15 +176,19 @@ function getOptions(type: TemplateType): t.TemplateOptions | undefined {
       return {
         includeTrident: includeTrident.value
       }
+      case "Half-Dragon":
+        return {
+          type: selectedDragonType.value
+        }
   }
 }
 
 const templates = ref(t.templates);
 const selectedTemplate = ref<TemplateType>("Squad");
-function applyTemplate() {
+async function applyTemplate() {
   if (selectedTemplate.value && monsterStats.value) {
     const options = getOptions(selectedTemplate.value);
-    const template = t.applyTemplate(selectedTemplate.value, monsterStats.value, options);
+    const template = await t.applyTemplate(selectedTemplate.value, monsterStats.value, options);
     if (template) {
       setMonster(template);
     }
@@ -192,6 +204,9 @@ watch(selectedTemplate, value => {
   }
   if (value === "Merfolk") {
     includeTrident.value = true;
+  }
+  if (value === "Half-Dragon") {
+    selectedDragonType.value = "Amethyst";
   }
 });
 

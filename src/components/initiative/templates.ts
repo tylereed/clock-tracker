@@ -3,12 +3,12 @@ import pluralize from "pluralize";
 import { Action, parse as parseAttack } from "@/utils/Attack";
 import Dice from "@/utils/Dice";
 import * as h from "@/utils/helpers";
-import { MonsterO5e, Size } from "@/utils/Open5e";
+import { MonsterO5e, Size, getMonsterCached } from "@/utils/Open5e";
 
-export const templates = ["Squad", "Skeleton", "Zombie", "Merfolk", "Sahuagin"] as const;
+export const templates = ["Squad", "Skeleton", "Zombie", "Merfolk", "Sahuagin", "Half-Dragon"] as const;
 export type TemplateType = typeof templates[number];
 
-export type TemplateOptions = ZombieOptions | MerfolkOptions;
+export type TemplateOptions = ZombieOptions | MerfolkOptions | HalfDragonOptions;
 
 interface ZombieOptions {
   undeadFortitude: boolean,
@@ -21,7 +21,15 @@ interface MerfolkOptions {
   includeTrident: boolean
 }
 
-export function applyTemplate(template: TemplateType, stats: MonsterO5e, options?: ZombieOptions | MerfolkOptions): MonsterO5e {
+export const dragonTypes = ["Amethyst", "Black", "Blue", "Brass", "Bronze", "Copper", "Earth", "Emerald", "Gold",
+  "Green", "Red", "River", "Sapphire", "Shadow", "Silver", "White"] as const;
+export type DragonType = typeof dragonTypes[number];
+
+export interface HalfDragonOptions {
+  type: DragonType
+}
+
+export async function applyTemplate(template: TemplateType, stats: MonsterO5e, options?: TemplateOptions): Promise<MonsterO5e> {
   switch (template) {
     case "Squad":
       return applySquadTemplate(stats);
@@ -33,6 +41,8 @@ export function applyTemplate(template: TemplateType, stats: MonsterO5e, options
       return applyMerfolkTemplate(stats, options as MerfolkOptions);
     case "Sahuagin":
       return applySahuaginTemplate(stats);
+    case "Half-Dragon":
+      return await applyHalfDragonTemplate(stats, options as HalfDragonOptions);
     default:
       throw "Unknown template: " + template;
   }
@@ -268,18 +278,27 @@ function appendList(current: string, toAppend: string) {
   return `${current}, ${toAppend}`;
 }
 
-function modifyDarkvision(senses: string, distance: number) {
+function modifyVision(senses: string, type: string, distance: number) {
   // looks like senses always has Passive Perception listed
-  if (senses.indexOf("darkvision") === -1) {
-    return `darkvision ${distance} ft., ${senses}`;
+  if (senses.indexOf(type) === -1) {
+    return `${type} ${distance} ft., ${senses}`;
   } else {
-    const result = senses.match(/darkvision (\d+) (ft\.|')/)!;
+    const visionRegex = new RegExp(`${type} (\\d+) (ft\.|')`);
+    const result = senses.match(visionRegex)!;
     if (parseInt(result[1]) < distance) {
-      return senses.replace(/darkvision \d+ (ft\.|')/, `darkvision ${distance} ft.`);
+      return senses.replace(visionRegex, `${type} ${distance} ft.`);
     }
   }
 
-  return senses; // already has darkvision at or better than distance
+  return senses; // already has vision at or better than distance
+}
+
+function modifyBlindSight(senses: string, distance: number) {
+  return modifyVision(senses, "blindsight", distance);
+}
+
+function modifyDarkvision(senses: string, distance: number) {
+  return modifyVision(senses, "darkvision", distance);
 }
 
 function addOrReplaceIfBetter(actions: { name: string; desc: string }[], newAction: { name: string; desc: string; }, newAttack: Action) {
@@ -579,7 +598,6 @@ function applyMerfolkTemplate(stats: MonsterO5e, options: MerfolkOptions) {
   return template;
 }
 
-
 function applySahuaginTemplate(stats: MonsterO5e) {
   const template = { ...stats };
 
@@ -640,6 +658,66 @@ function applySahuaginTemplate(stats: MonsterO5e) {
     damageType: "piercing"
   };
   addOrReplaceIfBetter(template.bonus_actions, { name: "Bite", desc: formatDescription(biteAction) }, biteAction);
+
+  return template;
+}
+
+const ancient = 24;
+const adult = 18;
+const young = 9;
+
+function buildSlug(age: string, color: string) {
+  if (age === "wyrmling") {
+    return `${color}-dragon-${age}-a5e`.toLocaleLowerCase()
+  }
+  return `${age}-${color}-dragon-a5e`.toLocaleLowerCase();
+}
+
+async function getBreathWeapon(cr: number, color: string) {
+
+  let age;
+  if (cr >= ancient) {
+    age = "ancient";
+  } else if (cr >= adult) {
+    age = "adult";
+  } else if (cr >= young) {
+    age = "young"
+  } else {
+    age = "wyrmling"
+  }
+
+  const slug = buildSlug(age, color);
+  const monster = await getMonsterCached(slug);
+  const [breath] = monster.actions?.filter(a => a.name.match(/Breath/))!;
+  return breath;
+}
+
+async function applyHalfDragonTemplate(stats: MonsterO5e, options: HalfDragonOptions) {
+  const template = { ...stats };
+
+  template.name = "Half-Dragon " + stats.name;
+
+  if (stats.languages.length > 1) {
+    template.languages = appendList(stats.languages, "Draconic");
+  }
+
+  const withDarkVision = modifyDarkvision(stats.senses, 60);
+  template.senses = modifyBlindSight(withDarkVision, 10);
+
+  const cr = stringToCr(stats.challenge_rating);
+  if (cr >= 9 && (template.speed.fly ?? 0) < 60) {
+    template.speed.fly = 60;
+
+    template.special_abilities ??= [];
+    template.special_abilities.push({
+      name: "Wings",
+      desc: "The half-dragon gains wings and a fly speed of 60."
+    });
+  }
+
+  const breath = await getBreathWeapon(cr, options.type);
+  template.actions ??= [];
+  template.actions.push(breath);
 
   return template;
 }
