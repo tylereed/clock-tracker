@@ -49,15 +49,13 @@ describe("AddEditInitiative", () => {
     test("Add Initiative - Min", async () => {
       const wrapper = await mountAddEditInitiative();
 
-      const [
-        txtInitiative,
-        txtName
-      ] = wrapper.findAllComponents({ name: "VTextField" });
+      const txtInitiative = wrapper.findComponent('[data-test="txtInitiative"]');
+      const txtName = wrapper.findComponent('[data-test="txtName"]');
 
       await txtInitiative.setValue("5");
       await txtName.setValue("unit test name");
 
-      const vform = wrapper.findComponent({ name: "VForm" });
+      const vform = wrapper.findComponent('[data-test="frmInitiative"]');
       await vform.trigger("validate");
       await vform.trigger("submit.prevent");
 
@@ -79,13 +77,11 @@ describe("AddEditInitiative", () => {
     test("Add Initiative - All", async () => {
       const wrapper = await mountAddEditInitiative();
 
-      const [
-        txtInitiative,
-        txtName,
-        txtDex,
-        txtAc,
-        txtMaxHp
-      ] = wrapper.findAllComponents({ name: "VTextField" });
+        const txtInitiative = wrapper.findComponent('[data-test="txtInitiative"]');
+        const txtName = wrapper.findComponent('[data-test="txtName"]');
+        const txtDex = wrapper.findComponent('[data-test="txtDex"]');
+        const txtAc = wrapper.findComponent('[data-test="txtAc"]');
+        const txtMaxHp = wrapper.findComponent('[data-test="txtMaxHp"]');
 
       await txtInitiative.setValue("6");
       await txtName.setValue("unit test name - all");
@@ -93,7 +89,7 @@ describe("AddEditInitiative", () => {
       await txtAc.setValue("18");
       await txtMaxHp.setValue("100");
 
-      const vform = wrapper.findComponent({ name: "VForm" });
+      const vform = wrapper.findComponent('[data-test="frmInitiative"]');
       await vform.trigger("validate");
       await vform.trigger("submit.prevent");
 
@@ -115,7 +111,7 @@ describe("AddEditInitiative", () => {
     test("Validates Initiative - Required", async () => {
       const wrapper = await mountAddEditInitiative();
 
-      const txtInitiative = wrapper.findAllComponents({ name: "VTextField" })[0];
+      const txtInitiative = wrapper.findComponent('[data-test="txtInitiative"]');
       await txtInitiative.setValue("");
       await txtInitiative.trigger("blur");
 
@@ -126,7 +122,7 @@ describe("AddEditInitiative", () => {
     test("Validates Initiative - Must be a positive number", async () => {
       const wrapper = await mountAddEditInitiative();
 
-      const txtInitiative = wrapper.findAllComponents({ name: "VTextField" })[0];
+      const txtInitiative = wrapper.findComponent('[data-test="txtInitiative"]');
       await txtInitiative.setValue("a");
       await txtInitiative.trigger("blur");
 
@@ -137,7 +133,7 @@ describe("AddEditInitiative", () => {
     test("Validates Name - Required", async () => {
       const wrapper = await mountAddEditInitiative();
 
-      const txtName = wrapper.findAllComponents({ name: "VTextField" })[1];
+      const txtName = wrapper.findComponent('[data-test="txtName"]');
       await txtName.setValue("");
       await txtName.trigger("blur");
 
@@ -148,7 +144,7 @@ describe("AddEditInitiative", () => {
     test("Validates Dex - Not Required", async () => {
       const wrapper = await mountAddEditInitiative();
 
-      const txtDex = wrapper.findAllComponents({ name: "VTextField" })[2];
+      const txtDex = wrapper.findComponent('[data-test="txtDex"]');
       await txtDex.setValue("");
       await txtDex.trigger("blur");
 
@@ -159,7 +155,7 @@ describe("AddEditInitiative", () => {
     test("Validates Dex - Must be a positive number", async () => {
       const wrapper = await mountAddEditInitiative();
 
-      const txtDex = wrapper.findAllComponents({ name: "VTextField" })[2];
+      const txtDex = wrapper.findComponent('[data-test="txtDex"]');
       await txtDex.setValue("a");
       await txtDex.trigger("blur");
 
@@ -170,7 +166,7 @@ describe("AddEditInitiative", () => {
     test("Validates Dex - Allows negative number", async () => {
       const wrapper = await mountAddEditInitiative();
 
-      const txtDex = wrapper.findAllComponents({ name: "VTextField" })[2];
+      const txtDex = wrapper.findComponent('[data-test="txtDex"]');
       await txtDex.setValue("-1");
       await txtDex.trigger("blur");
 
@@ -181,7 +177,7 @@ describe("AddEditInitiative", () => {
     test("Validates AC - Must be a positive number", async () => {
       const wrapper = await mountAddEditInitiative();
 
-      const txtAc = wrapper.findAllComponents({ name: "VTextField" })[3];
+      const txtAc = wrapper.findComponent('[data-test="txtAc"]');
       await txtAc.setValue("a");
       await txtAc.trigger("blur");
 
@@ -192,7 +188,7 @@ describe("AddEditInitiative", () => {
     test("Validates Max HP - Must be a positive number", async () => {
       const wrapper = await mountAddEditInitiative();
 
-      const txtMaxHp = wrapper.findAllComponents({ name: "VTextField" })[4];
+      const txtMaxHp = wrapper.findComponent('[data-test="txtMaxHp"]');
       await txtMaxHp.setValue("a");
       await txtMaxHp.trigger("blur");
 
@@ -214,14 +210,11 @@ describe("AddEditInitiative", () => {
       expect(html).not.toContain("Add PC Initiative");
       expect(html).toContain("Add Monster Initiative");
 
-      const [
-        cmbTemplate,
-        txtInitiative,
-        txtName,
-        txtDex,
-        txtAc,
-        txtMaxHp
-      ] = wrapper.findAllComponents({ name: "VTextField" });
+      const txtInitiative = wrapper.findComponent('[data-test="txtInitiative"]');
+      const txtName = wrapper.findComponent('[data-test="txtName"]');
+      const txtDex = wrapper.findComponent('[data-test="txtDex"]');
+      const txtAc = wrapper.findComponent('[data-test="txtAc"]');
+      const txtMaxHp = wrapper.findComponent('[data-test="txtMaxHp"]');
 
       expect.soft(txtInitiative.html()).contain(toValue(9));
       expect.soft(txtName.html()).contain(toValue("Unit Test Monster"));
@@ -233,32 +226,23 @@ describe("AddEditInitiative", () => {
     test("Rolls Initiative", async () => {
       const wrapper = await mountAddEditInitiative(defaultMonster);
 
-      const [
-        cmbTemplate,
-        txtInitiative,
-        ,
-        ,
-        ,
-        txtMaxHp
-      ] = wrapper.findAllComponents({ name: "VTextField" });
+      const txtInitiative = wrapper.findComponent('[data-test="txtInitiative"]');
+      const txtMaxHp = wrapper.findComponent('[data-test="txtMaxHp"]');
 
-      const [
-        btnApplyTemplate,
-        btnInitiative,
-        btnOpenLink,
-        btnHealth
-      ] = wrapper.findAllComponents({ name: "VBtn" });
+      const btnInitiative = wrapper.findComponent('[data-test="btnInitiative"]');
+      const btnHealth = wrapper.findComponent('[data-test="btnHealth"]');
+      const btnHp = btnHealth.findAllComponents({ name: "VBtn" }).at(0)!;
 
       await txtInitiative.setValue("");
       await txtMaxHp.setValue("");
 
-      expect(txtInitiative.html()).not.toMatch(/value="\d+"/);
+      expect.soft(txtInitiative.html()).not.toMatch(/value="\d+"/);
       expect(txtMaxHp.html()).not.toMatch(/value="\d+"/);
 
       await btnInitiative.trigger("click");
-      await btnHealth.trigger("click");
+      await btnHp.trigger("click");
 
-      expect(txtInitiative.html()).toMatch(/value="\d+"/);
+      expect.soft(txtInitiative.html()).toMatch(/value="\d+"/);
       expect(txtMaxHp.html()).toMatch(/value="\d+"/);
     });
 
@@ -266,7 +250,7 @@ describe("AddEditInitiative", () => {
     test("Add Monster", async () => {
       const wrapper = await mountAddEditInitiative(defaultMonster);
 
-      const vform = wrapper.findComponent({ name: "VForm" });
+      const vform = wrapper.findComponent('[data-test="frmInitiative"]');
       await vform.trigger("validate");
       await vform.trigger("submit.prevent");
 
