@@ -21,14 +21,18 @@
         <v-text-field :hide-details="true" density="compact" v-model="init.dex" :rules="r.DexRules"
           @update:focused="(focused) => updateUndoRedo(i, 'dex', focused)" @keyup.enter.stop="nextRow($event)" />
       </v-col>
-      <v-col cols="3" v-if="hasName"><v-text-field :hide-details="true" density="compact" v-model="init.name"
-          :rules="r.NameRules" @update:focused="(focused) => updateUndoRedo(i, 'name', focused)"
-          @keyup.enter.stop="nextRow($event)" /></v-col>
-      <v-col v-if="hasAc"><v-text-field :hide-details="true" density="compact" v-model="init.ac" :rules="r.AcRules"
-          @update:focused="(focused) => updateUndoRedo(i, 'ac', focused)" @keyup.enter.stop="nextRow($event)" /></v-col>
-      <v-col v-if="hasMaxHp"><v-text-field :hide-details="true" density="compact" v-model="init.maxHp"
-          :rules="r.MaxHpRules" @update:focused="(focused) => updateUndoRedo(i, 'maxHp', focused)"
-          @keyup.enter.stop="nextRow($event)" /></v-col>
+      <v-col cols="3" v-if="hasName">
+        <v-text-field :hide-details="true" density="compact" v-model="init.name" :rules="r.NameRules"
+          @update:focused="(focused) => updateUndoRedo(i, 'name', focused)" @keyup.enter.stop="nextRow($event)" />
+      </v-col>
+      <v-col v-if="hasAc">
+        <v-text-field :hide-details="true" density="compact" v-model="init.ac" :rules="r.AcRules"
+          @update:focused="(focused) => updateUndoRedo(i, 'ac', focused)" @keyup.enter.stop="nextRow($event)" />
+      </v-col>
+      <v-col v-if="hasMaxHp">
+        <v-text-field :hide-details="true" density="compact" v-model="init.maxHp" :rules="r.MaxHpRules"
+          @update:focused="(focused) => updateUndoRedo(i, 'maxHp', focused)" @keyup.enter.stop="nextRow($event)" />
+      </v-col>
       <v-col v-if="hasHp">
         <v-menu location="end center" :close-on-content-click="false" :open-on-focus="true" :offset="2">
           <template v-slot:activator="{ props }">
@@ -71,6 +75,12 @@
             <b>{{ bonus.name }}</b> {{ bonus.desc }}
           </p>
         </template>
+      </v-col>
+      <v-col cols="12" v-if="init.reactions?.length" v-show="i !== turn">
+        <p><b>Reactions</b></p>
+        <p v-for="reaction in init.reactions">
+          <b>{{ reaction.name }}</b> {{ reaction.desc }}
+        </p>
       </v-col>
       <v-col cols="12" v-if="init.saves" v-show="i !== turn">
         <v-row>
@@ -127,6 +137,7 @@ import Conditions from "@/types/Conditions";
 import { findSibling, findPreviousSibling } from "@/utils/helpers";
 import Initiative, { InitiativeColumns, Initiatives } from "@/types/Initiative";
 import r from "@/components/initiative/InitiativeRules";
+
 import * as v from "@/utils/validators";
 const vTheme = useTheme();
 
