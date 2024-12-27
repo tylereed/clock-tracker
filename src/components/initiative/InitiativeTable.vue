@@ -37,17 +37,16 @@
         <v-menu location="end center" :close-on-content-click="false" :open-on-focus="true" :offset="2">
           <template v-slot:activator="{ props }">
             <v-text-field v-bind="props" :hide-details="true" density="compact" v-model="init.hp" :rules="[validateHp]"
-              @update:focused="(focused) => { updateUndoRedo(i, 'hp', focused); hpChange = 0; }"
-              @keyup.enter.stop="nextRow($event)" />
+              @update:focused="(focused) => handleHpChange(i, focused)" @keyup.enter.stop="nextRow($event)" />
           </template>
           <v-card>
             <div align="center" class="ma-2">
               <v-btn class="ma-1" variant="outlined" color="primary" prepend-icon="mdi-flask"
-                @click="changeHealth(i, '+')" :disabled="!healAndDamageValid">Heal</v-btn>
+                @click="changeHealth(i, '+')" :disabled="!healAndDamageValid" tabindex="-1">Heal</v-btn>
               <v-text-field class="ma-1" density="compact" v-model="hpChange" hide-details="auto"
-                :rules="[validateHpChange]" />
+                :rules="[validateHpChange]" tabindex="-1" />
               <v-btn class="ma-1" variant="outlined" color="error" prepend-icon="mdi-bandage"
-                @click="changeHealth(i, '-')" :disabled="!healAndDamageValid">Damage</v-btn>
+                @click="changeHealth(i, '-')" :disabled="!healAndDamageValid" tabindex="-1">Damage</v-btn>
             </div>
           </v-card>
         </v-menu>
@@ -243,6 +242,28 @@ function changeHealth(index: number, type: "+" | "-") {
   initiatives.value[index].hp = newValue;
   hpChange.value = 0;
   emit("insertInitCommand", index, "hp", newValue, oldValue);
+}
+
+function handleHpChange(index: number, focused: boolean) {
+  if (focused) {
+    updateUndoRedo(index, 'hp', focused);
+    hpChange.value = 0;
+  } else {
+    const sNewValue = initiatives.value[index].hp as unknown as string | undefined;
+    const maybeSymbol = sNewValue?.charAt(0);
+    if (maybeSymbol === "+" || maybeSymbol === "-") {
+      const change = +(sNewValue ?? 0);
+      const oldValue = +oldValues.get("hp" + index);
+      const newValue = maybeSymbol === "+" ?
+        Math.min(oldValue + change, initiatives.value[index].maxHp || Number.MAX_SAFE_INTEGER) :
+        Math.max(oldValue + change, 0);
+      initiatives.value[index].hp = newValue;
+      emit("insertInitCommand", index, "hp", newValue, oldValue);
+    } else {
+      updateUndoRedo(index, 'hp', focused);
+    }
+    hpChange.value = 0;
+  }
 }
 
 </script>
