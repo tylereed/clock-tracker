@@ -3,7 +3,7 @@
     <v-row>
       <v-col cols="9">
         <v-autocomplete v-model="monsterSearch" v-model:search="searchInput" :loading="loading" :items="monsters"
-          return-object auto-select-first item-title="name" item-value="slug" @update:search="doSearch">
+          return-object auto-select-first item-title="name" item-value="slug" @update:search="doSearchDebounced">
           <template v-slot:append>
             <show-stats :disabled="!monsterSearch" :id="monsterSearch?.slug!" />
           </template>
