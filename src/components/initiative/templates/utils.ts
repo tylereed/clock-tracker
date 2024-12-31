@@ -13,6 +13,7 @@ export function stringToCr(text: string) {
 
 export function crToPb(cr: string): number;
 export function crToPb(cr?: number): number;
+export function crToPb(cr: number | string): number;
 export function crToPb(cr?: number | string) {
   if (typeof cr === "string") {
     cr = stringToCr(cr);
@@ -149,7 +150,7 @@ export function formatDescription(attack: Action) {
 
 export function addPlusDamage(action: Action, plus: Dice, damageType: string) {
 
-  if (action.plusDamageAverage ?? 0 > plus.Average) {
+  if ((action.plusDamageAverage ?? 0) > plus.Average) {
     // existing plus damage is better.  Leave it.
     return;
   }
@@ -185,11 +186,8 @@ export function addOrReplaceIfBetter(actions: { name: string; desc: string }[], 
 
 
 export function notMagic(ability: { name: string, desc: string }): boolean {
-  return ability.desc.indexOf("magic") === -1 &&
-    ability.desc.indexOf("spell") === -1 &&
-    ability.name !== "Spellcasting" &&
-    ability.name.indexOf("-Level") === -1 &&
-    ability.name.indexOf("Cantrip") === -1;
+  return ability.desc.search(/magic|spell/i) === -1 &&
+    ability.name.search(/Spellcasting|-Level|Cantrip/) === -1;
 }
 
 function modifyVision(senses: string, type: string, distance: number) {
@@ -215,14 +213,26 @@ export function modifyDarkvision(senses: string, distance: number) {
   return modifyVision(senses, "darkvision", distance);
 }
 
-export function appendList(current: string, toAppend: string) {
+export function appendList(current: string, toAppend: string): string;
+export function appendList(current: string, toAppendList: string[]): string;
+export function appendList(current: string, ...toAppendList: string[]): string;
+export function appendList(current: string, toAppend: string | string[]) {
+
   if (!current) {
-    return toAppend;
+    if (typeof toAppend === "string") {
+      return toAppend;
+    } else {
+      return toAppend.join(", ");
+    }
   }
 
-  if (current.indexOf(toAppend) > -1) {
-    return current;
+  let toAppendList: string[];
+  if (typeof toAppend === "string") {
+    toAppendList = toAppend.split(", ");
+  } else {
+    toAppendList = toAppend;
   }
 
-  return `${current}, ${toAppend}`;
+  toAppendList = toAppendList.filter(x => current.indexOf(x) === -1);
+  return [current, ...toAppendList].join(", ");
 }

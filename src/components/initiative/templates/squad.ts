@@ -11,7 +11,7 @@ function increaseSquadDamage(dice: Dice) {
 }
 
 export function applySquadTemplate(stats: MonsterO5e) {
-  const template = { ...stats };
+  const template: MonsterO5e = { ...stats };
 
   template.name = stats.name + " Squad";
   template.size = increaseSize(stats.size, 2);
@@ -26,10 +26,6 @@ export function applySquadTemplate(stats: MonsterO5e) {
       const squad_hit_dice = new Dice(5 * hit_dice.Count, hit_dice.Sides, 5 * hit_dice.Modifier);
       template.hit_dice = squad_hit_dice.toString();
     }
-  }
-
-  if (!template.special_abilities) {
-    template.special_abilities = [];
   }
 
   template.actions = [];
@@ -58,7 +54,7 @@ export function applySquadTemplate(stats: MonsterO5e) {
 
   const creaturePlural: string = pluralize(stats.name);
 
-  template.special_abilities.push(
+  template.special_abilities = [
     {
       name: "Area Vulnerability",
       desc: "The squad takes double damage from any effect that targets an area."
@@ -71,7 +67,7 @@ export function applySquadTemplate(stats: MonsterO5e) {
       name: "Squad",
       desc: `The squad is composed of 5 or more ${creaturePlural}. If it is subjected to a spell, attack, or other effect that affects only one target, it takes any damage but ignores other effects. It can share its space with ${stats.size} or smaller creatures or objects. The squad can move through any opening large enough for one ${stats.name} without squeezing.`
     }
-  );
+  ];
 
   return template;
 }
