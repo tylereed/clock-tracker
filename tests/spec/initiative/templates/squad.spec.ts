@@ -1,16 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { defaultMonster } from "../defaultMonster";
 import { applySquadTemplate } from "../../../../src/components/initiative/templates/squad";
 import { MonsterO5e } from "../../../../src/utils/Open5e";
+import { assertAction, jsonMonster } from "./helpers";
 
 describe("Squad Template", () => {
-  const jsonMonster = JSON.stringify(defaultMonster);
-
-  function assertAction(actions: {name: string, desc: string}[], name: string, expected: string) {
-    const [action] = actions.filter(x => x.name === name);
-    expect.soft(action, "Could not find action names " + name).not.toBeNull();
-    expect.soft(action?.desc).toBe(expected);
-  }
 
   test("applySquadTemplate", () => {
     const monster: MonsterO5e = JSON.parse(jsonMonster);

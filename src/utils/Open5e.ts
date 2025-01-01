@@ -27,6 +27,7 @@ export type Size = "Tiny" | "Small" | "Medium" | "Large" | "Huge" | "Gargantuan"
 export interface MonsterO5e {
   slug: string;
   name: string;
+  desc: string;
   size: Size;
   type: string;
   subtype: string;

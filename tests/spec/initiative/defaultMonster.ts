@@ -1,7 +1,7 @@
 import { DocumentSlug, MonsterO5e } from "../../../src/utils/Open5e";
 
 
-export const defaultMonster = {
+export const defaultMonster: MonsterO5e = {
   "slug": "unit_test_monster",
   "desc": "Fake monster for unit tests",
   "name": "Unit Test Monster",
@@ -62,4 +62,4 @@ export const defaultMonster = {
   "document__title": "Unit Test Document",
   "document__license_url": "http://example.com",
   "document__url": "http://example.com"
-}  as MonsterO5e;
+};
