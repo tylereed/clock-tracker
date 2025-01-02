@@ -6,7 +6,7 @@ export const jsonMonster = JSON.stringify(defaultMonster);
 export function assertAction(actions: { name: string, desc: string }[], name: string, expected: string) {
   const [action] = actions.filter(x => x.name === name);
   expect.soft(action, "Could not find action names " + name).not.toBeNull();
-  expect.soft(action?.desc).toBe(expected);
+  expect.soft(action?.desc, name + " desc did not match expected").toBe(expected);
 }
 
 export function assertHasActions(actions: { name: string, desc: string }[], ...names: string[]) {

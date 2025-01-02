@@ -51,14 +51,12 @@ export function applyMerfolkTemplate(stats: MonsterO5e, options: MerfolkOptions)
     addOrReplaceIfBetter(template.actions, { name: "Trident", desc: formatDescription(trident) }, trident);
   }
 
-  if (stringToCr(stats.challenge_rating) >= 2 && template.actions?.findIndex(a => a.name === "Trident")) {
-    if (stringToCr(stats.challenge_rating) >= 2) {
-      template.bonus_actions ??= [];
-      template.bonus_actions.push({
-        name: "Trident",
-        desc: "The merfolk makes a trident attack"
-      });
-    }
+  if (stringToCr(stats.challenge_rating) >= 2 && (template.actions?.findIndex(a => a.name === "Trident") ?? -1) > -1) {
+    template.bonus_actions ??= [];
+    template.bonus_actions.push({
+      name: "Trident",
+      desc: "The merfolk makes a trident attack"
+    });
   }
 
   return template;
