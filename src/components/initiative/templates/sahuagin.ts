@@ -9,7 +9,7 @@ export function applySahuaginTemplate(stats: MonsterO5e) {
 
   template.name = "Sahuagin " + stats.name;
 
-  if (template.speed?.swim ?? 0 < 40) {
+  if ((template.speed.swim ?? 0) < 40) {
     template.speed.swim = 40;
   }
 
@@ -43,6 +43,7 @@ export function applySahuaginTemplate(stats: MonsterO5e) {
     isWeapon: true,
     isSpell: false,
     toHitBonus: pb + strBonus,
+    reach: 5,
     numberTargets: 1,
     damageAverage: clawDice.Average,
     damageDice: clawDice,
@@ -58,6 +59,7 @@ export function applySahuaginTemplate(stats: MonsterO5e) {
     isWeapon: true,
     isSpell: false,
     toHitBonus: pb + strBonus,
+    reach: 5,
     numberTargets: 1,
     damageAverage: biteDice.Average,
     damageDice: biteDice,
