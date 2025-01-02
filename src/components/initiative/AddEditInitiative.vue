@@ -62,7 +62,7 @@
         </v-container>
       </v-card-text>
       <v-card-actions>
-        <v-btn variant="elevated" color="primary" :disabled="!isFormValid" type="submit" >Add</v-btn>
+        <v-btn variant="elevated" color="primary" :disabled="!isFormValid" type="submit">Add</v-btn>
         <v-btn @click="emit('close')" variant="outlined">Close</v-btn>
       </v-card-actions>
     </v-card>
@@ -80,8 +80,8 @@ import Initiative from "@/types/Initiative";
 import { MonsterO5e } from "@/utils/Open5e";
 import v from "./InitiativeRules";
 import { monsterO5eToInitiative } from "./initiativeHelpers";
-import { TemplateType, DragonType } from "./templates";
-import * as t from "./templates";
+import { TemplateType, DragonType, dragonTypes, TemplateOptions, templates as templateNames } from "@/components/initiative/templates/types";
+import * as t from "@/components/initiative/templates";
 
 const props = defineProps<{ monsterStats?: MonsterO5e | null }>();
 const { monsterStats } = toRefs(props);
@@ -162,10 +162,10 @@ const vigorMortis = ref(false);
 
 const includeTrident = ref(true);
 
-const halfDragonTypes = ref(t.dragonTypes);
+const halfDragonTypes = ref(dragonTypes);
 const selectedDragonType = ref<DragonType>("Amethyst");
 
-function getOptions(type: TemplateType): t.TemplateOptions | undefined {
+function getOptions(type: TemplateType): TemplateOptions | undefined {
   switch (type) {
     case "Zombie":
       return {
@@ -185,7 +185,7 @@ function getOptions(type: TemplateType): t.TemplateOptions | undefined {
   }
 }
 
-const templates = ref(t.templates);
+const templates = ref(templateNames);
 const selectedTemplate = ref<TemplateType>("Squad");
 async function applyTemplate() {
   if (selectedTemplate.value && monsterStats.value) {

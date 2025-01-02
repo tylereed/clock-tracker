@@ -6,6 +6,7 @@ import * as directives from "vuetify/directives";
 import InitiativeTrackerPage from "../../../src/pages/InitiativeTracker.vue";
 
 global.ResizeObserver = require("resize-observer-polyfill");
+
 const vuetify = createVuetify({
   components,
   directives
