@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { applyMerfolkTemplate } from "../../../../src/components/initiative/templates/merfolk";
 import { MonsterO5e } from "../../../../src/utils/Open5e";
-import { assertAction, assertHasActions, jsonMonster as jsonDefaultMonster } from "./helpers";
+import { expectActionSoft, expectHasActionsSoft, jsonMonster as jsonDefaultMonster } from "./helpers";
 import { MerfolkOptions } from "../../../../src/components/initiative/templates/types";
 
 describe("Merfolk Template", () => {
@@ -18,9 +18,9 @@ describe("Merfolk Template", () => {
     expect.soft(actual.senses).toMatch(/darkvision 30 ft./);
     expect.soft(actual.languages).toMatch(/Aquan/);
 
-    assertAction(actual.actions, "Claw", "Melee Weapon Attack: +8 to hit, reach 10 ft., one target. Hit: 18 (3d8 + 5) bludgeoning damage.");
+    expectActionSoft(actual.actions, "Claw", "Melee Weapon Attack: +8 to hit, reach 10 ft., one target. Hit: 18 (3d8 + 5) bludgeoning damage.");
     expect(actual.bonus_actions ?? []).toHaveLength(0);
-    assertHasActions(actual.special_abilities, "Amphibious");
+    expectHasActionsSoft(actual.special_abilities, "Amphibious");
   });
 
   test("applyMerfolkTemplate - Trident", () => {
@@ -28,9 +28,9 @@ describe("Merfolk Template", () => {
 
     const actual = applyMerfolkTemplate(monster, { includeTrident: true } as MerfolkOptions);
 
-    assertAction(actual.actions, "Trident", "Melee or Ranged Weapon Attack: +8 to hit, reach 5 ft. or range 20/60 ft., one target. Hit: 8 (d6+5) piercing damage, or 9 (d8+5) piercing damage if used with two hands to make a melee attack.");
+    expectActionSoft(actual.actions, "Trident", "Melee or Ranged Weapon Attack: +8 to hit, reach 5 ft. or range 20/60 ft., one target. Hit: 8 (d6+5) piercing damage, or 9 (d8+5) piercing damage if used with two hands to make a melee attack.");
     expect.soft(actual.bonus_actions ?? []).toHaveLength(1);
-    assertAction(actual.bonus_actions, "Trident", "The merfolk makes a trident attack");
+    expectActionSoft(actual.bonus_actions, "Trident", "The merfolk makes a trident attack");
   });
 
 });

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { applyZombieTemplate } from "../../../../src/components/initiative/templates/zombie";
 import { MonsterO5e } from "../../../../src/utils/Open5e";
-import { assertAction, assertHasActions, jsonMonster as jsonDefaultMonster } from "./helpers";
+import { expectActionSoft, expectHasActionsSoft, jsonMonster as jsonDefaultMonster } from "./helpers";
 import { first } from "../../../../src/utils/helpers";
 import { ZombieOptions } from "../../../../src/components/initiative/templates/types";
 
@@ -35,9 +35,9 @@ describe("Zombie Template", () => {
     expect.soft(actual.speed.burrow).toBe(10);
     expect.soft(actual.speed.walk).toBe(20);
 
-    assertAction(actual.actions, "Bite", "Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 21 (3d10+5) piercing damage.");
-    assertAction(actual.actions, "Grab", "Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 15 (3d6+5) bludgeoning damage and the target is grappled if its Medium or smaller (escape DC 16) and until the grapple ends the unit test monster zombie can't grab another target.");
-    assertAction(actual.actions, "Multiattack", "The unit test creature make a bite and a claw attack. The unit test monster zombie can replace one weapon attack with a bite or grab.");
+    expectActionSoft(actual.actions, "Bite", "Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 21 (3d10+5) piercing damage.");
+    expectActionSoft(actual.actions, "Grab", "Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 15 (3d6+5) bludgeoning damage and the target is grappled if its Medium or smaller (escape DC 16) and until the grapple ends the unit test monster zombie can't grab another target.");
+    expectActionSoft(actual.actions, "Multiattack", "The unit test creature make a bite and a claw attack. The unit test monster zombie can replace one weapon attack with a bite or grab.");
     expect.soft(actual.actions).toHaveLength(4);
 
     const skills = Object.getOwnPropertyNames(actual.skills);
@@ -50,7 +50,7 @@ describe("Zombie Template", () => {
     expect.soft(actual.languages).toBe("understands the languages it knew in life but can't speak");
 
     expect.soft(actual.special_abilities).toHaveLength(1);
-    assertAction(actual.special_abilities, "Undead Nature", "A zombie doesn't require air, sustenance, or sleep.");
+    expectActionSoft(actual.special_abilities, "Undead Nature", "A zombie doesn't require air, sustenance, or sleep.");
   });
 
   test("applyZombieTemplate - keep lower ability scores", () => {
@@ -123,8 +123,8 @@ describe("Zombie Template", () => {
 
     const actual = applyZombieTemplate(monster, { infectiousBite: true } as ZombieOptions);
 
-    assertAction(actual.actions, "Bite", "Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 21 (3d10+5) piercing damage plus 2 (d4) necrotic damage. A creature bitten by the zombie takes 2 (1d4) ongoing necrotic damage until it regains hit points or a creature makes a DC 15 Medicine check to treat the wound. If a beast, dragon, giant, humanoid, or monstrosity dies while suffering from this effect, it becomes a zombie after 1 minute, gaining the zombie template.");
-    assertAction(actual.actions, "Grab", "Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 15 (3d6+5) bludgeoning damage and the target is grappled if its Medium or smaller (escape DC 16) and until the grapple ends the unit test monster zombie can't grab another target.");
+    expectActionSoft(actual.actions, "Bite", "Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 21 (3d10+5) piercing damage plus 2 (d4) necrotic damage. A creature bitten by the zombie takes 2 (1d4) ongoing necrotic damage until it regains hit points or a creature makes a DC 15 Medicine check to treat the wound. If a beast, dragon, giant, humanoid, or monstrosity dies while suffering from this effect, it becomes a zombie after 1 minute, gaining the zombie template.");
+    expectActionSoft(actual.actions, "Grab", "Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 15 (3d6+5) bludgeoning damage and the target is grappled if its Medium or smaller (escape DC 16) and until the grapple ends the unit test monster zombie can't grab another target.");
   });
 
   test("applyZombieTemplate - Vile Discharge", () => {
@@ -132,9 +132,9 @@ describe("Zombie Template", () => {
 
     const actual = applyZombieTemplate(monster, { vileDischarge: true } as ZombieOptions);
 
-    assertAction(actual.actions, "Bite", "Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 21 (3d10+5) piercing damage plus 2 (d4) poison damage.");
-    assertAction(actual.actions, "Grab", "Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 15 (3d6+5) bludgeoning damage plus 2 (d4) poison damage and the target is grappled if its Medium or smaller (escape DC 16) and until the grapple ends the unit test monster zombie can't grab another target.");
-    assertAction(actual.actions, "Claw", "Melee Weapon Attack: +8 to hit, reach 10 ft., one target. Hit: 18 (3d8+5) bludgeoning damage plus 2 (d4) poison damage.");
+    expectActionSoft(actual.actions, "Bite", "Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 21 (3d10+5) piercing damage plus 2 (d4) poison damage.");
+    expectActionSoft(actual.actions, "Grab", "Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 15 (3d6+5) bludgeoning damage plus 2 (d4) poison damage and the target is grappled if its Medium or smaller (escape DC 16) and until the grapple ends the unit test monster zombie can't grab another target.");
+    expectActionSoft(actual.actions, "Claw", "Melee Weapon Attack: +8 to hit, reach 10 ft., one target. Hit: 18 (3d8+5) bludgeoning damage plus 2 (d4) poison damage.");
   });
 
   test("applyZombieTemplate - Options", () => {
@@ -147,11 +147,7 @@ describe("Zombie Template", () => {
       vigorMortis: true
     } as ZombieOptions);
 
-    assertHasActions(actual.special_abilities, "Undead Fortitude (1/Day)", "Infectious Bite", "Vile Discharge", "Vigor Mortis");
+    expectHasActionsSoft(actual.special_abilities, "Undead Fortitude (1/Day)", "Infectious Bite", "Vile Discharge", "Vigor Mortis");
   });
 
-  /*
-  additional tests
-  test the options
-  */
 });

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { applySahuaginTemplate } from "../../../../src/components/initiative/templates/sahuagin";
 import { MonsterO5e } from "../../../../src/utils/Open5e";
-import { assertAction, assertHasActions, jsonMonster as jsonDefaultMonster } from "./helpers";
+import { expectActionSoft, expectHasActionsSoft, jsonMonster as jsonDefaultMonster } from "./helpers";
 
 describe("Sahuagin Template", () => {
 
@@ -16,9 +16,9 @@ describe("Sahuagin Template", () => {
     expect.soft(actual.senses).toMatch(/darkvision 120 ft./);
     expect.soft(actual.languages).toMatch(/Sahuagin/);
 
-    assertAction(actual.actions, "Claw", "Melee Weapon Attack: +8 to hit, reach 10 ft., one target. Hit: 18 (3d8 + 5) bludgeoning damage.");
-    assertAction(actual.bonus_actions, "Bite", "Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 7 (d4+5) piercing damage.");
-    assertHasActions(actual.special_abilities, "Blood Frenzy", "Limited Amphibiousness", "Shark Telepathy");
+    expectActionSoft(actual.actions, "Claw", "Melee Weapon Attack: +8 to hit, reach 10 ft., one target. Hit: 18 (3d8 + 5) bludgeoning damage.");
+    expectActionSoft(actual.bonus_actions, "Bite", "Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 7 (d4+5) piercing damage.");
+    expectHasActionsSoft(actual.special_abilities, "Blood Frenzy", "Limited Amphibiousness", "Shark Telepathy");
   });
 
 });

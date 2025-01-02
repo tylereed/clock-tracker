@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { appplySkeletonTemplate } from "../../../../src/components/initiative/templates/skeleton";
 import { MonsterO5e } from "../../../../src/utils/Open5e";
-import { assertAction, assertHasActions, jsonMonster as jsonDefaultMonster } from "./helpers";
+import { expectActionSoft, expectHasActionsSoft, jsonMonster as jsonDefaultMonster } from "./helpers";
 
 describe("Merfolk Template", () => {
 
@@ -27,7 +27,7 @@ describe("Merfolk Template", () => {
     expect.soft(actual.condition_immunities).toMatch("poisoned");
     expect.soft(actual.senses).toMatch("darkvision 60 ft.");
     expect.soft(actual.languages).toBe("understands the languages it knew in life but can't speak");
-    assertHasActions(actual.special_abilities, "Undead Nature");
+    expectHasActionsSoft(actual.special_abilities, "Undead Nature");
   });
 
 });
