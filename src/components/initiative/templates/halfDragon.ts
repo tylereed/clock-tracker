@@ -34,7 +34,7 @@ async function getBreathWeapon(cr: number, color: string) {
   return breath;
 }
 
-export async function applyHalfDragonTemplate(stats: MonsterO5e, options: HalfDragonOptions) {
+export async function applyHalfDragonTemplate(stats: MonsterO5e, options: HalfDragonOptions): Promise<MonsterO5e>  {
   const template = { ...stats };
 
   template.name = "Half-Dragon " + stats.name;

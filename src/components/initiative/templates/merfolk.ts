@@ -5,7 +5,7 @@ import Dice from "@/utils/Dice";
 import { Action } from "@/utils/Attack";
 
 
-export function applyMerfolkTemplate(stats: MonsterO5e, options: MerfolkOptions) {
+export function applyMerfolkTemplate(stats: MonsterO5e, options: MerfolkOptions): MonsterO5e  {
   const template = { ...stats };
 
   template.name = "Merfolk " + stats.name;

@@ -36,7 +36,7 @@ function* buildZombieAbilities(options: Partial<ZombieOptions>, dc: number) {
   }
 }
 
-export function applyZombieTemplate(stats: MonsterO5e, options: ZombieOptions) {
+export function applyZombieTemplate(stats: MonsterO5e, options: ZombieOptions): MonsterO5e  {
   const template = { ...stats };
 
   template.name = stats.name + " Zombie";

@@ -10,7 +10,7 @@ function increaseSquadDamage(dice: Dice) {
   return [damageDice.Average, damageDice] as const;
 }
 
-export function applySquadTemplate(stats: MonsterO5e) {
+export function applySquadTemplate(stats: MonsterO5e): MonsterO5e  {
   const template: MonsterO5e = { ...stats };
 
   template.name = stats.name + " Squad";

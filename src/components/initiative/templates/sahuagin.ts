@@ -4,7 +4,7 @@ import { MonsterO5e } from "@/utils/Open5e";
 import { addOrReplaceIfBetter, crToPb, formatDescription, modifyDarkvision } from "./utils";
 
 
-export function applySahuaginTemplate(stats: MonsterO5e) {
+export function applySahuaginTemplate(stats: MonsterO5e): MonsterO5e  {
   const template = { ...stats };
 
   template.name = "Sahuagin " + stats.name;

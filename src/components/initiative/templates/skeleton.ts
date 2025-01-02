@@ -2,7 +2,7 @@ import Dice from "@/utils/Dice";
 import { MonsterO5e } from "@/utils/Open5e";
 import { appendList, crToPb, modifyDarkvision, notMagic } from "./utils";
 
-export function appplySkeletonTemplate(stats: MonsterO5e) {
+export function appplySkeletonTemplate(stats: MonsterO5e): MonsterO5e {
   const template = { ...stats };
 
   template.name = stats.name + " Skeleton";
