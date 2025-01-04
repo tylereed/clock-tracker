@@ -175,5 +175,6 @@ describe("AttackAction", () => {
     const actual = parse(text)!;
 
     assertActionEqual(actual, expected);
-  })
+  });
+
 });

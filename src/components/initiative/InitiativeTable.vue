@@ -37,7 +37,7 @@
         <v-menu location="end center" :close-on-content-click="false" :open-on-focus="true" :offset="2">
           <template v-slot:activator="{ props }">
             <v-text-field v-bind="props" :hide-details="true" density="compact" v-model="init.hp" :rules="[validateHp]"
-              @update:focused="(focused) => handleHpChange(i, focused)" @keyup.enter.stop="nextRow($event)" />
+              @update:focused="(focused) => handleHpChange(i, focused)" @keyup.enter.stop="nextRow($event)" data-test="txtHp" />
           </template>
           <v-card>
             <div align="center" class="ma-2">

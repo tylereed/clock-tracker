@@ -4,9 +4,8 @@ import { createVuetify } from "vuetify";
 import * as components from "vuetify/components";
 import * as directives from "vuetify/directives";
 import InitiativeTable from "../../../src/components/initiative/InitiativeTable.vue";
-import Initiative, { InitiativeColumns, Initiatives } from "../../../src/types/Initiative";
-import { MonsterO5e } from "../../../src/utils/Open5e";
-import { ErrorMessages } from "../../../src/utils/validators";
+import { InitiativeColumns, Initiatives, InitWithId } from "../../../src/types/Initiative";
+import { defaultMonster } from "./defaultMonster";
 
 global.ResizeObserver = require("resize-observer-polyfill");
 
@@ -55,6 +54,7 @@ function buildColumns(...keys: (keyof InitiativeColumns)[]) {
 }
 
 describe("InitiativeTable", () => {
+  const sDefaultInitiative = JSON.stringify({ id: 1, ...defaultMonster, order: 0, conditions: {} });
 
   describe("mount initiative table", () => {
 
@@ -87,7 +87,32 @@ describe("InitiativeTable", () => {
       expectColumns({ [column]: true }, html);
     });
 
+  });
 
+  test.skip("popups health change", async () => {
+    const columns = buildColumns("hasHp");
+    const monster = JSON.parse(sDefaultInitiative) as InitWithId;
+
+    const wrapper = await mountInitiativeTable([monster], columns, 0, 1);
+    const vtxtHp = wrapper.findComponent("[data-test='txtHp']");
+    const txtHp = vtxtHp.find("input");
+
+    await txtHp.trigger("focus");
+    await txtHp.setValue("10");
+
+    const html = wrapper.html();
+    expect(html).toContain("Heal");
+    expect(html).toContain("Damage");
+  });
+
+  test("alternate row", async () => {
+    const columns = buildColumns("hasInitiative", "hasName", "hasAc", "hasMaxHp", "hasHp", "hasConditions");
+    const monster = JSON.parse(sDefaultInitiative) as InitWithId;
+
+    const wrapper = await mountInitiativeTable([monster, monster], columns, 0, 1);
+
+    const html = wrapper.html();
+    expect(html).toContain("alternate-row");
   });
 
 });
