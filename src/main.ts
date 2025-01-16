@@ -9,14 +9,11 @@ import { registerPlugins } from "@/plugins";
 
 // Components
 import App from "./App.vue";
-import ToastPlugin from "vue-toast-notification";
-import "vue-toast-notification/dist/theme-default.css";
 
 // Composables
 import { createApp } from "vue";
 
-const app = createApp(App)
-  .use(ToastPlugin);
+const app = createApp(App);
 
 registerPlugins(app);
 
