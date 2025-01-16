@@ -43,7 +43,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, toRefs, watch } from "vue";
 
 import InitiativeTable from "@/components/initiative/InitiativeTable.vue";
 import * as i from "@/components/initiative/initiativeHelpers";
@@ -53,6 +53,7 @@ import TsUndoRedo from "@/components/common/TsUndoRedo.vue";
 import { Executor } from "@/utils/Executor";
 import Initiative, { Initiatives, InitWithId } from "@/types/Initiative";
 import { first } from "@/utils/helpers";
+import { usePrefixes } from "./encounterHelpers";
 
 const props = defineProps<{
   label: string,
@@ -60,13 +61,14 @@ const props = defineProps<{
   showMonster?: boolean,
 }>();
 
+const { groupNamePrefix } = toRefs(props);
+
 const emit = defineEmits<{
   (e: "sendToInitiative", inits: Initiatives): void,
 }>();
 
 let entryId = 0;
-const GroupNamePrefix = computed(() => props.groupNamePrefix + "-"); //"party-";
-const FullPrefix = computed(() => i.makeKey(GroupNamePrefix.value));
+const { GroupNamePrefix, FullPrefix } = usePrefixes(groupNamePrefix);
 
 const allInitiatives = ref<Map<string, Initiatives>>();
 const initiatives = ref<Initiatives>([]);
