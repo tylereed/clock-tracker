@@ -3,7 +3,7 @@ import { describe, beforeEach, expect, test, vi } from "vitest";
 import { createVuetify } from "vuetify";
 import * as components from "vuetify/components";
 import * as directives from "vuetify/directives";
-import DarkModeToggle from "../../src/components/DarkModeToggle.vue";
+import DarkModeToggle from "../../src/components/settings/DarkModeToggle.vue";
 
 const vuetify = createVuetify({
   components,

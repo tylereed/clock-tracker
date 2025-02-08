@@ -1,6 +1,5 @@
 <template>
-  <v-card class="ma-2">
-    <v-card-item><v-card-title>Timers</v-card-title></v-card-item>
+  <v-card flat>
     <v-card-text>
       <v-container fluid>
         <v-row dense>
@@ -30,11 +29,10 @@ import AddCountdown from "@/components/timer/AddCountdown.vue";
 import TimerVue from "@/components/timer/Timer.vue";
 import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
 
-import { Timer } from "@/types/Timer";
+import { storeToRefs } from "pinia";
+import { useTimersStore } from "@/stores/timers";
 
-type Timers = Timer[];
-
-const timers = ref<Timers>([]);
+const { timers } = storeToRefs(useTimersStore());
 const addCountdownDisplay = ref(false);
 
 function clearTimers() {
@@ -177,6 +175,8 @@ function elapsedTimer(id: number) {
   }
 }
 
-addTimer();
+if (timers.value.length === 0) {
+  addTimer();
+}
 
 </script>

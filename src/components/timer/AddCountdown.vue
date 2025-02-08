@@ -42,7 +42,7 @@ function addNewCountdown() {
 }
 
 function countdownHasValue() {
-  return hours.value + minutes.value > 0 || "Time must have a value";
+  return (hours.value + minutes.value > 0) || "Time must have a value";
 }
 
 </script>
