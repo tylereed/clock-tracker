@@ -1,5 +1,5 @@
 <template>
-  <v-card class="ma-2">
+  <v-card flat>
     <v-card-item><v-card-title>Timers</v-card-title></v-card-item>
     <v-card-text>
       <v-container fluid>
