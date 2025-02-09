@@ -25,7 +25,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, shallowRef } from "vue";
 
 import Clocks from "@/pages/Clocks.vue";
 import Timer from "@/pages/Timers.vue";
@@ -38,9 +38,9 @@ import { clearCaches } from "@/utils/Cache";
 const activeTiles = ref<Tile[]>([]);
 
 activeTiles.value.push(
-  { visible: true, title: "Timers", component: Timer },
-  { visible: true, title: "Clocks", component: Clocks },
-  { visible: true, title: "Encounters", component: Encounters }
+  { visible: true, title: "Timers", component: shallowRef(Timer) },
+  { visible: true, title: "Clocks", component: shallowRef(Clocks) },
+  { visible: true, title: "Encounters", component: shallowRef(Encounters) }
 );
 
 function toggle(i: number) {
