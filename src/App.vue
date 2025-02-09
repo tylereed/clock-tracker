@@ -15,7 +15,7 @@
               <component :is="t.component" />
             </v-sheet>
           </v-expand-transition>
-          <v-btn :icon="t.visible ? 'mdi-chevron-up' : 'mdi-chevron-down'" class="position-absolute top-0 right-0 mr-3"
+          <v-btn density="comfortable" :icon="t.visible ? 'mdi-chevron-up' : 'mdi-chevron-down'" class="position-absolute top-0 right-0 mt-1 mr-3"
             @click="toggle(i)" />
         </v-card>
       </template>
