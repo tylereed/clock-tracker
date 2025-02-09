@@ -1,6 +1,5 @@
 <template>
   <v-card flat>
-    <v-card-item><v-card-title>Clocks</v-card-title></v-card-item>
     <v-card-text>
       <v-tabs v-model="selectedTab">
         <v-tab v-for="(clockTab, index) in clockTabs" :key="index" @click.middle.prevent="removeTab(index)">

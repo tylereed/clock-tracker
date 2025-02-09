@@ -1,30 +1,25 @@
 <template>
   <v-app>
     <v-main>
+      <v-sheet class="mx-2 rounded-b-lg d-flex align-center">
+        <span class="text-h2 ml-2">GM Tools</span>
+        <v-spacer />
+        <dark-mode-toggle class="mx-2" />
+      </v-sheet>
 
-      <v-expansion-panels>
-        <v-expansion-panel>
-
-        </v-expansion-panel>
-      </v-expansion-panels>
-
-      <template v-for="t in activeTiles">
+      <template v-for="(t, i) in activeTiles" :key="i">
         <v-card class="ma-2 position-relative">
           <v-card-title>{{ t.title }}</v-card-title>
-          <v-slide-y-transition>
+          <v-expand-transition>
             <v-sheet v-if="t.visible">
               <component :is="t.component" />
             </v-sheet>
-          </v-slide-y-transition>
-          <v-switch v-model:model-value="t.visible" class="position-absolute top-0 right-0 mr-3" />
+          </v-expand-transition>
+          <v-btn :icon="t.visible ? 'mdi-chevron-up' : 'mdi-chevron-down'" class="position-absolute top-0 right-0 mr-3"
+            @click="toggle(i)" />
         </v-card>
       </template>
 
-      <!-- <timer />
-      <clocks />
-      <encounters /> -->
-      <!-- 
-      <dark-mode-toggle class="position-absolute top-0 right-0 mr-3" /> -->
     </v-main>
   </v-app>
 </template>
@@ -47,6 +42,10 @@ activeTiles.value.push(
   { visible: true, title: "Clocks", component: Clocks },
   { visible: true, title: "Encounters", component: Encounters }
 );
+
+function toggle(i: number) {
+  activeTiles.value[i].visible = !activeTiles.value[i].visible;
+}
 
 clearCaches();
 </script>
