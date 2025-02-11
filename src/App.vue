@@ -29,10 +29,10 @@ import Clocks from "@/pages/Clocks.vue";
 import Timer from "@/pages/Timers.vue";
 import Encounters from "@/pages/Encounters.vue";
 
-import Tile from "./types/Tile";
+import Tile from "@/types/Tile";
 import { clearCaches } from "@/utils/Cache";
-import Settings from "./components/Settings.vue";
-import { useTilesStore } from "./stores/tiles";
+import Settings from "@/components/settings/Settings.vue";
+import { useTilesStore } from "@/stores/tiles";
 
 const tilesStore = useTilesStore();
 
@@ -43,15 +43,19 @@ const tiles = [
 ];
 const allTiles = new Map(tiles.map(t => [t.title, t]));
 
-const activeTiles = ref<Map<string, Tile>>(new Map(tiles.map(t => [t.title, t])));
+const activeTiles = ref<Map<string, Tile>>(new Map());
+setActiveTiles();
 
-watch(() => tilesStore.selectedTiles, () => {
+watch(() => tilesStore.selectedTiles, setActiveTiles);
+
+function setActiveTiles() {
   activeTiles.value.clear();
-  const sortedTiles = tilesStore.selectedTiles.toSorted((x, y) => tilesStore.allTiles().indexOf(x) - tilesStore.allTiles().indexOf(y));
+  const tilesOrder = tilesStore.allTiles();
+  const sortedTiles = tilesStore.selectedTiles.toSorted((x, y) => tilesOrder.indexOf(x) - tilesOrder.indexOf(y));
   for (const t of sortedTiles) {
     activeTiles.value.set(t, allTiles.get(t)!);
   }
-});
+}
 
 function toggle(name: string) {
   const tile = activeTiles.value.get(name)!;

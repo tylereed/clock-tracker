@@ -16,7 +16,7 @@
 </template>
 
 <script setup lang="ts">
-import DarkModeToggle from "@/components/DarkModeToggle.vue";
+import DarkModeToggle from "@/components/settings/DarkModeToggle.vue";
 
 import { useTilesStore } from "@/stores/tiles";
 

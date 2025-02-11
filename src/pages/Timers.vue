@@ -32,7 +32,7 @@ import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
 import { storeToRefs } from "pinia";
 import { useTimersStore } from "@/stores/timers";
 
-const { timers } = storeToRefs(useTimersStore()); // useStorage<Timer[]>("timers", [], sessionStorage);
+const { timers } = storeToRefs(useTimersStore());
 const addCountdownDisplay = ref(false);
 
 function clearTimers() {
