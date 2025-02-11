@@ -40,12 +40,13 @@ import { createClock, getClockSize } from "@/components/clocks/helpers";
 
 import { Clock, ClockTab, NewClock } from "@/types/Clock";
 import { Executor } from "@/utils/Executor";
+import { useStorage } from "@vueuse/core";
 
 type Clocks = Clock[];
 type ClockTabs = ClockTab[];
 
 const clockTabs = ref<ClockTabs>([]);
-const selectedTab = ref(0);
+const selectedTab = useStorage("clock-selectedTab", 0, localStorage);
 const clocks = computed<Clocks>(() => clockTabs.value[selectedTab.value].clocks);
 
 const addEditClockDisplay = ref(false);

@@ -27,6 +27,7 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
+import { useStorage } from "@vueuse/core";
 
 import InitiativeTracker from "./InitiativeTracker.vue";
 import ManageParty from "./ManageParty.vue";
@@ -35,7 +36,7 @@ import ManageMonsters from "./ManageMonsters.vue";
 import { Initiatives } from "@/types/Initiative";
 
 type TabTypes = "Initiative" | "Party" | "Monsters";
-const selectedTab = ref<TabTypes>("Initiative");
+const selectedTab = useStorage<TabTypes>("clock-selectedTab", "Initiative", localStorage);
 
 const tracker = ref<{ insertInitiatives: (inits: Initiatives, clear?: boolean) => void }>();
 

@@ -37,9 +37,9 @@ import { useTilesStore } from "@/stores/tiles";
 const tilesStore = useTilesStore();
 
 const tiles = [
-  { visible: true, title: "Timers", component: shallowRef(Timer) },
-  { visible: true, title: "Clocks", component: shallowRef(Clocks) },
-  { visible: true, title: "Encounters", component: shallowRef(Encounters) }
+  { visible: false, title: "Timers", component: shallowRef(Timer) },
+  { visible: false, title: "Clocks", component: shallowRef(Clocks) },
+  { visible: false, title: "Encounters", component: shallowRef(Encounters) }
 ];
 const allTiles = new Map(tiles.map(t => [t.title, t]));
 
