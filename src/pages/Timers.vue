@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from "vue";
+import { onMounted, onUnmounted, reactive, ref } from "vue";
 import { useToast } from "vue-toast-notification";
 
 import AddCountdown from "@/components/timer/AddCountdown.vue";
@@ -30,10 +30,11 @@ import TimerVue from "@/components/timer/Timer.vue";
 import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
 
 import { Timer } from "@/types/Timer";
+import { useStorage } from "@vueuse/core";
+import { storeToRefs } from "pinia";
+import { useTimersStore } from "@/stores/timers";
 
-type Timers = Timer[];
-
-const timers = ref<Timers>([]);
+const { timers } = storeToRefs(useTimersStore()); // useStorage<Timer[]>("timers", [], sessionStorage);
 const addCountdownDisplay = ref(false);
 
 function clearTimers() {
@@ -176,6 +177,8 @@ function elapsedTimer(id: number) {
   }
 }
 
-addTimer();
+if (timers.value.length === 0) {
+  addTimer();
+}
 
 </script>
