@@ -46,7 +46,7 @@ type Clocks = Clock[];
 type ClockTabs = ClockTab[];
 
 const clockTabs = ref<ClockTabs>([]);
-const selectedTab = useStorage("clock-selectedTab", 0, localStorage);
+const selectedTab = useStorage("clock-selectedTab", 0, sessionStorage);
 const clocks = computed<Clocks>(() => clockTabs.value[selectedTab.value].clocks);
 
 const addEditClockDisplay = ref(false);
