@@ -22,15 +22,13 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, reactive, ref } from "vue";
+import { reactive, ref } from "vue";
 import { useToast } from "vue-toast-notification";
 
 import AddCountdown from "@/components/timer/AddCountdown.vue";
 import TimerVue from "@/components/timer/Timer.vue";
 import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
 
-import { Timer } from "@/types/Timer";
-import { useStorage } from "@vueuse/core";
 import { storeToRefs } from "pinia";
 import { useTimersStore } from "@/stores/timers";
 
