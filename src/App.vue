@@ -7,7 +7,7 @@
         <settings class="ma-2" />
       </v-sheet>
 
-      <v-card class="ma-2 position-relative" v-for="(t, i) in activeTiles" :key="i">
+      <v-card class="ma-2 position-relative" v-for="[name, t] in activeTiles" :key="name">
         <v-card-title>{{ t.title }}</v-card-title>
         <v-expand-transition>
           <v-sheet v-if="t.visible">
@@ -15,7 +15,7 @@
           </v-sheet>
         </v-expand-transition>
         <v-btn density="comfortable" :icon="t.visible ? 'mdi-chevron-up' : 'mdi-chevron-down'"
-          class="position-absolute top-0 right-0 mt-1 mr-3" @click="toggle(i)" />
+          class="position-absolute top-0 right-0 mt-1 mr-3" @click="toggle(name)" />
       </v-card>
 
     </v-main>
@@ -23,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef } from "vue";
+import { ref, shallowRef, watch } from "vue";
 
 import Clocks from "@/pages/Clocks.vue";
 import Timer from "@/pages/Timers.vue";
@@ -32,17 +32,30 @@ import Encounters from "@/pages/Encounters.vue";
 import Tile from "./types/Tile";
 import { clearCaches } from "@/utils/Cache";
 import Settings from "./components/Settings.vue";
+import { useTilesStore } from "./stores/tiles";
 
-const activeTiles = ref<Tile[]>([]);
+const tilesStore = useTilesStore();
 
-activeTiles.value.push(
+const tiles = [
   { visible: true, title: "Timers", component: shallowRef(Timer) },
   { visible: true, title: "Clocks", component: shallowRef(Clocks) },
   { visible: true, title: "Encounters", component: shallowRef(Encounters) }
-);
+];
+const allTiles = new Map(tiles.map(t => [t.title, t]));
 
-function toggle(i: number) {
-  activeTiles.value[i].visible = !activeTiles.value[i].visible;
+const activeTiles = ref<Map<string, Tile>>(new Map(tiles.map(t => [t.title, t])));
+
+watch(() => tilesStore.selectedTiles, () => {
+  activeTiles.value.clear();
+  const sortedTiles = tilesStore.selectedTiles.toSorted((x, y) => tilesStore.allTiles().indexOf(x) - tilesStore.allTiles().indexOf(y));
+  for (const t of sortedTiles) {
+    activeTiles.value.set(t, allTiles.get(t)!);
+  }
+});
+
+function toggle(name: string) {
+  const tile = activeTiles.value.get(name)!;
+  tile.visible = !tile.visible;
 }
 
 clearCaches();
