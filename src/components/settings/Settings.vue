@@ -9,7 +9,8 @@
         <dark-mode-toggle class="mx-2" />
       </v-list-item>
       <v-list-item v-for="t in tilesStore.allTiles()">
-        <v-checkbox v-model="tilesStore.selectedTiles" :label="t" :value="t" />
+        <v-checkbox v-model="tilesStore.selectedTiles" :label="t" :value="t" true-icon="mdi-check-circle"
+          color="primary" false-icon="mdi-close-circle" base-color="error" hide-details density="compact" />
       </v-list-item>
     </v-list>
   </v-menu>
