@@ -1,5 +1,6 @@
 import { mount, VueWrapper } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { createTestingPinia } from "@pinia/testing";
 import { createVuetify } from "vuetify";
 import * as components from "vuetify/components";
 import * as directives from "vuetify/directives";
@@ -20,7 +21,7 @@ function mountTimers(): VueWrapper<any, any> {
         components: {
           TimersPage
         },
-        plugins: [vuetify]
+        plugins: [vuetify, createTestingPinia()]
       }
     });
 }
@@ -42,11 +43,13 @@ function buildDefaultTimer() {
 describe("Timers Page", () => {
 
   beforeEach(() => {
-    vi.useFakeTimers()
+    vi.useFakeTimers();
+    sessionStorage.clear();
   });
 
   afterEach(() => {
-    vi.restoreAllMocks()
+    vi.restoreAllMocks();
+    sessionStorage.clear();
   });
 
   test("loads page", () => {
