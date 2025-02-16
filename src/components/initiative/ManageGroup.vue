@@ -17,7 +17,7 @@
       <v-col>
         <div class="pt-2">
           <v-btn :disabled="groupNames.length <= 1">
-            <v-icon icon="mdi-delete-forever" color="error" @click="deleteSelectedGroup" />
+            <v-icon icon="mdi-delete-forever" color="error" @click="deleteSelectedGroup()" />
           </v-btn>
         </div>
       </v-col>
@@ -29,10 +29,10 @@
   <v-container fluid>
     <v-row>
       <v-col>
-        <v-btn variant="elevated" color="primary" @click="addEntry">Add</v-btn>
+        <v-btn variant="elevated" color="primary" @click="addEntry()">Add</v-btn>
       </v-col>
       <v-col>
-        <v-btn variant="elevated" color="primary" @click="sendToInit">Send to Initiative</v-btn>
+        <v-btn variant="elevated" color="primary" @click="sendToInit()">Send to Initiative</v-btn>
       </v-col>
     </v-row>
   </v-container>
