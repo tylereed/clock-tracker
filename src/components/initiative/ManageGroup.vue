@@ -88,7 +88,7 @@ const executor = new Executor(() => i.saveInits(initiatives.value, `${GroupNameP
 
 onMounted(() => {
   allInitiatives.value = new Map<string, Initiatives>(loadAllGroups());
-  entryId = [...allInitiatives.value.values()].flatMap(x => x).map(x => x.order).reduce((x, y) => x > y ? x : y);
+  entryId = [...allInitiatives.value.values()].flatMap(x => x).map(x => x.order).reduce((x, y) => x > y ? x : y, 0);
 
   const f = first(groupNames.value);
   if (f) {

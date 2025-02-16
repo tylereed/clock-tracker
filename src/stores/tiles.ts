@@ -6,7 +6,7 @@ const tiles = ["Timers", "Clocks", "Encounters"];
 export const useTilesStore = defineStore("tiles", () => {
 
   const selectedTiles = useStorage("tiles", tiles);
-  const openTiles = useStorage<string[]>("openTiles", []);
+  const openTiles = useStorage<string[]>("openTiles", [], sessionStorage);
 
   function allTiles() {
     return tiles;
