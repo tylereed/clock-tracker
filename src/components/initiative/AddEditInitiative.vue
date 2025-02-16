@@ -14,21 +14,21 @@
           </v-row>
           <v-row v-show="selectedTemplate === 'Zombie'">
             <v-col>
-              <v-checkbox label="Undead Fortitude" density="compact" v-model="undeadFortitude" />
+              <v-checkbox label="Undead Fortitude" density="compact" v-model="undeadFortitude" v-tooltip:top="'If the zombie is reduced to 0 hit points by damage that isnt radiant or from a critical hit, its instead reduced to 1 hit point, falls prone, and is stunned until the end of its next turn, appearing to be dead.'" />
             </v-col>
             <v-col>
-              <v-checkbox label="Infectious Bite" density="compact" v-model="infectiousBite" />
+              <v-checkbox label="Infectious Bite" density="compact" v-model="infectiousBite" v-tooltip:top="'A creature bitten by the zombie takes 2 (1d4) ongoing necrotic damage until it regains hit points or a creature makes a DC 15 Medicine check to treat the wound. If a beast, dragon, giant, humanoid, or monstrosity dies while suffering from this effect, it becomes a zombie after 1 minute, gaining the zombie template.'" />
             </v-col>
             <v-col>
-              <v-checkbox label="Vile Discharge" density="compact" v-model="vileDischarge" />
+              <v-checkbox label="Vile Discharge" density="compact" v-model="vileDischarge" v-tooltip:top="'The zombie\'s melee attacks deal an extra 2 (1d4) poison damage. Additionally, when it\'s reduced to 0 hit points, it explodes. Creatures within 5 feet make a Dexterity saving throw against the zombie\'s maneuver DC, taking 5 (2d4) poison damage on a failure.'" />
             </v-col>
             <v-col>
-              <v-checkbox label="Vigor Mortis" density="compact" v-model="vigorMortis" />
+              <v-checkbox label="Vigor Mortis" density="compact" v-model="vigorMortis" v-tooltip:top="'The zombie can take the Dash action as a bonus action. It can\'t do so again until it moves 0 feet on one of its turns.'" />
             </v-col>
           </v-row>
           <v-row v-show="selectedTemplate === 'Merfolk'">
             <v-col>
-              <v-checkbox label="Include Trident" density="compact" v-model="includeTrident" />
+              <v-checkbox label="Include Trident" density="compact" v-model="includeTrident" v-tooltip:top="'Add a trident to the creature\'s equipment if it doesn\'t already have one.'" />
             </v-col>
           </v-row>
           <v-row v-show="selectedTemplate === 'Half-Dragon'">
