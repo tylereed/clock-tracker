@@ -9,7 +9,7 @@
               <v-select v-model="selectedTemplate" density="compact" label="Template" :items="templates" />
             </v-col>
             <v-col cols="3">
-              <v-btn @click="applyTemplate">Apply Template</v-btn>
+              <v-btn @click="applyTemplate()">Apply Template</v-btn>
             </v-col>
           </v-row>
           <v-row v-show="selectedTemplate === 'Zombie'">
@@ -40,7 +40,7 @@
             <v-col :cols="isEdit ? 9 : 12"><v-text-field label="Initiative" density="compact" v-model="newInit.order"
                 :rules="v.OrderRules" data-test="txtInitiative" /></v-col>
             <v-col v-if="isEdit" cols="3">
-              <v-btn @click="rollInitiative" v-tooltip:top="initiativeDice.toString()"
+              <v-btn @click="rollInitiative()" v-tooltip:top="initiativeDice.toString()"
                 data-test="btnInitiative">Roll</v-btn>
             </v-col>
             <v-col cols="isEdit ? 11 : 12"><v-text-field label="Name" density="compact" v-model="newInit.name"

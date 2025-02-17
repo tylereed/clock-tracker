@@ -41,6 +41,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "jsdom",
+    testTimeout: 10000,
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },

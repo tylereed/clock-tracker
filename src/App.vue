@@ -33,13 +33,14 @@ import Tile from "@/types/Tile";
 import { clearCaches } from "@/utils/Cache";
 import Settings from "@/components/settings/Settings.vue";
 import { useTilesStore } from "@/stores/tiles";
+import { getUnique } from "./utils/helpers";
 
 const tilesStore = useTilesStore();
 
 const tiles = [
-  { visible: false, title: "Timers", component: shallowRef(Timer) },
-  { visible: false, title: "Clocks", component: shallowRef(Clocks) },
-  { visible: false, title: "Encounters", component: shallowRef(Encounters) }
+  { visible: tilesStore.openTiles.includes("Timers"), title: "Timers", component: shallowRef(Timer) },
+  { visible: tilesStore.openTiles.includes("Clocks"), title: "Clocks", component: shallowRef(Clocks) },
+  { visible: tilesStore.openTiles.includes("Encounters"), title: "Encounters", component: shallowRef(Encounters) }
 ];
 const allTiles = new Map(tiles.map(t => [t.title, t]));
 
@@ -60,6 +61,9 @@ function setActiveTiles() {
 function toggle(name: string) {
   const tile = activeTiles.value.get(name)!;
   tile.visible = !tile.visible;
+
+  const openTiles = [...activeTiles.value.values()].filter(t => t.visible).map(t => t.title);
+  tilesStore.openTiles = getUnique(...openTiles);
 }
 
 clearCaches();

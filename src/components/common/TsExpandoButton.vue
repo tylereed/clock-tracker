@@ -12,7 +12,7 @@
         </v-btn>
       </template>
       <template v-for="(button, i) in dropdownActions" :key="'button' + i">
-        <v-btn :class="getClass(i)" @click="button.action" variant="elevated" color="primary">
+        <v-btn :class="getClass(i)" @click="button.action()" variant="elevated" color="primary">
           {{ button.label }}
         </v-btn>
       </template>

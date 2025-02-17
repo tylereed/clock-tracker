@@ -17,7 +17,7 @@
       <v-col>
         <div class="pt-2">
           <v-btn :disabled="groupNames.length <= 1">
-            <v-icon icon="mdi-delete-forever" color="error" @click="deleteSelectedGroup" />
+            <v-icon icon="mdi-delete-forever" color="error" @click="deleteSelectedGroup()" />
           </v-btn>
         </div>
       </v-col>
@@ -29,10 +29,10 @@
   <v-container fluid>
     <v-row>
       <v-col>
-        <v-btn variant="elevated" color="primary" @click="addEntry">Add</v-btn>
+        <v-btn variant="elevated" color="primary" @click="addEntry()">Add</v-btn>
       </v-col>
       <v-col>
-        <v-btn variant="elevated" color="primary" @click="sendToInit">Send to Initiative</v-btn>
+        <v-btn variant="elevated" color="primary" @click="sendToInit()">Send to Initiative</v-btn>
       </v-col>
     </v-row>
   </v-container>
@@ -44,6 +44,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
+import { useStorage } from "@vueuse/core";
 
 import InitiativeTable from "@/components/initiative/InitiativeTable.vue";
 import * as i from "@/components/initiative/initiativeHelpers";
@@ -65,14 +66,14 @@ const emit = defineEmits<{
 }>();
 
 let entryId = 0;
-const GroupNamePrefix = computed(() => props.groupNamePrefix + "-"); //"party-";
+const GroupNamePrefix = computed(() => props.groupNamePrefix + "-");
 const FullPrefix = computed(() => i.makeKey(GroupNamePrefix.value));
 
 const allInitiatives = ref<Map<string, Initiatives>>();
 const initiatives = ref<Initiatives>([]);
 const groupNames = computed(() => allInitiatives.value ? [...allInitiatives.value.keys()] : []);
 const search = ref<string>("Default");
-const selectedGroup = ref<string>("Default");
+const selectedGroup = useStorage("selected-" + props.groupNamePrefix, "Default", sessionStorage);
 
 watch(selectedGroup, (value) => {
   if (value && allInitiatives.value) {
@@ -88,7 +89,7 @@ const executor = new Executor(() => i.saveInits(initiatives.value, `${GroupNameP
 
 onMounted(() => {
   allInitiatives.value = new Map<string, Initiatives>(loadAllGroups());
-  entryId = [...allInitiatives.value.values()].flatMap(x => x).map(x => x.order).reduce((x, y) => x > y ? x : y);
+  entryId = [...allInitiatives.value.values()].flatMap(x => x).map(x => x.order).reduce((x, y) => x > y ? x : y, 0);
 
   const f = first(groupNames.value);
   if (f) {
