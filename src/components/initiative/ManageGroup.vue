@@ -44,6 +44,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
+import { useStorage } from "@vueuse/core";
 
 import InitiativeTable from "@/components/initiative/InitiativeTable.vue";
 import * as i from "@/components/initiative/initiativeHelpers";
@@ -65,14 +66,14 @@ const emit = defineEmits<{
 }>();
 
 let entryId = 0;
-const GroupNamePrefix = computed(() => props.groupNamePrefix + "-"); //"party-";
+const GroupNamePrefix = computed(() => props.groupNamePrefix + "-");
 const FullPrefix = computed(() => i.makeKey(GroupNamePrefix.value));
 
 const allInitiatives = ref<Map<string, Initiatives>>();
 const initiatives = ref<Initiatives>([]);
 const groupNames = computed(() => allInitiatives.value ? [...allInitiatives.value.keys()] : []);
 const search = ref<string>("Default");
-const selectedGroup = ref<string>("Default");
+const selectedGroup = useStorage("selected-" + props.groupNamePrefix, "Default", sessionStorage);
 
 watch(selectedGroup, (value) => {
   if (value && allInitiatives.value) {
