@@ -33,6 +33,7 @@ import Tile from "@/types/Tile";
 import { clearCaches } from "@/utils/Cache";
 import Settings from "@/components/settings/Settings.vue";
 import { useTilesStore } from "@/stores/tiles";
+import { getUnique } from "./utils/helpers";
 
 const tilesStore = useTilesStore();
 
@@ -60,7 +61,9 @@ function setActiveTiles() {
 function toggle(name: string) {
   const tile = activeTiles.value.get(name)!;
   tile.visible = !tile.visible;
-  tilesStore.openTiles = [...[...activeTiles.value.values()].filter(t => t.visible).map(t => t.title)];
+
+  const openTiles = [...activeTiles.value.values()].filter(t => t.visible).map(t => t.title);
+  tilesStore.openTiles = getUnique(...openTiles);
 }
 
 clearCaches();
