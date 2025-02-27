@@ -1,5 +1,7 @@
 import Conditions from "./Conditions";
 
+export type InitiativeActionKey = "actions" | "bonusActions" | "reactions" | "legendaryActions" | "traits";
+
 export default interface Initiative {
   open5eId?: string;
   name: string;
@@ -15,6 +17,7 @@ export default interface Initiative {
   reactions?: Actions[];
   legendaryActions?: Actions[];
   saves?: { str: number, dex: number, con: number, int: number, wis: number, cha: number };
+  [key: InitiativeActionKey]: Actions[];
 }
 
 export interface Actions {
@@ -32,5 +35,6 @@ export interface InitiativeColumns {
   hasAc: boolean,
   hasMaxHp: boolean,
   hasHp: boolean,
-  hasConditions: boolean
+  hasConditions: boolean,
+  hasEdit: boolean
 }

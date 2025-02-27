@@ -25,7 +25,7 @@
   </v-container>
 
   <initiative-table :initiatives="initiatives" :columns="columns" @delete-initiative="deleteInitiative"
-    @insert-init-command="insertInitCommand" />
+    @edit-initiative="editInitiative" @insert-init-command="insertInitCommand" />
   <v-container fluid>
     <v-row>
       <v-col>
@@ -40,12 +40,17 @@
   <v-card-actions>
     <ts-undo-redo :executor="executor" />
   </v-card-actions>
+  <v-dialog v-model="addInitiativeDisplay" width="50%" min-width="400px">
+    <add-edit-initiative class="pa-2 ma-6" :init-stats="editInit" @add-init="addExistingMonster" @edit-init="updateInit"
+      @close="addInitiativeDisplay = false" />
+  </v-dialog>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import { useStorage } from "@vueuse/core";
 
+import AddEditInitiative from "@/components/initiative/AddEditInitiative.vue";
 import InitiativeTable from "@/components/initiative/InitiativeTable.vue";
 import * as i from "@/components/initiative/initiativeHelpers";
 import MonsterSearch from "./MonsterSearch.vue";
@@ -65,6 +70,13 @@ const emit = defineEmits<{
   (e: "sendToInitiative", inits: Initiatives): void,
 }>();
 
+const addInitiativeDisplay = ref(false);
+const editInit = ref<InitWithId | null>(null);
+function editInitiative(id: number) {
+  editInit.value = { ...initiatives.value[id], id: id };
+  addInitiativeDisplay.value = true;
+}
+
 let entryId = 0;
 const GroupNamePrefix = computed(() => props.groupNamePrefix + "-");
 const FullPrefix = computed(() => i.makeKey(GroupNamePrefix.value));
@@ -77,13 +89,13 @@ const selectedGroup = useStorage("selected-" + props.groupNamePrefix, "Default",
 
 watch(selectedGroup, (value) => {
   if (value && allInitiatives.value) {
-    initiatives.value = allInitiatives.value?.get(value) ?? [];
+    initiatives.value = allInitiatives.value.get(value) ?? [];
   } else {
     initiatives.value = [];
   }
 });
 
-const columns = i.buildInitiativeColumns({ hasDex: true });
+const columns = i.buildInitiativeColumns({ hasDex: true, hasEdit: true });
 
 const executor = new Executor(() => i.saveInits(initiatives.value, `${GroupNamePrefix.value}${selectedGroup.value}`));
 
@@ -91,10 +103,15 @@ onMounted(() => {
   allInitiatives.value = new Map<string, Initiatives>(loadAllGroups());
   entryId = [...allInitiatives.value.values()].flatMap(x => x).map(x => x.order).reduce((x, y) => x > y ? x : y, 0);
 
-  const f = first(groupNames.value);
-  if (f) {
-    setSelected(f);
+  //const f = first(groupNames.value);
+  //if (f) {
+  setSelected(selectedGroup.value);
+  if (selectedGroup.value && allInitiatives.value) {
+    initiatives.value = allInitiatives.value.get(selectedGroup.value) ?? [];
+  } else {
+    initiatives.value = [];
   }
+  //}
 });
 
 function newEntry(): InitWithId {
@@ -163,7 +180,24 @@ function addEntry(init?: InitWithId) {
 }
 
 function addExistingMonster(monster: Initiative) {
-  addEntry({ ...monster, id: entryId++ })
+  addEntry({ ...monster, id: entryId++ });
+}
+
+function updateInit(id: number, init: Initiative) {
+  addInitiativeDisplay.value = false;
+
+  const toUpdate = init;
+  const toRemove = initiatives.value[id];
+  const selected = selectedGroup.value;
+
+  executor.runCommand(() => {
+    setSelected(selected);
+    initiatives.value[id] = { ...toUpdate, id };
+  },
+    () => {
+      setSelected(selected);
+      initiatives.value[id] = { ...toRemove };
+    });
 }
 
 function sendToInit() {

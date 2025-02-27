@@ -37,7 +37,8 @@
         <v-menu location="end center" :close-on-content-click="false" :open-on-focus="true" :offset="2">
           <template v-slot:activator="{ props }">
             <v-text-field v-bind="props" :hide-details="true" density="compact" v-model="init.hp" :rules="[validateHp]"
-              @update:focused="(focused) => handleHpChange(i, focused)" @keyup.enter.stop="nextRow($event)" data-test="txtHp" />
+              @update:focused="(focused) => handleHpChange(i, focused)" @keyup.enter.stop="nextRow($event)"
+              data-test="txtHp" />
           </template>
           <v-card>
             <div align="center" class="ma-2">
@@ -56,58 +57,62 @@
           @remove-condition="name => emit('removeCondition', i, name)" />
       </v-col>
       <v-col cols="1">
-        <show-stats class="mr-1" v-if="init.open5eId" :id="init.open5eId" style="background-color: transparent" />
+        <show-stats class="mr-1 mb-1" v-if="init.open5eId" :id="init.open5eId" style="background-color: transparent" />
+        <v-btn class="mr-1 mb-1" v-if="hasEdit" icon="mdi-pencil" @click="emit('editInitiative', i)"
+          style="background-color: transparent;" />
         <v-btn icon @click.stop="emit('deleteInitiative', i)" style="background-color: transparent">
           <v-icon icon="mdi-delete-forever" color="error" />
         </v-btn>
       </v-col>
-      <v-col cols="12" v-if="init.actions?.length || init.bonusActions?.length" v-show="i === turn">
-        <template v-if="init.actions?.length">
-          <p><b>Actions</b></p>
-          <p v-for="attack in init.actions">
-            <b>{{ attack.name }}</b> {{ attack.desc }}
+      <template v-if="hasTurnOrder">
+        <v-col cols="12" v-if="init.actions?.length || init.bonusActions?.length" v-show="i === turn">
+          <template v-if="init.actions?.length">
+            <p><b>Actions</b></p>
+            <p v-for="attack in init.actions">
+              <b>{{ attack.name }}</b> {{ attack.desc }}
+            </p>
+          </template>
+          <template v-if="init.bonusActions?.length">
+            <p><b>Bonus Actions</b></p>
+            <p v-for="bonus in init.bonusActions">
+              <b>{{ bonus.name }}</b> {{ bonus.desc }}
+            </p>
+          </template>
+        </v-col>
+        <v-col cols="12" v-if="init.reactions?.length" v-show="i !== turn">
+          <p><b>Reactions</b></p>
+          <p v-for="reaction in init.reactions">
+            <b>{{ reaction.name }}</b> {{ reaction.desc }}
           </p>
-        </template>
-        <template v-if="init.bonusActions?.length">
-          <p><b>Bonus Actions</b></p>
-          <p v-for="bonus in init.bonusActions">
-            <b>{{ bonus.name }}</b> {{ bonus.desc }}
-          </p>
-        </template>
-      </v-col>
-      <v-col cols="12" v-if="init.reactions?.length" v-show="i !== turn">
-        <p><b>Reactions</b></p>
-        <p v-for="reaction in init.reactions">
-          <b>{{ reaction.name }}</b> {{ reaction.desc }}
-        </p>
-      </v-col>
-      <v-col cols="12" v-if="init.saves" v-show="i !== turn">
-        <v-row>
-          <v-col><b>Saves</b></v-col>
-          <v-col><b>STR</b>:&nbsp;{{ init.saves.str }}</v-col>
-          <v-col><b>DEX</b>:&nbsp;{{ init.saves.dex }}</v-col>
-          <v-col><b>CON</b>:&nbsp;{{ init.saves.con }}</v-col>
-          <v-col><b>INT</b>:&nbsp;{{ init.saves.int }}</v-col>
-          <v-col><b>WIS</b>:&nbsp;{{ init.saves.wis }}</v-col>
-          <v-col><b>CHA</b>:&nbsp;{{ init.saves.cha }}</v-col>
-          <v-col cols="5" />
-        </v-row>
-      </v-col>
-      <v-col cols="12" v-if="init.traits?.length">
-        <p>
-          <b>Traits</b>
-          <v-chip v-for="trait in init.traits" size="small" class="mx-1" v-tooltip:bottom="trait.desc">{{ trait.name
+        </v-col>
+        <v-col cols="12" v-if="init.saves" v-show="i !== turn">
+          <v-row>
+            <v-col><b>Saves</b></v-col>
+            <v-col><b>STR</b>:&nbsp;{{ init.saves.str }}</v-col>
+            <v-col><b>DEX</b>:&nbsp;{{ init.saves.dex }}</v-col>
+            <v-col><b>CON</b>:&nbsp;{{ init.saves.con }}</v-col>
+            <v-col><b>INT</b>:&nbsp;{{ init.saves.int }}</v-col>
+            <v-col><b>WIS</b>:&nbsp;{{ init.saves.wis }}</v-col>
+            <v-col><b>CHA</b>:&nbsp;{{ init.saves.cha }}</v-col>
+            <v-col cols="5" />
+          </v-row>
+        </v-col>
+        <v-col cols="12" v-if="init.traits?.length">
+          <p>
+            <b>Traits</b>
+            <v-chip v-for="trait in init.traits" size="small" class="mx-1" v-tooltip:bottom="trait.desc">{{ trait.name
             }}</v-chip>
-        </p>
-      </v-col>
-      <v-col cols="12" v-if="init.legendaryActions?.length" v-show="i !== turn">
-        <p><b>Legendary Actions</b></p>
-        <p v-for="legendary in init.legendaryActions">
-          <b>{{ legendary.name }}</b> {{ legendary.desc }}
-        </p>
-      </v-col>
+          </p>
+        </v-col>
+        <v-col cols="12" v-if="init.legendaryActions?.length" v-show="i !== turn">
+          <p><b>Legendary Actions</b></p>
+          <p v-for="legendary in init.legendaryActions">
+            <b>{{ legendary.name }}</b> {{ legendary.desc }}
+          </p>
+        </v-col>
+      </template>
     </v-row>
-    <v-row v-show="hasTurnOrder">
+    <v-row v-if="hasTurnOrder">
       <v-col><v-btn @click="emit('decrementTurn')" :disabled="turn === 0 && round === 1">Previous</v-btn></v-col>
       <v-col><v-btn @click="emit('incrementTurn')" :disabled="initiatives.length === 0">Next</v-btn></v-col>
       <v-col><v-btn @click="emit('resetTurn')">Reset</v-btn></v-col>
@@ -147,7 +152,7 @@ const props = defineProps<{
   columns: InitiativeColumns
 }>();
 const { initiatives, turn, round, columns } = toRefs(props);
-const { hasInitiative, hasDex, hasName, hasAc, hasMaxHp, hasHp, hasConditions } = columns.value;
+const { hasInitiative, hasDex, hasName, hasAc, hasMaxHp, hasHp, hasConditions, hasEdit } = columns.value;
 const hasTurnOrder = computed(() => turn.value != null && round.value != null);
 
 const emit = defineEmits<{
@@ -155,6 +160,7 @@ const emit = defineEmits<{
   removeCondition: [id: number, name: keyof Conditions],
   addInitiative: [],
   deleteInitiative: [id: number],
+  editInitiative: [id: number],
   incrementTurn: [],
   decrementTurn: [],
   resetTurn: [],
