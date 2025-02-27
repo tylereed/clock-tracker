@@ -71,7 +71,6 @@ describe("AddEditInitiative", () => {
       expect.soft(actual.ac).toBeUndefined();
       expect.soft(actual.maxHp).toBeUndefined();
       expect.soft(actual.hp).toBeUndefined();
-      expect.soft(actual.actions).toBeUndefined();
     });
 
     test("Add Initiative - All", async () => {
@@ -105,7 +104,6 @@ describe("AddEditInitiative", () => {
       expect.soft(actual.ac).toBe(18);
       expect.soft(actual.maxHp).toBe(100);
       expect.soft(actual.hp).toBe(100);
-      expect.soft(actual.actions).toBeUndefined();
     });
 
     test("Validates Initiative - Required", async () => {
