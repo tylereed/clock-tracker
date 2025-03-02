@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { useStorage } from "@vueuse/core";
 
-const tiles = ["Timers", "Clocks", "Encounters"];
+const tiles = ["Timers", "Clocks", "Encounters", "Word Formatter"];
 
 export const useTilesStore = defineStore("tiles", () => {
 

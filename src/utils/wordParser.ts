@@ -1,4 +1,5 @@
 import Typo from "typo-js";
+import { sleep } from "./helpers";
 
 function addCustomWords(dict: Typo, ...words: string[]) {
   const d: any = dict;
@@ -6,8 +7,6 @@ function addCustomWords(dict: Typo, ...words: string[]) {
     d.dictionaryTable[w] = null;
   }
 }
-
-const dictionary = new Typo("en_US-custom", null, null, { dictionaryPath: "dictionaries" });
 
 interface SpecialChar {
   symbol: symbol,
@@ -82,11 +81,7 @@ function* combine(used: IndexedWord[], unused: IndexedWord[]) {
   while (unused.length) yield unused.pop()!.word;
 }
 
-function testWord(possiblyWord: string) {
-  return dictionary.check(possiblyWord) || isNumber(possiblyWord) || isThrow(possiblyWord);
-}
-
-function splitWords(word1: string, word2: string) {
+function splitWords(word1: string, word2: string, testWord: (w: string) => boolean) {
   const newWords = word1 + word2;
 
   for (let i = 1; i < newWords.length; i++) {
@@ -100,7 +95,7 @@ function splitWords(word1: string, word2: string) {
   return [word1, word2];
 }
 
-function* fixupWords(words: string[]) {
+function* fixupWords(words: string[], testWord: (w: string) => boolean) {
   if (words.length === 0) {
     return;
   }
@@ -116,7 +111,7 @@ function* fixupWords(words: string[]) {
   for (let i = 1; i < words.length; i++) {
     let isCurrentValid = testWord(words[i]);
     if (isPreviousValid && !isCurrentValid) {
-      const [first, second] = splitWords(previousWord, words[i]);
+      const [first, second] = splitWords(previousWord, words[i], testWord);
       yield first;
       words[i] = second;
       isCurrentValid = testWord(words[i]);
@@ -130,7 +125,7 @@ function* fixupWords(words: string[]) {
   yield previousWord;
 }
 
-function buildWords(text: string): string {
+function buildWords(text: string, testWord: (w: string) => boolean): string {
 
   const letters = text.split(/\s+/).filter(x => x !== "");
   const size = letters.length;
@@ -183,7 +178,7 @@ function buildWords(text: string): string {
 
   if (unusedWords.length) {
     const allWords: string[] = [...combine(words, unusedWords)];
-    return [...fixupWords(allWords)].join(" ");
+    return [...fixupWords(allWords, testWord)].join(" ");
   } else {
     return words.map(x => x.word).join(" ");
   }
@@ -200,11 +195,11 @@ function findSpecialChars(text: string): string | symbol {
   return text;
 }
 
-function format(text: string | symbol): string | SpecialChar {
+function format(text: string | symbol, testWord: (w: string) => boolean): string | SpecialChar {
   const type = typeof text;
 
   if (type === "string") {
-    return buildWords(text as string);
+    return buildWords(text as string, testWord);
   }
 
   for (let special of specialChars) {
@@ -265,9 +260,20 @@ function buildParagraph(words: (string | SpecialChar)[]): string[] {
   return paragraph;
 }
 
-export default function formatParagraph(text: string): string {
+export default async function formatParagraph(text: string, customWords: string[]) {
+
+  const dictionary = new Typo("en_US-custom", null, null, { dictionaryPath: "dictionaries", asyncLoad: true });
+  while (!dictionary.loaded) {
+    await sleep(100);
+  }
+  addCustomWords(dictionary, ...customWords);
+
+  const testWord = function (possiblyWord: string) {
+    return dictionary.check(possiblyWord) || isNumber(possiblyWord) || isThrow(possiblyWord);
+  }
+
   const lines = splitInput(text).map(findSpecialChars).filter(x => x !== "");
-  const words = lines.map(l => format(l));
+  const words = lines.map(l => format(l, testWord));
 
   return buildParagraph(words).join("");
 }
