@@ -26,8 +26,9 @@
 import { ref, shallowRef, watch } from "vue";
 
 import Clocks from "@/pages/Clocks.vue";
-import Timer from "@/pages/Timers.vue";
 import Encounters from "@/pages/Encounters.vue";
+import Timer from "@/pages/Timers.vue";
+import WordFormatter from "@/pages/WordFormatter.vue";
 
 import Tile from "@/types/Tile";
 import { clearCaches } from "@/utils/Cache";
@@ -40,7 +41,8 @@ const tilesStore = useTilesStore();
 const tiles = [
   { visible: tilesStore.openTiles.includes("Timers"), title: "Timers", component: shallowRef(Timer) },
   { visible: tilesStore.openTiles.includes("Clocks"), title: "Clocks", component: shallowRef(Clocks) },
-  { visible: tilesStore.openTiles.includes("Encounters"), title: "Encounters", component: shallowRef(Encounters) }
+  { visible: tilesStore.openTiles.includes("Encounters"), title: "Encounters", component: shallowRef(Encounters) },
+  { visible: tilesStore.openTiles.includes("WordFormatter"), title: "Word Formatter", component: shallowRef(WordFormatter) }
 ];
 const allTiles = new Map(tiles.map(t => [t.title, t]));
 
