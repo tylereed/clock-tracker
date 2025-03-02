@@ -86,6 +86,50 @@ function testWord(possiblyWord: string) {
   return dictionary.check(possiblyWord) || isNumber(possiblyWord) || isThrow(possiblyWord);
 }
 
+function splitWords(word1: string, word2: string) {
+  const newWords = word1 + word2;
+
+  for (let i = 1; i < newWords.length; i++) {
+    const first = newWords.substring(0, i);
+    const second = newWords.substring(i);
+    if (testWord(first) && testWord(second)) {
+      return [first, second];
+    }
+  }
+
+  return [word1, word2];
+}
+
+function* fixupWords(words: string[]) {
+  if (words.length === 0) {
+    return;
+  }
+  if (words.length === 1) {
+    yield words[0];
+    return;
+  }
+  words = [...words];
+
+  let previousWord = words[0];
+  let isPreviousValid = testWord(previousWord);
+
+  for (let i = 1; i < words.length; i++) {
+    let isCurrentValid = testWord(words[i]);
+    if (isPreviousValid && !isCurrentValid) {
+      const [first, second] = splitWords(previousWord, words[i]);
+      yield first;
+      words[i] = second;
+      isCurrentValid = testWord(words[i]);
+    } else {
+      yield previousWord;
+    }
+    previousWord = words[i];
+    isPreviousValid = isCurrentValid;
+  }
+
+  yield previousWord;
+}
+
 function buildWords(text: string): string {
 
   const letters = text.split(/\s+/).filter(x => x !== "");
@@ -94,44 +138,30 @@ function buildWords(text: string): string {
   let currentWord = "";
   let currentEndIndex = -1;
 
-  //new Boolean[size][size];
-
-  // Array.apply()
-
   const covered = Array(size).fill(false);
-  //const matrix: Array<Array<boolean | undefined> | undefined> = Array.from({ length: size }, () => undefined);
   const words: IndexedWord[] = [];
-  //const indexes = [];
 
   let start = 0
   let end = 1;
-
-  //matrix[0] = Array(size).fill(undefined);
 
   while (true) {
     let possiblyWord = letters.slice(start, end).join('');
 
     if (testWord(possiblyWord)) {
-      //matrix[start]![end] = true;
       currentWord = possiblyWord;
       currentEndIndex = end;
-      //words.push(possiblyWord);
-    } else {
-      //matrix[start]![end] = false;
     }
 
     end++;
     if ((end > size) || (end - start > 13)) {
       if (currentWord) {
         words.push({ start, end: currentEndIndex, word: currentWord });
-        //indexes.push({ start, end: start + currentWord.length });
 
         for (let i = start; i < currentEndIndex; i++) {
           covered[i] = true;
         }
       }
 
-      //let wordEnd = currentEndIndex; // matrix[start]!.lastIndexOf(true);
       start = currentEndIndex === -1 ? start + 1 : currentEndIndex;
       end = start + 1;
 
@@ -141,12 +171,8 @@ function buildWords(text: string): string {
         break;
       }
 
-      //matrix[start] ??= Array(size).fill(undefined);
     }
   }
-
-  // const y = matrix.map(x => x ? (x.map(z => z ? "T" : z === false ? "x" : ".")).join("") : ".".repeat(size)).join("\n");
-  // console.log(y);
 
   const unusedIndexes = [...findUnused(covered)];
   const unusedWords: IndexedWord[] = [];
@@ -155,8 +181,12 @@ function buildWords(text: string): string {
     unusedWords.push({ ...u, word: w });
   }
 
-  const allWords: string[] = [...combine(words, unusedWords)];
-  return allWords.join(" ");
+  if (unusedWords.length) {
+    const allWords: string[] = [...combine(words, unusedWords)];
+    return [...fixupWords(allWords)].join(" ");
+  } else {
+    return words.map(x => x.word).join(" ");
+  }
 }
 
 function findSpecialChars(text: string): string | symbol {
@@ -233,10 +263,6 @@ function buildParagraph(words: (string | SpecialChar)[]): string[] {
   }
 
   return paragraph;
-}
-
-function fixupWords(words: string[]) {
-
 }
 
 export default function formatParagraph(text: string): string {
