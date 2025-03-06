@@ -84,7 +84,8 @@ export function buildInitiativeColumns(columns: Partial<InitiativeColumns>) {
     hasAc: true,
     hasMaxHp: true,
     hasHp: false,
-    hasConditions: false
+    hasConditions: false,
+    hasEdit: false
   };
 
   return { ...defaultColumns, ...columns };

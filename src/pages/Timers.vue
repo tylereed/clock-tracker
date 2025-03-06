@@ -11,7 +11,7 @@
       </v-container>
     </v-card-text>
     <v-card-actions>
-      <v-btn @click="clearTimers" variant="outlined" color="error">Clear Timers</v-btn>
+      <v-btn @click="clearTimers()" variant="outlined" color="error">Clear Timers</v-btn>
       <ts-expando-button :actions="addTimerButtons" />
     </v-card-actions>
   </v-card>
