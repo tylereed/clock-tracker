@@ -57,3 +57,12 @@ export function first<T>(items: Iterable<T>): T | null {
   }
   return null;
 }
+
+export function getUnique<T>(...items: readonly T[]): T[] {
+  const s = new Set(items);
+  return [...s];
+}
+
+export function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}

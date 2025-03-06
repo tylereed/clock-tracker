@@ -5,7 +5,7 @@
         <v-tab v-for="(clockTab, index) in clockTabs" :key="index" @click.middle.prevent="removeTab(index)">
           {{ clockTab.name }}
         </v-tab>
-        <v-tab @click.native.prevent.stop.capture="addTab" width=".5em"><v-icon icon="mdi-plus" /></v-tab>
+        <v-tab @click.native.prevent.stop.capture="addTab()" width=".5em"><v-icon icon="mdi-plus" /></v-tab>
       </v-tabs>
       <v-window v-model="selectedTab">
         <v-window-item v-for="(clockTab, index) in clockTabs" :key="index">
@@ -46,7 +46,7 @@ type Clocks = Clock[];
 type ClockTabs = ClockTab[];
 
 const clockTabs = ref<ClockTabs>([]);
-const selectedTab = useStorage("clock-selectedTab", 0, localStorage);
+const selectedTab = useStorage("clock-selectedTab", 0, sessionStorage);
 const clocks = computed<Clocks>(() => clockTabs.value[selectedTab.value].clocks);
 
 const addEditClockDisplay = ref(false);
