@@ -1,16 +1,19 @@
-import { computed, ref, watch } from "vue";
-import { defineStore } from "pinia";
+import { computed, Ref, ref, watch } from "vue";
+import { defineStore, storeToRefs } from "pinia";
 
 import Initiative, { Initiatives, InitWithId } from "@/types/Initiative";
 
-export const useInitiativeStore = defineStore("initiative", () => {
-  const initiatives = ref<Initiatives>([]);
+// export const useInitiativeStore = defineStore("initiative", () => {
+//   const initiatives = ref<Initiatives>([]);
 
-  function addInitiative(init: InitWithId) {
-    initiatives.value.push(init);
-  }
+//   return { initiatives };
+// });
 
-  //const all
-
-  return { initiatives, addInitiative };
-});
+export function useInitiativeStoreNamed(name: string): Ref<Initiatives> {
+  const useStore = defineStore(name, () => {
+    const initiatives = ref<Initiatives>([]);
+    return { initiatives };
+  });
+  const { initiatives } = storeToRefs(useStore());
+  return initiatives;
+};
