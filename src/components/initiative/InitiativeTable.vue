@@ -6,6 +6,8 @@
       <v-col v-if="hasDex">Dex</v-col>
       <v-col cols="3" v-if="hasName">Name</v-col>
       <v-col v-if="hasAc">AC</v-col>
+      <v-col v-if="hasCr">CR</v-col>
+      <v-col v-if="hasLevel">Level</v-col>
       <v-col v-if="hasMaxHp">Max HP</v-col>
       <v-col v-if="hasHp">HP</v-col>
       <v-col v-if="hasConditions" cols="3">Conditions</v-col>
@@ -28,6 +30,14 @@
       <v-col v-if="hasAc">
         <v-text-field :hide-details="true" density="compact" v-model="init.ac" :rules="r.AcRules"
           @update:focused="(focused) => updateUndoRedo(i, 'ac', focused)" @keyup.enter.stop="nextRow($event)" />
+      </v-col>
+      <v-col v-if="hasCr">
+        <v-text-field :hide-details="true" density="compact" v-model="init.cr" :rules="r.CrRules"
+          @update:focused="(focused) => updateUndoRedo(i, 'cr', focused)" @keyup.enter.stop="nextRow($event)" />
+      </v-col>
+      <v-col v-if="hasLevel">
+        <v-text-field :hide-details="true" density="compact" v-model="init.cr" :rules="r.LevelRules"
+          @update:focused="(focused) => updateUndoRedo(i, 'cr', focused)" @keyup.enter.stop="nextRow($event)" />
       </v-col>
       <v-col v-if="hasMaxHp">
         <v-text-field :hide-details="true" density="compact" v-model="init.maxHp" :rules="r.MaxHpRules"
@@ -152,7 +162,7 @@ const props = defineProps<{
   columns: InitiativeColumns
 }>();
 const { initiatives, turn, round, columns } = toRefs(props);
-const { hasInitiative, hasDex, hasName, hasAc, hasMaxHp, hasHp, hasConditions, hasEdit } = columns.value;
+const { hasInitiative, hasDex, hasName, hasAc, hasCr, hasLevel, hasMaxHp, hasHp, hasConditions, hasEdit } = columns.value;
 const hasTurnOrder = computed(() => turn.value != null && round.value != null);
 
 const emit = defineEmits<{

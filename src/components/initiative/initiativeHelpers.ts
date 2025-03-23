@@ -84,6 +84,8 @@ export function buildInitiativeColumns(columns: Partial<InitiativeColumns>) {
     hasAc: true,
     hasMaxHp: true,
     hasHp: false,
+    hasCr: false,
+    hasLevel: false,
     hasConditions: false,
     hasEdit: false
   };
@@ -115,6 +117,7 @@ export function monsterO5eToInitiative(monster: MonsterO5e, nameOverride?: strin
     ac: monster.armor_class,
     maxHp: monster.hit_points,
     hp: monster.hit_points,
+    cr: monster.cr!, // CR is marked as nullable in the db, but is always populated
     conditions: {},
     traits: [...buildActions(monster.special_abilities)],
     actions: [...buildActions(monster.actions)],

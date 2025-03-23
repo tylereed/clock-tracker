@@ -34,6 +34,9 @@
       <v-col>
         <v-btn variant="elevated" color="primary" @click="sendToInit()">Send to Initiative</v-btn>
       </v-col>
+      <v-col>
+        
+      </v-col>
     </v-row>
   </v-container>
   <monster-search v-if="showMonster" @add-monster="addExistingMonster" />
@@ -97,7 +100,7 @@ watch(selectedGroup, (value) => {
   }
 });
 
-const columns = i.buildInitiativeColumns({ hasDex: true, hasEdit: true });
+const columns = i.buildInitiativeColumns({ hasDex: true, hasEdit: true, hasCr: !!props.showMonster, hasLevel: !props.showMonster });
 
 const executor = new Executor(() => i.saveInits(initiatives.value, `${GroupNamePrefix.value}${selectedGroup.value}`));
 
@@ -105,15 +108,12 @@ onMounted(() => {
   allInitiatives.value = new Map<string, Initiatives>(loadAllGroups());
   entryId = [...allInitiatives.value.values()].flatMap(x => x).map(x => x.order).reduce((x, y) => x > y ? x : y, 0);
 
-  //const f = first(groupNames.value);
-  //if (f) {
   setSelected(selectedGroup.value);
   if (selectedGroup.value && allInitiatives.value) {
     initiatives.value = allInitiatives.value.get(selectedGroup.value) ?? [];
   } else {
     initiatives.value = [];
   }
-  //}
 });
 
 function newEntry(): InitWithId {

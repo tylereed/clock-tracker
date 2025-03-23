@@ -11,6 +11,8 @@ export default interface Initiative {
   maxHp?: number;
   hp?: number;
   conditions: Conditions;
+  level?: number;
+  cr?: number;
   traits?: Actions[];
   actions?: Actions[];
   bonusActions?: Actions[];
@@ -35,6 +37,8 @@ export interface InitiativeColumns {
   hasAc: boolean,
   hasMaxHp: boolean,
   hasHp: boolean,
+  hasCr: boolean,
+  hasLevel: boolean,
   hasConditions: boolean,
   hasEdit: boolean
 }
