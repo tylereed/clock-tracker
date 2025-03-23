@@ -32,8 +32,9 @@ import Conditions from "@/types/Conditions";
 import { Executor, Command } from "@/utils/Executor";
 import Initiative, { Initiatives } from "@/types/Initiative";
 import * as i from "@/components/initiative/initiativeHelpers";
+import { useInitiativeStoreNamed } from "@/stores/initiativeStore";
 
-const initiatives = ref<Initiatives>([]);
+const initiatives = useInitiativeStoreNamed("encounter"); // ref<Initiatives>([]);
 
 const columns = i.buildInitiativeColumns({ hasInitiative: true, hasHp: true, hasConditions: true });
 
