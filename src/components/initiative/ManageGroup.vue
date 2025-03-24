@@ -2,7 +2,7 @@
   <v-container fluid>
     <v-row>
       <v-col cols="11">
-        <v-combobox :label="label" v-model="search" @update:model-value="setSelected" :items="groupNames"
+        <v-combobox :label="label" v-model="search" @update:model-value="setSelected" :items="groupStore.names"
           @keyup.enter="createNewGroup" :hide-no-data="false">
           <template v-slot:no-data>
             <v-list-item>
@@ -16,7 +16,7 @@
       </v-col>
       <v-col>
         <div class="pt-2">
-          <v-btn :disabled="groupNames.length <= 1">
+          <v-btn :disabled="groupStore.names.length <= 1">
             <v-icon icon="mdi-delete-forever" color="error" @click="deleteSelectedGroup()" />
           </v-btn>
         </div>
@@ -34,9 +34,6 @@
       <v-col>
         <v-btn variant="elevated" color="primary" @click="sendToInit()">Send to Initiative</v-btn>
       </v-col>
-      <v-col>
-        
-      </v-col>
     </v-row>
   </v-container>
   <monster-search v-if="showMonster" @add-monster="addExistingMonster" />
@@ -50,19 +47,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStorage } from "@vueuse/core";
+import { onMounted, ref, toRefs, watch } from "vue";
 
+import TsUndoRedo from "@/components/common/TsUndoRedo.vue";
 import AddEditInitiative from "@/components/initiative/AddEditInitiative.vue";
 import InitiativeTable from "@/components/initiative/InitiativeTable.vue";
 import * as i from "@/components/initiative/initiativeHelpers";
 import MonsterSearch from "./MonsterSearch.vue";
-import TsUndoRedo from "@/components/common/TsUndoRedo.vue";
 
-import { Executor } from "@/utils/Executor";
+import { useGroupStoreNamed } from "@/stores/groups";
 import Initiative, { Initiatives, InitWithId } from "@/types/Initiative";
+import { Executor } from "@/utils/Executor";
 import { first } from "@/utils/helpers";
-import { usePrefixes } from "./encounterHelpers";
+import { newEntry } from "./encounterHelpers";
 
 const props = defineProps<{
   label: string,
@@ -83,18 +81,18 @@ function editInitiative(id: number) {
   addInitiativeDisplay.value = true;
 }
 
-let entryId = 0;
-const { GroupNamePrefix, FullPrefix } = usePrefixes(groupNamePrefix);
+//let entryId = 0;
+//const GroupPrefixKey = usePrefixes(groupNamePrefix);
 
-const allInitiatives = ref<Map<string, Initiatives>>();
+//const allInitiatives = ref<Map<string, Initiatives>>();
 const initiatives = ref<Initiatives>([]);
-const groupNames = computed(() => allInitiatives.value ? [...allInitiatives.value.keys()] : []);
+//const groupNames = computed(() => allInitiatives.value ? [...allInitiatives.value.keys()] : []);
 const search = ref<string>("Default");
 const selectedGroup = useStorage("selected-" + props.groupNamePrefix, "Default", sessionStorage);
 
 watch(selectedGroup, (value) => {
-  if (value && allInitiatives.value) {
-    initiatives.value = allInitiatives.value.get(value) ?? [];
+  if (value) {
+    initiatives.value = groupStore.allInitiatives.get(value) ?? [];
   } else {
     initiatives.value = [];
   }
@@ -102,73 +100,69 @@ watch(selectedGroup, (value) => {
 
 const columns = i.buildInitiativeColumns({ hasDex: true, hasEdit: true, hasCr: !!props.showMonster, hasLevel: !props.showMonster });
 
-const executor = new Executor(() => i.saveInits(initiatives.value, `${GroupNamePrefix.value}${selectedGroup.value}`));
+const executor = new Executor(() => i.saveInits(initiatives.value, i.makeKey(`${groupNamePrefix.value}-${selectedGroup.value}`)));
+
+const groupStore = useGroupStoreNamed(groupNamePrefix.value);
 
 onMounted(() => {
-  allInitiatives.value = new Map<string, Initiatives>(loadAllGroups());
-  entryId = [...allInitiatives.value.values()].flatMap(x => x).map(x => x.order).reduce((x, y) => x > y ? x : y, 0);
+  //const groupPrefixKey = i.makeKey(groupNamePrefix.value + "-");
+
+  //groupStore.allInitiatives
+  //allInitiatives.value = new Map<string, Initiatives>(loadAllGroups(groupPrefixKey));
+  //entryId = [...allInitiatives.value.values()].flatMap(x => x).map(x => x.order).reduce((x, y) => x > y ? x : y, 0);
 
   setSelected(selectedGroup.value);
-  if (selectedGroup.value && allInitiatives.value) {
-    initiatives.value = allInitiatives.value.get(selectedGroup.value) ?? [];
+  if (selectedGroup.value && groupStore.allInitiatives) {
+    initiatives.value = groupStore.allInitiatives.get(selectedGroup.value) ?? [];
   } else {
     initiatives.value = [];
   }
 });
 
-function newEntry(): InitWithId {
-  return {
-    id: entryId++,
-    order: 0,
-    name: "",
-    conditions: {},
-  };
-}
-
 function setSelected(selected?: string | null) {
-  if (selected && allInitiatives.value?.has(selected)) {
+  if (selected && groupStore.allInitiatives.has(selected)) {
     search.value = selected;
     selectedGroup.value = selected;
   }
 }
 
 function createNewGroup() {
-  if (!allInitiatives.value?.has(search.value)) {
+  if (!groupStore.allInitiatives.has(search.value)) {
     const selectedGroupName = selectedGroup.value;
     const newGroupName = search.value;
-    const newGroup = [newEntry()];
+    const newGroup = [newEntry(groupStore.nextEntryId())];
 
     executor.runCommand(() => {
-      allInitiatives.value!.set(newGroupName, [...newGroup]);
+      groupStore.allInitiatives.set(newGroupName, [...newGroup]);
       setSelected(newGroupName);
     },
       () => {
         setSelected(selectedGroupName);
-        allInitiatives.value!.delete(newGroupName);
+        groupStore.allInitiatives.delete(newGroupName);
       });
   }
 }
 
 function deleteSelectedGroup() {
-  if (selectedGroup.value && allInitiatives.value?.has(selectedGroup.value)) {
-    const toDeleteKey = selectedGroup.value;
+  if (selectedGroup.value && groupStore.allInitiatives.has(selectedGroup.value)) {
+    const toDeleteKey = i.makeKey(`${groupNamePrefix.value}-${selectedGroup.value}`); // i.makeKey selectedGroup.value;
     const oldGroup = [...initiatives.value];
 
     executor.runCommand(() => {
-      allInitiatives.value?.delete(toDeleteKey);
-      i.deleteInits(GroupNamePrefix.value + toDeleteKey);
-      setSelected(first(groupNames.value));
+      groupStore.allInitiatives.delete(toDeleteKey);
+      i.deleteInits(toDeleteKey);
+      setSelected(first(groupStore.names));
     },
       () => {
-        allInitiatives.value?.set(toDeleteKey, oldGroup);
-        i.saveInits(oldGroup, GroupNamePrefix.value + toDeleteKey);
+        groupStore.allInitiatives.set(toDeleteKey, oldGroup);
+        i.saveInits(oldGroup, toDeleteKey);
         setSelected(toDeleteKey);
       });
   }
 }
 
 function addEntry(init?: InitWithId) {
-  const toAdd = init ?? newEntry();
+  const toAdd = init ?? newEntry(groupStore.nextEntryId());
   const selected = selectedGroup.value;
 
   executor.runCommand(() => {
@@ -182,7 +176,7 @@ function addEntry(init?: InitWithId) {
 }
 
 function addExistingMonster(monster: Initiative) {
-  addEntry({ ...monster, id: entryId++ });
+  addEntry({ ...monster, id: groupStore.nextEntryId() });
 }
 
 function updateInit(id: number, init: Initiative) {
@@ -226,31 +220,5 @@ function insertInitCommand(index: number, propName: keyof Initiative, newValue: 
     () => {
       setSelected(selected);
     });
-}
-
-function* loadAllGroups(): Generator<readonly [string, Initiatives], void, unknown> {
-  let returned = false;
-
-  for (const groupName of loadGroupNameKeys()) {
-    const group = i.loadInits(GroupNamePrefix.value + groupName);
-    returned = true;
-    yield [groupName, group] as const;
-  }
-
-  if (!returned) {
-    yield ["Default", [newEntry()]] as const;
-  }
-}
-
-function* loadGroupNameKeys() {
-  const count = localStorage.length;
-  const prefixLength = FullPrefix.value.length;
-
-  for (let i = 0; i < count; i++) {
-    const key = localStorage.key(i);
-    if (key?.startsWith(FullPrefix.value)) {
-      yield key.substring(prefixLength);
-    }
-  }
 }
 </script>

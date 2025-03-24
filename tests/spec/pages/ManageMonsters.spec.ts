@@ -1,5 +1,6 @@
 import { mount } from "@vue/test-utils";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test } from "vitest";
+import { createTestingPinia } from "@pinia/testing";
 import { createVuetify } from "vuetify";
 import * as components from "vuetify/components";
 import * as directives from "vuetify/directives";
@@ -18,7 +19,7 @@ function mountManageMonstersPage() {
         components: {
           ManageMonstersPage
         },
-        plugins: [vuetify]
+        plugins: [vuetify, createTestingPinia()]
       }
     });
 }

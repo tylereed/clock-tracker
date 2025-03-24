@@ -142,15 +142,15 @@
 
 <script setup lang="ts">
 import { computed, ref, toRefs } from "vue";
-import ConditionsVue from "@/components/initiative/Conditions.vue";
 import { useTheme } from "vuetify";
 
-import ShowStats from "./ShowStats.vue";
+import ConditionsVue from "@/components/initiative/Conditions.vue";
 
-import Conditions from "@/types/Conditions";
-import { findSibling, findPreviousSibling } from "@/utils/helpers";
-import Initiative, { InitiativeColumns, Initiatives } from "@/types/Initiative";
 import r from "@/components/initiative/InitiativeRules";
+import Conditions from "@/types/Conditions";
+import Initiative, { InitiativeColumns, Initiatives } from "@/types/Initiative";
+import { findPreviousSibling, findSibling } from "@/utils/helpers";
+import ShowStats from "./ShowStats.vue";
 
 import * as v from "@/utils/validators";
 const vTheme = useTheme();
@@ -276,7 +276,7 @@ function handleHpChange(index: number, focused: boolean) {
       initiatives.value[index].hp = newValue;
       emit("insertInitCommand", index, "hp", newValue, oldValue);
     } else {
-      updateUndoRedo(index, 'hp', focused);
+      updateUndoRedo(index, "hp", focused);
     }
     hpChange.value = 0;
   }

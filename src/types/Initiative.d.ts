@@ -2,6 +2,8 @@ import Conditions from "./Conditions";
 
 export type InitiativeActionKey = "actions" | "bonusActions" | "reactions" | "legendaryActions" | "traits";
 
+export type InitKey = string & { __TYPE__: "InitKey" };
+
 export default interface Initiative {
   open5eId?: string;
   name: string;
