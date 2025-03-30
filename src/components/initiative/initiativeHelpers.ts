@@ -1,15 +1,15 @@
 import debounce from "debounce";
 
-import { Command, Executor } from "@/utils/Executor";
-import Initiative, { Actions, InitiativeColumns, Initiatives } from "@/types/Initiative";
-import { MonsterO5e } from "@/utils/Open5e";
+import Initiative, { Actions, InitiativeColumns, Initiatives, InitKey } from "@/types/Initiative";
 import Dice from "@/utils/Dice";
+import { Command, Executor } from "@/utils/Executor";
+import { MonsterO5e } from "@/utils/Open5e";
 
-export function makeKey(name?: string) {
-  return name ? "inits-" + name : "inits";
+export function makeKey(name?: string): InitKey {
+  return (name ? "inits-" + name : "inits") as InitKey;
 }
 
-const saveDebounced = debounce(function (key: string, toSave: Initiatives) {
+const saveDebounced = debounce(function (key: InitKey, toSave: Initiatives) {
   try {
     const saveData = JSON.stringify(toSave);
     localStorage.setItem(key, saveData);
@@ -18,14 +18,14 @@ const saveDebounced = debounce(function (key: string, toSave: Initiatives) {
   }
 }, 500);
 
-export function saveInits(inits: Initiatives, name?: string) {
-  const key = makeKey(name);
+export function saveInits(inits: Initiatives, name?: InitKey) {
+  const key: InitKey = name ?? makeKey();
   saveDebounced(key, [...inits]);
 }
 
-export function loadInits(name?: string) {
+export function loadInits(name?: InitKey) {
   try {
-    const key = makeKey(name);
+    const key = name ?? makeKey();
     const initJson = localStorage.getItem(key);
     if (initJson) {
       const restoredInits = JSON.parse(initJson) as Initiatives;
@@ -45,8 +45,8 @@ export function loadInits(name?: string) {
   return [];
 }
 
-export function deleteInits(name?: string) {
-  const key = makeKey(name);
+export function deleteInits(name?: InitKey) {
+  const key = name ?? makeKey();
   localStorage.removeItem(key);
 }
 
@@ -84,6 +84,8 @@ export function buildInitiativeColumns(columns: Partial<InitiativeColumns>) {
     hasAc: true,
     hasMaxHp: true,
     hasHp: false,
+    hasCr: false,
+    hasLevel: false,
     hasConditions: false,
     hasEdit: false
   };
@@ -115,6 +117,7 @@ export function monsterO5eToInitiative(monster: MonsterO5e, nameOverride?: strin
     ac: monster.armor_class,
     maxHp: monster.hit_points,
     hp: monster.hit_points,
+    cr: monster.challenge_rating,
     conditions: {},
     traits: [...buildActions(monster.special_abilities)],
     actions: [...buildActions(monster.actions)],

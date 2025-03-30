@@ -57,6 +57,10 @@
                 data-test="txtDex" /></v-col>
             <v-col cols="12"><v-text-field label="AC" density="compact" v-model="newInit.ac" :rules="v.AcRules"
                 data-test="txtAc" /></v-col>
+            <v-col cols="12" v-if="isMonster"><v-text-field label="CR" density="compact" v-model="newInit.cr"
+                :rules="v.CrRules" data-test="txtCr" /></v-col>
+            <v-col cols="12" v-else><v-text-field label="Level" density="compact" v-model="newInit.level"
+                :rules="v.LevelRules" data-test="txtLevel" /></v-col>
             <v-col :cols="isMonster && healthDice ? 9 : 12"><v-text-field label="HP" density="compact"
                 v-model="newInit.maxHp" :rules="v.MaxHpRules" data-test="txtMaxHp" /></v-col>
             <v-col v-if="isMonster && healthDice" cols="3">

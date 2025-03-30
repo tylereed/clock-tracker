@@ -37,7 +37,8 @@ const initiatives = ref<Initiatives>([]);
 
 const columns = i.buildInitiativeColumns({ hasInitiative: true, hasHp: true, hasConditions: true });
 
-const executor = new Executor(() => i.saveInits(initiatives.value, "encounter"));
+const encounterKey = i.makeKey("encounter");
+const executor = new Executor(() => i.saveInits(initiatives.value, encounterKey));
 
 function addInit(init: Initiative) {
   insertInitiative(init);
@@ -188,11 +189,12 @@ function removeCondition(index: number, name: keyof Conditions) {
 
 function loadInits() {
   let result = i.loadInits();
+  const key = i.makeKey("encounter");
   if (result.length) {
-    i.saveInits(result, "encounter");
+    i.saveInits(result, key);
     i.deleteInits();
   } else {
-    result = i.loadInits("encounter");
+    result = i.loadInits(key);
   }
   return result;
 }

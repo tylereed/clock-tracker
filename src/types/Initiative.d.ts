@@ -2,6 +2,8 @@ import Conditions from "./Conditions";
 
 export type InitiativeActionKey = "actions" | "bonusActions" | "reactions" | "legendaryActions" | "traits";
 
+export type InitKey = string & { __TYPE__: "InitKey" };
+
 export default interface Initiative {
   open5eId?: string;
   name: string;
@@ -11,6 +13,8 @@ export default interface Initiative {
   maxHp?: number;
   hp?: number;
   conditions: Conditions;
+  level?: number;
+  cr?: string;
   traits?: Actions[];
   actions?: Actions[];
   bonusActions?: Actions[];
@@ -35,6 +39,8 @@ export interface InitiativeColumns {
   hasAc: boolean,
   hasMaxHp: boolean,
   hasHp: boolean,
+  hasCr: boolean,
+  hasLevel: boolean,
   hasConditions: boolean,
   hasEdit: boolean
 }
