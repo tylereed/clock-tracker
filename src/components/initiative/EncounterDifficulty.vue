@@ -191,7 +191,7 @@ function tier01Increase(cr: string) {
   if (cr === "1/2") return "1";
   return cr;
 }
-function calca5e(party: Initiatives, monsters: Initiatives): DifficultyRating {
+function calcA5e(party: Initiatives, monsters: Initiatives): DifficultyRating {
   const partyLevel = party.map(p => +p.level!).reduce((x, y) => x + y, 0);
   const averageLevel = partyLevel / party.length;
 
@@ -254,7 +254,7 @@ function calculateDifficulty(partyName?: string, monsterName?: string): Difficul
 
   const difficulty5e14 = calc5e2014(party, monsters);
   const difficulty5e24 = calc5e2024(party, monsters);
-  const difficultya5e = calca5e(party, monsters);
+  const difficultya5e = calcA5e(party, monsters);
 
   return [difficulty5e14, difficulty5e24, difficultya5e];
 }

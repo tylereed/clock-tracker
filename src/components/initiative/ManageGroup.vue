@@ -134,7 +134,7 @@ function createNewGroup() {
 
 function deleteSelectedGroup() {
   if (selectedGroup.value && groupStore.allInitiatives.has(selectedGroup.value)) {
-    const toDeleteKey = i.makeKey(`${groupNamePrefix.value}-${selectedGroup.value}`); // i.makeKey selectedGroup.value;
+    const toDeleteKey = i.makeKey(`${groupNamePrefix.value}-${selectedGroup.value}`);
     const oldGroup = [...initiatives.value];
 
     executor.runCommand(() => {
