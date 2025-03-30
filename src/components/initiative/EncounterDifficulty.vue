@@ -3,9 +3,11 @@
     <v-row>
       <v-col>
         <v-select label="Party" v-model="selectedParty" :items="partyStore.names" />
+        <p v-for="p in partyLevels">Level {{ p.level }}: {{ p.count }}</p>
       </v-col>
       <v-col>
         <v-select label="Monsters" v-model="selectedMonster" :items="monsterStore.names" />
+        <p v-for="m in monsterCrs">CR {{ m.cr }}: {{ m.count }}</p>
       </v-col>
     </v-row>
     <v-row>
@@ -19,7 +21,7 @@
           <v-card>
             <v-card-title>{{ rating.name }}</v-card-title>
             <v-card-text>
-              <p>XP: {{ rating.value }}</p>
+              <p>{{ rating.valueName ?? "XP" }}: {{ rating.value }}</p>
               <br />
               <p v-for="t in rating.thresholds" :class="{ bold: t.highlight }">{{ t.name }}: {{ t.value }}</p>
               <br />
@@ -41,16 +43,23 @@ p.bold {
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { crToXp, MonsterNamePrefix, PartyNamePrefix } from "./encounterHelpers";
+import { crToIndex, crToXp, indexToCr, MonsterNamePrefix, PartyNamePrefix } from "./encounterHelpers";
 import { useGroupStoreNamed } from "@/stores/groups";
 import { Initiatives } from "@/types/Initiative";
+import { stringToCr } from "./templates/utils";
 
+interface Description {
+  name: string;
+  value: number | string;
+  highlight?: boolean
+}
 interface DifficultyRating {
   name: string;
   difficulty: string;
+  valueName?: string;
   value: number;
-  thresholds: { name: string; value: number | string; highlight: boolean }[],
-  other?: { name: string; value: number | string; highlight?: boolean }[],
+  thresholds: Description[],
+  other?: Description[],
 }
 
 const partyStore = useGroupStoreNamed(PartyNamePrefix);
@@ -61,7 +70,24 @@ const isError = computed(() => error.value != null);
 const difficulties = ref<DifficultyRating[]>([]);
 
 const selectedParty = ref<string>();
+const partyLevels = computed(() => {
+  const party = partyStore.getInitiative(selectedParty.value);
+  if (!party) return null;
+
+  const levels = Array.from({ length: 20 }, () => 0);
+  party.forEach(p => levels[p.level! - 1]++);
+  return levels.map((count, index) => ({ count, level: index + 1 })).filter(p => p.count > 0)
+});
+
 const selectedMonster = ref<string>();
+const monsterCrs = computed(() => {
+  const monsters = monsterStore.getInitiative(selectedMonster.value);
+  if (!monsters) return null;
+
+  const crs = Array.from({ length: 34 }, () => 0);
+  monsters.forEach(m => crs[crToIndex(m.cr!)]++);
+  return crs.map((count, index) => ({ count, cr: indexToCr(index) })).filter(m => m.count > 0);
+});
 
 watch([selectedParty, selectedMonster], ([newParty, newMonster]) => {
   updateCalculation(newParty, newMonster);
@@ -158,6 +184,58 @@ function calc5e2024(party: Initiatives, monsters: Initiatives): DifficultyRating
   }
 }
 
+function tier01Increase(cr: string) {
+  if (cr === "0") return "1/8";
+  if (cr === "1/8") return "1/8";
+  if (cr === "1/4") return "1/4";
+  if (cr === "1/2") return "1";
+  return cr;
+}
+function calca5e(party: Initiatives, monsters: Initiatives): DifficultyRating {
+  const partyLevel = party.map(p => +p.level!).reduce((x, y) => x + y, 0);
+  const averageLevel = partyLevel / party.length;
+
+  const easyCr = partyLevel / 6;
+  const mediumCr = partyLevel / 3;
+  const hardCr = partyLevel / 2;
+  const deadlyCr = partyLevel * 2 / 3;
+  const impossibleCr = partyLevel;
+
+  let crCalc = monsters.map(m => m.cr!);
+  if (averageLevel <= 4) {
+    crCalc = crCalc.map(tier01Increase);
+  }
+  const monsterCr = crCalc.map(stringToCr).reduce((x, y) => x + y, 0);
+
+  const crLevels = ["easy", "medium", "hard", "deadly", "impossible"];
+  const [_, minIndex] = [easyCr, mediumCr, hardCr, deadlyCr, impossibleCr].map(cr => Math.abs(monsterCr - cr))
+    .reduce(([diff, index], currentDiff, currentIndex) => currentDiff < diff ? [currentDiff, currentIndex] : [diff, index], [Number.MAX_VALUE, -1]);
+  const difficulty = crLevels[minIndex];
+
+  const maxCr = averageLevel * 1.5;
+  const strongMonsters = monsters.map(m => ({ name: m.name, cr: stringToCr(m.cr!) })).filter(m => m.cr > maxCr).map(m => m.name).join(", ");
+
+  const other: Description[] = [{ name: "Maximum monster CR", value: Math.floor(maxCr) + 1, highlight: strongMonsters.length > 0 }];
+  if (strongMonsters.length) {
+    other.push({ name: "Impossible monsters", value: strongMonsters, highlight: true })
+  }
+
+  return {
+    name: "A5E",
+    difficulty: difficulty,
+    valueName: "Encounter CR",
+    value: monsterCr,
+    thresholds: [
+      { name: "easy", value: easyCr.toFixed(3), highlight: difficulty === "easy" },
+      { name: "medium", value: mediumCr.toFixed(3), highlight: difficulty === "medium" },
+      { name: "hard", value: hardCr.toFixed(3), highlight: difficulty === "hard" },
+      { name: "deadly", value: deadlyCr.toFixed(3), highlight: difficulty === "deadly" },
+      { name: "impossible", value: impossibleCr, highlight: difficulty === "impossible" },
+    ],
+    other: other
+  }
+}
+
 function calculateDifficulty(partyName?: string, monsterName?: string): DifficultyRating[] | { error: string } {
 
   const party = partyStore.getInitiative(partyName);
@@ -176,8 +254,9 @@ function calculateDifficulty(partyName?: string, monsterName?: string): Difficul
 
   const difficulty5e14 = calc5e2014(party, monsters);
   const difficulty5e24 = calc5e2024(party, monsters);
+  const difficultya5e = calca5e(party, monsters);
 
-  return [difficulty5e14, difficulty5e24];
+  return [difficulty5e14, difficulty5e24, difficultya5e];
 }
 
 </script>
