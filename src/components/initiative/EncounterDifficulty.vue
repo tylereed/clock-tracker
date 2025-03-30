@@ -89,9 +89,9 @@ const monsterCrs = computed(() => {
   return crs.map((count, index) => ({ count, cr: indexToCr(index) })).filter(m => m.count > 0);
 });
 
-watch([selectedParty, selectedMonster], ([newParty, newMonster]) => {
-  updateCalculation(newParty, newMonster);
-});
+watch([selectedParty, selectedMonster], ([newParty, newMonster]) => updateCalculation(newParty, newMonster));
+
+partyStore.$subscribe(() => updateCalculation(selectedParty.value, selectedMonster.value));
 
 function updateCalculation(partyName?: string, monsterName?: string) {
   const result = calculateDifficulty(partyName, monsterName);

@@ -41,7 +41,7 @@ export function useGroupStoreNamed(name: string) {
 
     const allInitiatives = ref<Map<string, Initiatives>>(new Map<string, Initiatives>(groups));
     const names = computed(() => allInitiatives.value ? [...allInitiatives.value.keys()] : []);
-    entryId = [...allInitiatives.value.values()].flatMap(x => x).map(x => x.order).reduce((x, y) => x > y ? x : y, 0);
+    entryId = [...allInitiatives.value.values()].flatMap(x => x).map(x => x.order).reduce((x, y) => x > y ? x : y, 0) + 1;
 
     function nextEntryId() {
       return entryId++;
