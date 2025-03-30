@@ -11,7 +11,6 @@
     <v-row>
       <v-col v-if="isError" cols="12">
         <v-card>
-          <v-card-title></v-card-title>
           <v-card-text>Error: {{ error }}</v-card-text>
         </v-card>
       </v-col>
@@ -22,9 +21,10 @@
             <v-card-text>
               <p>XP: {{ rating.value }}</p>
               <br />
-              <template v-for="t in rating.thresholds">
-                <p :class="{ bold: t.highlight }">{{ t.name }}: {{ t.value }}</p>
-              </template>
+              <p v-for="t in rating.thresholds" :class="{ bold: t.highlight }">{{ t.name }}: {{ t.value }}</p>
+              <br />
+              <p v-if="rating.other?.length" v-for="o in rating.other" :class="{ bold: o.highlight }">{{ o.name }}: {{
+                o.value }}</p>
             </v-card-text>
           </v-card>
         </v-col>
@@ -49,7 +49,8 @@ interface DifficultyRating {
   name: string;
   difficulty: string;
   value: number;
-  thresholds: { name: string; value: number; highlight: boolean }[]
+  thresholds: { name: string; value: number | string; highlight: boolean }[],
+  other?: { name: string; value: number | string; highlight?: boolean }[],
 }
 
 const partyStore = useGroupStoreNamed(PartyNamePrefix);
@@ -63,7 +64,11 @@ const selectedParty = ref<string>();
 const selectedMonster = ref<string>();
 
 watch([selectedParty, selectedMonster], ([newParty, newMonster]) => {
-  const result = calculateDifficulty(newParty, newMonster);
+  updateCalculation(newParty, newMonster);
+});
+
+function updateCalculation(partyName?: string, monsterName?: string) {
+  const result = calculateDifficulty(partyName, monsterName);
   if ("error" in result) {
     error.value = result.error;
     difficulties.value = [];
@@ -72,7 +77,7 @@ watch([selectedParty, selectedMonster], ([newParty, newMonster]) => {
 
   error.value = null;
   difficulties.value = result;
-});
+}
 
 
 const easy5e14 = [25, 50, 75, 125, 250, 300, 350, 450, 550, 600, 800, 1000, 1100, 1250, 1400, 1600, 2000, 2100, 2400, 2800];
@@ -84,6 +89,14 @@ const low5e24 = [50, 100, 150, 250, 500, 600, 750, 1000, 1300, 1600, 1900, 2200,
 const moderate5e24 = [75, 150, 225, 375, 750, 1000, 1300, 1700, 2000, 2300, 2900, 3700, 4200, 4900, 5400, 6100, 7200, 8700, 10700, 13200];
 const high5e24 = [100, 200, 400, 500, 1100, 1400, 1700, 2100, 2600, 3100, 4100, 4700, 5400, 6200, 7800, 9800, 11700, 14200, 17200, 22000];
 
+function getMultiplier2014(countMonsters: number) {
+  if (countMonsters === 1) return 1;
+  if (countMonsters === 2) return 1.5;
+  if (countMonsters <= 6) return 2;
+  if (countMonsters <= 10) return 2.5;
+  if (countMonsters <= 14) return 3;
+  return 4;
+}
 function calc5e2014(party: Initiatives, monsters: Initiatives): DifficultyRating {
 
   const indexes = party.map(p => p.level! - 1);
@@ -92,7 +105,9 @@ function calc5e2014(party: Initiatives, monsters: Initiatives): DifficultyRating
   const hardFloor = indexes.map(i => hard5e14[i]).reduce((x, y) => x + y, 0);
   const deadlyFloor = indexes.map(i => deadly5e14[i]).reduce((x, y) => x + y, 0);
 
-  const xp = monsters.map(m => m.cr!).map(crToXp).reduce((x, y) => x + y, 0);
+  const mult = getMultiplier2014(monsters.length);
+  const totalXp = monsters.map(m => m.cr!).map(crToXp).reduce((x, y) => x + y, 0);
+  const xp = totalXp * mult;
 
   let difficulty: string = "N/A";
   if (xp >= deadlyFloor) difficulty = "deadly";
@@ -109,6 +124,10 @@ function calc5e2014(party: Initiatives, monsters: Initiatives): DifficultyRating
       { name: "medium", value: mediumFloor, highlight: difficulty === "medium" },
       { name: "hard", value: hardFloor, highlight: difficulty === "hard" },
       { name: "deadly", value: deadlyFloor, highlight: difficulty === "deadly" },
+    ],
+    other: [
+      { name: "XP earned", value: totalXp },
+      { name: "XP multiplier", value: mult }
     ]
   }
 }
