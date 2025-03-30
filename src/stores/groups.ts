@@ -1,10 +1,10 @@
-import { computed, Ref, ref, watch } from "vue";
-import { defineStore, storeToRefs } from "pinia";
+import { defineStore } from "pinia";
+import { computed, ref } from "vue";
 
-import Initiative, { Initiatives, InitKey, InitWithId } from "@/types/Initiative";
+import { Initiatives, InitKey } from "@/types/Initiative";
 
-import * as i from "@/components/initiative/initiativeHelpers";
 import { newEntry } from "@/components/initiative/encounterHelpers";
+import * as i from "@/components/initiative/initiativeHelpers";
 
 let entryId = 0;
 
@@ -47,7 +47,20 @@ export function useGroupStoreNamed(name: string) {
       return entryId++;
     }
 
-    return { allInitiatives, names, nextEntryId };
+    function getInitiative(name?: string) {
+      if (!name) {
+        return null;
+      }
+
+      const init = allInitiatives.value.get(name);
+      if (!init) {
+        return null;
+      }
+
+      return init;
+    }
+
+    return { allInitiatives, names, nextEntryId, getInitiative };
   });
   return useStore();
 }

@@ -81,12 +81,7 @@ function editInitiative(id: number) {
   addInitiativeDisplay.value = true;
 }
 
-//let entryId = 0;
-//const GroupPrefixKey = usePrefixes(groupNamePrefix);
-
-//const allInitiatives = ref<Map<string, Initiatives>>();
 const initiatives = ref<Initiatives>([]);
-//const groupNames = computed(() => allInitiatives.value ? [...allInitiatives.value.keys()] : []);
 const search = ref<string>("Default");
 const selectedGroup = useStorage("selected-" + props.groupNamePrefix, "Default", sessionStorage);
 
@@ -105,12 +100,6 @@ const executor = new Executor(() => i.saveInits(initiatives.value, i.makeKey(`${
 const groupStore = useGroupStoreNamed(groupNamePrefix.value);
 
 onMounted(() => {
-  //const groupPrefixKey = i.makeKey(groupNamePrefix.value + "-");
-
-  //groupStore.allInitiatives
-  //allInitiatives.value = new Map<string, Initiatives>(loadAllGroups(groupPrefixKey));
-  //entryId = [...allInitiatives.value.values()].flatMap(x => x).map(x => x.order).reduce((x, y) => x > y ? x : y, 0);
-
   setSelected(selectedGroup.value);
   if (selectedGroup.value && groupStore.allInitiatives) {
     initiatives.value = groupStore.allInitiatives.get(selectedGroup.value) ?? [];

@@ -6,6 +6,7 @@
           <v-tab value="Initiative">Initiative</v-tab>
           <v-tab value="Party">Manage Party</v-tab>
           <v-tab value="Monsters">Manage Monsters</v-tab>
+          <v-tab value="Difficulty">Difficulty Calculator</v-tab>
         </v-tabs>
       </v-card-title>
     </v-card-item>
@@ -20,6 +21,9 @@
         <v-tabs-window-item value="Monsters">
           <manage-monsters @send-to-initiative="addMonsters" />
         </v-tabs-window-item>
+        <v-tabs-window-item value="Difficulty">
+          <encounter-difficulty />
+        </v-tabs-window-item>
       </v-tabs-window>
     </v-card-text>
   </v-card>
@@ -32,6 +36,7 @@ import { useStorage } from "@vueuse/core";
 import InitiativeTracker from "./InitiativeTracker.vue";
 import ManageParty from "./ManageParty.vue";
 import ManageMonsters from "./ManageMonsters.vue";
+import EncounterDifficulty from "@/components/initiative/EncounterDifficulty.vue";
 
 import { Initiatives } from "@/types/Initiative";
 

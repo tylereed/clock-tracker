@@ -117,7 +117,7 @@ export function monsterO5eToInitiative(monster: MonsterO5e, nameOverride?: strin
     ac: monster.armor_class,
     maxHp: monster.hit_points,
     hp: monster.hit_points,
-    cr: monster.cr!, // CR is marked as nullable in the db, but is always populated
+    cr: monster.challenge_rating,
     conditions: {},
     traits: [...buildActions(monster.special_abilities)],
     actions: [...buildActions(monster.actions)],

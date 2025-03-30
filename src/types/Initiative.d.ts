@@ -14,7 +14,7 @@ export default interface Initiative {
   hp?: number;
   conditions: Conditions;
   level?: number;
-  cr?: number;
+  cr?: string;
   traits?: Actions[];
   actions?: Actions[];
   bonusActions?: Actions[];

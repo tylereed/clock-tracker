@@ -36,8 +36,8 @@
           @update:focused="(focused) => updateUndoRedo(i, 'cr', focused)" @keyup.enter.stop="nextRow($event)" />
       </v-col>
       <v-col v-if="hasLevel">
-        <v-text-field :hide-details="true" density="compact" v-model="init.cr" :rules="r.LevelRules"
-          @update:focused="(focused) => updateUndoRedo(i, 'cr', focused)" @keyup.enter.stop="nextRow($event)" />
+        <v-text-field :hide-details="true" density="compact" v-model="init.level" :rules="r.LevelRules"
+          @update:focused="(focused) => updateUndoRedo(i, 'level', focused)" @keyup.enter.stop="nextRow($event)" />
       </v-col>
       <v-col v-if="hasMaxHp">
         <v-text-field :hide-details="true" density="compact" v-model="init.maxHp" :rules="r.MaxHpRules"
