@@ -1,37 +1,52 @@
 <template>
   <v-container>
-    <canvas ref="canvasRef" class="ma-2" :width="size" :height="size" />
     <v-row>
-      <v-col>
-        <v-card>
-          <v-card-text>
-            <p>Solinari: {{ solinariDayDisplay }}</p>
-            <p>Phase: {{ solinariPhase }}</p>
-          </v-card-text>
-        </v-card>
+      <v-col cols="8">
+        <canvas ref="canvasRef" class="ma-2" :width="size" :height="size" />
       </v-col>
-      <v-col>
-        <v-card>
-          <v-card-text>
-            <p>Lunitari: {{ lunitariDayDisplay }}</p>
-            <p>Phase: {{ lunitariPhase }}</p>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col>
-        <v-card>
-          <v-card-text>
-            <p>Nuitari: {{ nuitariDayDisplay }}</p>
-            <p>Phase: {{ nuitariPhase }}</p>
-          </v-card-text>
-        </v-card>
+      <v-col cols="4">
+        <v-row>
+          <v-col>
+            <v-card>
+              <v-card-text>
+                <p>Solinari: {{ solinariDayDisplay }}</p>
+                <p>Phase: {{ solinariPhase }}</p>
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+        <v-row>
+          <v-col>
+            <v-card>
+              <v-card-text>
+                <p>Lunitari: {{ lunitariDayDisplay }}</p>
+                <p>Phase: {{ lunitariPhase }}</p>
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+        <v-row>
+          <v-col>
+            <v-card>
+              <v-card-text>
+                <p>Nuitari: {{ nuitariDayDisplay }}</p>
+                <p>Phase: {{ nuitariPhase }}</p>
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+        <v-row>
+          <v-col>
+            <v-card>
+              <v-card-actions>
+                <v-btn variant="elevated" color="primary" text="Add Day" @click="addDay()" />
+                <v-btn variant="outlined" color="error" text="Randomize" @click="randomizeDays()" />
+              </v-card-actions>
+            </v-card>
+          </v-col>
+        </v-row>
       </v-col>
     </v-row>
-    <v-card class="mt-5">
-      <v-card-actions>
-        <v-btn variant="elevated" color="primary" text="Add Day" @click="addDay()" />
-      </v-card-actions>
-    </v-card>
   </v-container>
 </template>
 
@@ -80,6 +95,12 @@ function addDays(toAdd: number) {
 
 function addDay() {
   addDays(1);
+}
+
+function randomizeDays() {
+  solinariDay.value = Math.floor(solinariMax * Math.random());
+  lunitariDay.value = Math.floor(lunitariMax * Math.random());
+  nuitariDay.value = Math.floor(nuitariMax * Math.random());
 }
 
 const tau = Math.PI * 2;
