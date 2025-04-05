@@ -7,35 +7,17 @@
       <v-col cols="4">
         <v-row>
           <v-col>
-            <v-card>
-              <v-card-text>
-                <p>Solinari: {{ solinariDayDisplay }}</p>
-                <p>Phase: {{ solinariPhase }}</p>
-                <p>Bonus: {{ solinariBonus > 0 ? "+" : "" }}{{ solinariBonus }}</p>
-              </v-card-text>
-            </v-card>
+            <moon-status v-bind="solinari" />
           </v-col>
         </v-row>
         <v-row>
           <v-col>
-            <v-card>
-              <v-card-text>
-                <p>Lunitari: {{ lunitariDayDisplay }}</p>
-                <p>Phase: {{ lunitariPhase }}</p>
-                <p>Bonus: {{ lunitariBonus > 0 ? "+" : "" }}{{ lunitariBonus }}</p>
-              </v-card-text>
-            </v-card>
+            <moon-status v-bind="lunitari" />
           </v-col>
         </v-row>
         <v-row>
           <v-col>
-            <v-card>
-              <v-card-text>
-                <p>Nuitari: {{ nuitariDayDisplay }}</p>
-                <p>Phase: {{ nuitariPhase }}</p>
-                <p>Bonus: {{ nuitariBonus > 0 ? "+" : "" }}{{ nuitariBonus }}</p>
-              </v-card-text>
-            </v-card>
+            <moon-status v-bind="nuitari" />
           </v-col>
         </v-row>
         <v-row>
@@ -43,6 +25,7 @@
             <v-card>
               <v-card-actions>
                 <v-btn variant="elevated" color="primary" text="Add Day" @click="addDay()" />
+                <v-btn variant="elevated" color="primary" text="Subtract Day" @click="subtractDay()" />
                 <v-btn variant="outlined" color="error" text="Randomize" @click="randomizeDays()" />
               </v-card-actions>
             </v-card>
@@ -54,11 +37,12 @@
 </template>
 
 <script setup lang="ts">
-import { useStorage } from "@vueuse/core";
-import { computed, onMounted, onUpdated, Ref, ref, watch } from "vue";
+import { onMounted, onUpdated, ref, watch } from "vue";
 import { useTheme } from "vuetify";
 
-type MoonPhase = "New" | "Waxing" | "Full" | "Waning";
+import { MoonState } from "@/components/moonTracker/moon";
+import { useMoonBonus, useMoonStatus } from "@/components/moonTracker/moonHelpers";
+import MoonStatus from "@/components/moonTracker/MoonStatus.vue";
 
 const vTheme = useTheme();
 
@@ -69,61 +53,40 @@ watch(vTheme.current, render);
 const canvasRef = ref<HTMLCanvasElement>();
 const size = ref(500);
 
-function getPhase(day: number, max: number): MoonPhase {
-  const phaseNumber = Math.floor(day / (max / 4));
-  if (phaseNumber === 0) return "New";
-  if (phaseNumber === 1) return "Waxing";
-  if (phaseNumber === 2) return "Full"
-  return "Waning";
-}
-
-const solinariDay = useStorage("solinariDay", 0);
-const solinariDayDisplay = computed(() => solinariDay.value + 1);
-const solinariPhase = computed(() => getPhase(solinariDay.value, solinariMax));
-const solinariBonus = computed(() => calculateBonus(solinariPhase.value, lunitariPhase.value, nuitariPhase.value));
-
-const lunitariDay = useStorage("lunitariDay", 0);
-const lunitariDayDisplay = computed(() => lunitariDay.value + 1);
-const lunitariPhase = computed(() => getPhase(lunitariDay.value, lunitariMax));
-const lunitariBonus = computed(() => calculateBonus(lunitariPhase.value, solinariPhase.value, nuitariPhase.value));
-
-const nuitariDay = useStorage("nuitariDay", 0);
-const nuitariDayDisplay = computed(() => nuitariDay.value + 1);
-const nuitariPhase = computed(() => getPhase(nuitariDay.value, nuitariMax));
-const nuitariBonus = computed(() => calculateBonus(nuitariPhase.value, solinariPhase.value, lunitariPhase.value));
-
-const solinariMax = 36;
+const solinariMax = 38;
 const lunitariMax = 28;
 const nuitariMax = 8;
 
-function calculateBonus(mainMoon: MoonPhase, otherMoon1: MoonPhase, otherMoon2: MoonPhase) {
-  let bonus = 0;
+// Need all moon phases to calculate bonus
+// Build most of the status, then build bonus, then build full MoonState
+const solinariPart: Omit<MoonState, "bonus"> = useMoonStatus("solinariDay", solinariMax);
+const lunitariPart: Omit<MoonState, "bonus"> = useMoonStatus("lunitariDay", lunitariMax);
+const nuitariPart: Omit<MoonState, "bonus"> = useMoonStatus("nuitariDay", nuitariMax);
+const [solinariBonus, lunitariBonus, nuitariBonus] = useMoonBonus(solinariPart, lunitariPart, nuitariPart);
 
-  if (mainMoon === "New") bonus--;
-  else if (mainMoon === "Full") bonus++;
+const solinari: MoonState = { ...solinariPart, bonus: solinariBonus };
+const lunitari: MoonState = { ...lunitariPart, bonus: lunitariBonus };
+const nuitari: MoonState = { ...nuitariPart, bonus: nuitariBonus };
 
-  if (bonus != 0) {
-    if (mainMoon === otherMoon1) bonus++;
-    if (mainMoon === otherMoon2) bonus++;
-  }
-
-  return bonus;
-}
 
 function addDays(toAdd: number) {
-  solinariDay.value = (solinariDay.value + toAdd) % solinariMax;
-  lunitariDay.value = (lunitariDay.value + toAdd) % lunitariMax;
-  nuitariDay.value = (nuitariDay.value + toAdd) % nuitariMax;
+  solinari.day.value = (solinari.day.value + toAdd) % solinariMax;
+  lunitari.day.value = (lunitari.day.value + toAdd) % lunitariMax;
+  nuitari.day.value = (nuitari.day.value + toAdd) % nuitariMax;
 }
 
 function addDay() {
   addDays(1);
 }
 
+function subtractDay() {
+  addDays(-1);
+}
+
 function randomizeDays() {
-  solinariDay.value = Math.floor(solinariMax * Math.random());
-  lunitariDay.value = Math.floor(lunitariMax * Math.random());
-  nuitariDay.value = Math.floor(nuitariMax * Math.random());
+  solinari.day.value = Math.floor(solinariMax * Math.random());
+  lunitari.day.value = Math.floor(lunitariMax * Math.random());
+  nuitari.day.value = Math.floor(nuitariMax * Math.random());
 }
 
 const tau = Math.PI * 2;
@@ -195,4 +158,5 @@ function render() {
   drawMoons(ctx, width, height, x, y, radiusSolinari, radiusLunitari, radiusNuitari);
   ctx.restore();
 }
+
 </script>
