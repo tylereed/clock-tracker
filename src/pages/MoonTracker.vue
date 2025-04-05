@@ -11,6 +11,7 @@
               <v-card-text>
                 <p>Solinari: {{ solinariDayDisplay }}</p>
                 <p>Phase: {{ solinariPhase }}</p>
+                <p>Bonus: {{ solinariBonus > 0 ? "+" : "" }}{{ solinariBonus }}</p>
               </v-card-text>
             </v-card>
           </v-col>
@@ -21,6 +22,7 @@
               <v-card-text>
                 <p>Lunitari: {{ lunitariDayDisplay }}</p>
                 <p>Phase: {{ lunitariPhase }}</p>
+                <p>Bonus: {{ lunitariBonus > 0 ? "+" : "" }}{{ lunitariBonus }}</p>
               </v-card-text>
             </v-card>
           </v-col>
@@ -31,6 +33,7 @@
               <v-card-text>
                 <p>Nuitari: {{ nuitariDayDisplay }}</p>
                 <p>Phase: {{ nuitariPhase }}</p>
+                <p>Bonus: {{ nuitariBonus > 0 ? "+" : "" }}{{ nuitariBonus }}</p>
               </v-card-text>
             </v-card>
           </v-col>
@@ -51,8 +54,11 @@
 </template>
 
 <script setup lang="ts">
+import { useStorage } from "@vueuse/core";
 import { computed, onMounted, onUpdated, Ref, ref, watch } from "vue";
 import { useTheme } from "vuetify";
+
+type MoonPhase = "New" | "Waxing" | "Full" | "Waning";
 
 const vTheme = useTheme();
 
@@ -63,7 +69,7 @@ watch(vTheme.current, render);
 const canvasRef = ref<HTMLCanvasElement>();
 const size = ref(500);
 
-function getPhase(day: number, max: number) {
+function getPhase(day: number, max: number): MoonPhase {
   const phaseNumber = Math.floor(day / (max / 4));
   if (phaseNumber === 0) return "New";
   if (phaseNumber === 1) return "Waxing";
@@ -71,21 +77,38 @@ function getPhase(day: number, max: number) {
   return "Waning";
 }
 
-const solinariDay = ref(0);
+const solinariDay = useStorage("solinariDay", 0);
 const solinariDayDisplay = computed(() => solinariDay.value + 1);
 const solinariPhase = computed(() => getPhase(solinariDay.value, solinariMax));
+const solinariBonus = computed(() => calculateBonus(solinariPhase.value, lunitariPhase.value, nuitariPhase.value));
 
-const lunitariDay = ref(0);
+const lunitariDay = useStorage("lunitariDay", 0);
 const lunitariDayDisplay = computed(() => lunitariDay.value + 1);
 const lunitariPhase = computed(() => getPhase(lunitariDay.value, lunitariMax));
+const lunitariBonus = computed(() => calculateBonus(lunitariPhase.value, solinariPhase.value, nuitariPhase.value));
 
-const nuitariDay = ref(0);
+const nuitariDay = useStorage("nuitariDay", 0);
 const nuitariDayDisplay = computed(() => nuitariDay.value + 1);
 const nuitariPhase = computed(() => getPhase(nuitariDay.value, nuitariMax));
+const nuitariBonus = computed(() => calculateBonus(nuitariPhase.value, solinariPhase.value, lunitariPhase.value));
 
 const solinariMax = 36;
 const lunitariMax = 28;
 const nuitariMax = 8;
+
+function calculateBonus(mainMoon: MoonPhase, otherMoon1: MoonPhase, otherMoon2: MoonPhase) {
+  let bonus = 0;
+
+  if (mainMoon === "New") bonus--;
+  else if (mainMoon === "Full") bonus++;
+
+  if (bonus != 0) {
+    if (mainMoon === otherMoon1) bonus++;
+    if (mainMoon === otherMoon2) bonus++;
+  }
+
+  return bonus;
+}
 
 function addDays(toAdd: number) {
   solinariDay.value = (solinariDay.value + toAdd) % solinariMax;
