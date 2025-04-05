@@ -1,7 +1,7 @@
 <template>
   <v-card>
     <v-card-text>
-      <p>Solinari: {{ dayDisplay }}</p>
+      <p>{{ name }}: {{ dayDisplay }}</p>
       <p>Phase: {{ phase }}</p>
       <p>Bonus: {{ bonus.value > 0 ? "+" : "" }}{{ bonus }}</p>
     </v-card-text>

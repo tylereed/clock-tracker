@@ -59,9 +59,9 @@ const nuitariMax = 8;
 
 // Need all moon phases to calculate bonus
 // Build most of the status, then build bonus, then build full MoonState
-const solinariPart: Omit<MoonState, "bonus"> = useMoonStatus("solinariDay", solinariMax);
-const lunitariPart: Omit<MoonState, "bonus"> = useMoonStatus("lunitariDay", lunitariMax);
-const nuitariPart: Omit<MoonState, "bonus"> = useMoonStatus("nuitariDay", nuitariMax);
+const solinariPart: Omit<MoonState, "bonus"> = useMoonStatus("Solinari", solinariMax);
+const lunitariPart: Omit<MoonState, "bonus"> = useMoonStatus("Lunitari", lunitariMax);
+const nuitariPart: Omit<MoonState, "bonus"> = useMoonStatus("Nuitari", nuitariMax);
 const [solinariBonus, lunitariBonus, nuitariBonus] = useMoonBonus(solinariPart, lunitariPart, nuitariPart);
 
 const solinari: MoonState = { ...solinariPart, bonus: solinariBonus };

@@ -18,13 +18,14 @@ function getPhaseDisplay(day: number, max: number) {
   return "🌗";
 }
 
-export function useMoonStatus(storageKey: string, max: number) {
+export function useMoonStatus(name: string, max: number) {
+  const storageKey = name.toLocaleLowerCase() + "Day";
   const day = useStorage(storageKey, 0);
   const dayDisplay = computed(() => day.value + 1);
   const phase = computed(() => getPhase(day.value, max));
   const phaseDisplay = computed(() => getPhaseDisplay(day.value, max));
 
-  return { day, dayDisplay, phase, phaseDisplay };
+  return { name, day, dayDisplay, phase, phaseDisplay };
 }
 
 function calculateBonus(mainMoon: MoonPhase, otherMoon1: MoonPhase, otherMoon2: MoonPhase) {
