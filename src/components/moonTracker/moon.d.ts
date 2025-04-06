@@ -1,3 +1,5 @@
+import { Ref } from "vue";
+
 export type MoonPhase = "New" | "Waxing" | "Full" | "Waning";
 
 export interface MoonState {

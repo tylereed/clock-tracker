@@ -53,12 +53,12 @@ watch(vTheme.current, render);
 const canvasRef = ref<HTMLCanvasElement>();
 const size = ref(500);
 
-const solinariMax = 38;
+const solinariMax = 36;
 const lunitariMax = 28;
 const nuitariMax = 8;
 
 // Need all moon phases to calculate bonus
-// Build most of the status, then build bonus, then build full MoonState
+// Build most of the state, then build bonus, then build full MoonState
 const solinariPart: Omit<MoonState, "bonus"> = useMoonStatus("Solinari", solinariMax);
 const lunitariPart: Omit<MoonState, "bonus"> = useMoonStatus("Lunitari", lunitariMax);
 const nuitariPart: Omit<MoonState, "bonus"> = useMoonStatus("Nuitari", nuitariMax);
@@ -68,11 +68,12 @@ const solinari: MoonState = { ...solinariPart, bonus: solinariBonus };
 const lunitari: MoonState = { ...lunitariPart, bonus: lunitariBonus };
 const nuitari: MoonState = { ...nuitariPart, bonus: nuitariBonus };
 
+watch([solinari.day, lunitari.day, nuitari.day], render);
 
 function addDays(toAdd: number) {
-  solinari.day.value = (solinari.day.value + toAdd) % solinariMax;
-  lunitari.day.value = (lunitari.day.value + toAdd) % lunitariMax;
-  nuitari.day.value = (nuitari.day.value + toAdd) % nuitariMax;
+  solinari.day.value = (solinari.day.value + toAdd + solinariMax) % solinariMax;
+  lunitari.day.value = (lunitari.day.value + toAdd + lunitariMax) % lunitariMax;
+  nuitari.day.value = (nuitari.day.value + toAdd + nuitariMax) % nuitariMax;
 }
 
 function addDay() {
@@ -104,7 +105,7 @@ function drawSegments(ctx: CanvasRenderingContext2D, maxSlices: number, x: numbe
 
   ctx.beginPath();
   for (let i = 0; i < maxSlices; i++) {
-    const angleOffset = (tau * i / maxSlices)
+    const angleOffset = (tau * i / maxSlices);
     const sin = Math.sin(originAngle + angleOffset);
     const cos = Math.cos(originAngle + angleOffset);
 
@@ -132,9 +133,20 @@ function drawMoons(ctx: CanvasRenderingContext2D, width: number, height: number,
   drawMoon(ctx, "black", x, y, radiusNuitari);
 
   const originAngle = -Math.PI / 4;
-  drawSegments(ctx, 36, x, y, originAngle, radiusLunitari, radiusSolinari);
-  drawSegments(ctx, 28, x, y, originAngle, radiusNuitari, radiusLunitari);
-  drawSegments(ctx, 8, x, y, originAngle, 0, radiusNuitari);
+  drawSegments(ctx, solinariMax, x, y, originAngle, radiusLunitari, radiusSolinari);
+  drawSegments(ctx, lunitariMax, x, y, originAngle, radiusNuitari, radiusLunitari);
+  drawSegments(ctx, nuitariMax, x, y, originAngle, 0, radiusNuitari);
+}
+
+function drawMoonPhase(ctx: CanvasRenderingContext2D, x: number, y: number,
+  text: string, max: number, day: number, radius: number) {
+
+  const originAngle = -Math.PI / 4 + tau / max / 2;
+  const dayAngle = tau * day / max;
+  const xOffset = radius * Math.sin(originAngle + dayAngle);
+  const yOffset = radius * Math.cos(originAngle + dayAngle);
+
+  ctx.strokeText(text, x + xOffset, y + yOffset);
 }
 
 function render() {
@@ -156,6 +168,21 @@ function render() {
 
   ctx.save();
   drawMoons(ctx, width, height, x, y, radiusSolinari, radiusLunitari, radiusNuitari);
+  ctx.restore();
+
+  const textRadiusSolinari = (radiusSolinari + radiusLunitari) / 2;
+  const textRadiusLunitari = (radiusLunitari + radiusNuitari) / 2;
+  const textRadiusNuitari = 3 * radiusNuitari / 4;
+
+  ctx.save();
+
+  ctx.font = "30pt Verdana";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  drawMoonPhase(ctx, x, y, solinari.phaseDisplay.value, solinariMax, solinari.day.value, textRadiusSolinari);
+  drawMoonPhase(ctx, x, y, lunitari.phaseDisplay.value, lunitariMax, lunitari.day.value, textRadiusLunitari);
+  drawMoonPhase(ctx, x, y, nuitari.phaseDisplay.value, nuitariMax, nuitari.day.value, textRadiusNuitari);
   ctx.restore();
 }
 
