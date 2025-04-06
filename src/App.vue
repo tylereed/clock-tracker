@@ -55,8 +55,11 @@ function setActiveTiles() {
   activeTiles.value.clear();
   const tilesOrder = tilesStore.allTiles();
   const sortedTiles = tilesStore.selectedTiles.toSorted((x, y) => tilesOrder.indexOf(x) - tilesOrder.indexOf(y));
-  for (const t of sortedTiles) {
-    activeTiles.value.set(t, allTiles.get(t)!);
+  for (const tileId of sortedTiles) {
+    const tile = allTiles.get(tileId);
+    if (tile) {
+      activeTiles.value.set(tileId, tile);
+    }
   }
 }
 
