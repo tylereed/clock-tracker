@@ -1,10 +1,10 @@
 <template>
-  <v-container>
-    <v-row>
-      <v-col cols="8">
+  <v-container v-resize="resizeCanvas">
+    <v-row class="d-flex justify-center">
+      <v-col cols="auto">
         <canvas ref="canvasRef" class="ma-2" :width="size" :height="size" />
       </v-col>
-      <v-col cols="4">
+      <v-col cols="auto">
         <v-row>
           <v-col>
             <moon-status v-bind="solinari" v-model="solinari.day" />
@@ -37,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUpdated, Ref, ref, watch } from "vue";
+import { nextTick, onMounted, onUpdated, Ref, ref, watch } from "vue";
 import { useTheme } from "vuetify";
 
 import { MoonState, MoonStateProps } from "@/components/moonTracker/moon";
@@ -50,8 +50,20 @@ onMounted(render);
 onUpdated(render);
 watch(vTheme.current, render);
 
+const maxMoonSize = 500;
+
 const canvasRef = ref<HTMLCanvasElement>();
-const size = ref(500);
+const size = ref(maxMoonSize);
+
+
+async function resizeCanvas() {
+  const padding = 150;
+  size.value = Math.max(200, Math.min(window.innerWidth / 2 - padding, maxMoonSize));
+}
+watch(size, async () => {
+  await nextTick();
+  render();
+});
 
 const solinariMax = 36;
 const lunitariMax = 28;
@@ -155,7 +167,7 @@ function drawMoonPhase(ctx: CanvasRenderingContext2D, x: number, y: number,
   const xOffset = radius * Math.sin(originAngle + dayAngle);
   const yOffset = radius * Math.cos(originAngle + dayAngle);
 
-  ctx.strokeText(text, x + xOffset, y + yOffset);
+  ctx.fillText(text, x + xOffset, y + yOffset);
 }
 
 function render() {
@@ -173,6 +185,7 @@ function render() {
   const x = width / 2;
   const y = height / 2;
   const ctx = canvas?.getContext("2d");
+
   if (!ctx) return;
 
   ctx.save();
@@ -185,7 +198,10 @@ function render() {
 
   ctx.save();
 
-  ctx.font = "30pt Verdana";
+  const fontPercent = width / maxMoonSize;
+  const fontSize = Math.floor(fontPercent * 30);
+
+  ctx.font = fontSize + "pt Verdana";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
