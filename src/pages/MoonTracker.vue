@@ -7,17 +7,17 @@
       <v-col cols="4">
         <v-row>
           <v-col>
-            <moon-status v-bind="solinari" />
+            <moon-status v-bind="solinari" v-model="solinari.day" />
           </v-col>
         </v-row>
         <v-row>
           <v-col>
-            <moon-status v-bind="lunitari" />
+            <moon-status v-bind="lunitari" v-model="lunitari.day" />
           </v-col>
         </v-row>
         <v-row>
           <v-col>
-            <moon-status v-bind="nuitari" />
+            <moon-status v-bind="nuitari" v-model="nuitari.day" />
           </v-col>
         </v-row>
         <v-row>
@@ -37,10 +37,10 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUpdated, ref, watch } from "vue";
+import { onMounted, onUpdated, Ref, ref, watch } from "vue";
 import { useTheme } from "vuetify";
 
-import { MoonState } from "@/components/moonTracker/moon";
+import { MoonState, MoonStateProps } from "@/components/moonTracker/moon";
 import { useMoonBonus, useMoonStatus } from "@/components/moonTracker/moonHelpers";
 import MoonStatus from "@/components/moonTracker/MoonStatus.vue";
 
@@ -64,16 +64,25 @@ const lunitariPart: Omit<MoonState, "bonus"> = useMoonStatus("Lunitari", lunitar
 const nuitariPart: Omit<MoonState, "bonus"> = useMoonStatus("Nuitari", nuitariMax);
 const [solinariBonus, lunitariBonus, nuitariBonus] = useMoonBonus(solinariPart, lunitariPart, nuitariPart);
 
-const solinari: MoonState = { ...solinariPart, bonus: solinariBonus };
-const lunitari: MoonState = { ...lunitariPart, bonus: lunitariBonus };
-const nuitari: MoonState = { ...nuitariPart, bonus: nuitariBonus };
+const solinari: Ref<MoonStateProps> = ref({ ...solinariPart, bonus: solinariBonus });
+const lunitari: Ref<MoonStateProps> = ref({ ...lunitariPart, bonus: lunitariBonus });
+const nuitari: Ref<MoonStateProps> = ref({ ...nuitariPart, bonus: nuitariBonus });
 
-watch([solinari.day, lunitari.day, nuitari.day], render);
+function positiveModulo(dividend: number, divisor: number) {
+  return ((dividend % divisor) + divisor) % divisor;
+}
+
+watch([solinariPart.day, lunitariPart.day, nuitariPart.day], ([newSol, newLun, newNui]) => {
+  solinari.value.day = positiveModulo(newSol, solinariMax);
+  lunitari.value.day = positiveModulo(newLun, lunitariMax);
+  nuitari.value.day = positiveModulo(newNui, nuitariMax);
+  render();
+});
 
 function addDays(toAdd: number) {
-  solinari.day.value = (solinari.day.value + toAdd + solinariMax) % solinariMax;
-  lunitari.day.value = (lunitari.day.value + toAdd + lunitariMax) % lunitariMax;
-  nuitari.day.value = (nuitari.day.value + toAdd + nuitariMax) % nuitariMax;
+  solinari.value.day += toAdd;
+  lunitari.value.day += toAdd;
+  nuitari.value.day += toAdd;
 }
 
 function addDay() {
@@ -85,9 +94,9 @@ function subtractDay() {
 }
 
 function randomizeDays() {
-  solinari.day.value = Math.floor(solinariMax * Math.random());
-  lunitari.day.value = Math.floor(lunitariMax * Math.random());
-  nuitari.day.value = Math.floor(nuitariMax * Math.random());
+  solinari.value.day = Math.floor(solinariMax * Math.random());
+  lunitari.value.day = Math.floor(lunitariMax * Math.random());
+  nuitari.value.day = Math.floor(nuitariMax * Math.random());
 }
 
 const tau = Math.PI * 2;
@@ -180,9 +189,9 @@ function render() {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  drawMoonPhase(ctx, x, y, solinari.phaseDisplay.value, solinariMax, solinari.day.value, textRadiusSolinari);
-  drawMoonPhase(ctx, x, y, lunitari.phaseDisplay.value, lunitariMax, lunitari.day.value, textRadiusLunitari);
-  drawMoonPhase(ctx, x, y, nuitari.phaseDisplay.value, nuitariMax, nuitari.day.value, textRadiusNuitari);
+  drawMoonPhase(ctx, x, y, solinari.value.phaseDisplay, solinariMax, solinari.value.day, textRadiusSolinari);
+  drawMoonPhase(ctx, x, y, lunitari.value.phaseDisplay, lunitariMax, lunitari.value.day, textRadiusLunitari);
+  drawMoonPhase(ctx, x, y, nuitari.value.phaseDisplay, nuitariMax, nuitari.value.day, textRadiusNuitari);
   ctx.restore();
 }
 
