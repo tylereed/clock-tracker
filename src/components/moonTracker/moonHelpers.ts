@@ -10,12 +10,43 @@ function getPhase(day: number, max: number): MoonPhase {
   return "Waning";
 }
 
+const moonPhases = ["🌘", "🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"];
 function getPhaseDisplay(day: number, max: number) {
+
   const phase = getPhase(day, max);
-  if (phase === "New") return "🌑";
-  if (phase === "Waxing") return "🌓";
-  if (phase === "Full") return "🌕";
-  return "🌗";
+
+  if (max === 8) {
+    if (phase === "New") return "🌑";
+    if (phase === "Waxing") return "🌓";
+    if (phase === "Full") return "🌕";
+    return "🌗";
+  }
+
+  const daysInPhase = max / 4;
+  const dayPhase = day % daysInPhase;
+
+  let index;
+  switch (phase) {
+    case "New":
+      index = 1;
+      break;
+    case "Waxing":
+      index = 3;
+      break;
+    case "Full":
+      index = 5;
+      break;
+    case "Waning":
+      index = 7;
+      break;
+  }
+  if (dayPhase < 2) {
+    index--;
+  } else if (daysInPhase - dayPhase <= 2) {
+    index++;
+  }
+
+  return moonPhases[index];
 }
 
 export function useMoonStatus(name: string, max: number) {
