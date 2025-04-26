@@ -113,8 +113,15 @@ function randomizeDays() {
 
 const tau = Math.PI * 2;
 
-function drawMoon(ctx: CanvasRenderingContext2D, fillColor: string, x: number, y: number, radius: number) {
-  ctx.fillStyle = fillColor;
+function drawMoon(ctx: CanvasRenderingContext2D, startColor: string, endColor: string, width: number, x: number, y: number, radius: number) {
+  const start = width / 2 - radius;
+  const end = width - start;
+
+  const gradient = ctx.createLinearGradient(0, start, 0, end);
+  gradient.addColorStop(0, startColor);
+  gradient.addColorStop(1, endColor);
+
+  ctx.fillStyle = gradient;
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, tau);
   ctx.fill();
@@ -146,12 +153,16 @@ function drawMoons(ctx: CanvasRenderingContext2D, width: number, height: number,
 
   ctx.clearRect(0, 0, width, height);
 
-  ctx.strokeStyle = "#FFD700"; // golden yellow
+  const lineGradient = ctx.createLinearGradient(0, 0, 0, height);
+  lineGradient.addColorStop(0, "#FFD700"); // golden yellow
+  lineGradient.addColorStop(1, "#BFA100");
+
+  ctx.strokeStyle = lineGradient;
   ctx.lineWidth = 2.5;
 
-  drawMoon(ctx, "#FAF9F6", x, y, radiusSolinari); // off-white
-  drawMoon(ctx, "red", x, y, radiusLunitari);
-  drawMoon(ctx, "black", x, y, radiusNuitari);
+  drawMoon(ctx, "#F8F8FF", "#BFC1C2", width, x, y, radiusSolinari); // off-white
+  drawMoon(ctx, "#EF0000", "#6F0000", width, x, y, radiusLunitari);
+  drawMoon(ctx, "#707070", "black", width, x, y, radiusNuitari);
 
   const originAngle = -Math.PI / 4;
   drawSegments(ctx, solinariMax, x, y, originAngle, radiusLunitari, radiusSolinari);
