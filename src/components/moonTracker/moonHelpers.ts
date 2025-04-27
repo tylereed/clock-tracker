@@ -1,6 +1,6 @@
 import { useStorage } from "@vueuse/core";
 import { computed, Ref } from "vue";
-import { MoonPhase, MoonState } from "./moon";
+import { MoonPhase, MoonSize, MoonState } from "./moon";
 
 function getPhase(day: number, max: number): MoonPhase {
   const phaseNumber = Math.floor(day / (max / 4));
@@ -10,16 +10,17 @@ function getPhase(day: number, max: number): MoonPhase {
   return "Waning";
 }
 
-const moonPhases = ["🌘", "🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"];
-function getPhaseDisplay(day: number, max: number) {
+const moonPhases: MoonSize[] = ["Waning Crescent", "New Moon", "Waxing Crescent", "First Quarter",
+  "Waxing Gibbous", "Full Moon", "Waning Gibbous", "Last Quarter", "Waning Crescent"];
+function getPhaseDisplay(day: number, max: number): MoonSize {
 
   const phase = getPhase(day, max);
 
   if (max === 8) {
-    if (phase === "New") return "🌑";
-    if (phase === "Waxing") return "🌓";
-    if (phase === "Full") return "🌕";
-    return "🌗";
+    if (phase === "New") return "New Moon";
+    if (phase === "Waxing") return "First Quarter";
+    if (phase === "Full") return "Full Moon";
+    return "Last Quarter";
   }
 
   const daysInPhase = max / 4;

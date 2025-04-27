@@ -40,7 +40,7 @@
 import { nextTick, onMounted, onUpdated, Ref, ref, watch } from "vue";
 import { useTheme } from "vuetify";
 
-import { MoonState, MoonStateProps } from "@/components/moonTracker/moon";
+import { MoonPhase, MoonSize, MoonState, MoonStateProps } from "@/components/moonTracker/moon";
 import { useMoonBonus, useMoonStatus } from "@/components/moonTracker/moonHelpers";
 import MoonStatus from "@/components/moonTracker/MoonStatus.vue";
 
@@ -171,14 +171,52 @@ function drawMoons(ctx: CanvasRenderingContext2D, width: number, height: number,
 }
 
 function drawMoonPhase(ctx: CanvasRenderingContext2D, x: number, y: number,
-  text: string, max: number, day: number, radius: number) {
+  miniRadius: number, phaseDisplay: MoonSize, max: number, day: number, radius: number) {
 
   const originAngle = -Math.PI / 4 + tau / max / 2;
   const dayAngle = tau * day / max;
   const xOffset = radius * Math.sin(originAngle + dayAngle);
   const yOffset = radius * Math.cos(originAngle + dayAngle);
 
-  ctx.fillText(text, x + xOffset, y + yOffset);
+  //ctx.fillText(text, x + xOffset, y + yOffset);
+
+  let fill: string;
+  let secondFill: string;
+  if (phaseDisplay.endsWith("Crescent") || phaseDisplay === "Full Moon") {
+    fill = "yellow";
+    secondFill = "purple";
+  } else {
+    fill = "purple";
+    secondFill = "yellow";
+  }
+
+  ctx.fillStyle = fill;
+  ctx.strokeStyle = fill;
+  ctx.beginPath();
+  ctx.arc(x + xOffset, y + yOffset, miniRadius, 0, tau);
+  ctx.fill();
+  //ctx.stroke();
+  if (phaseDisplay === "Full Moon" || phaseDisplay === "New Moon") {
+    return;
+  }
+
+  // 🌑🌒🌓🌔🌕🌖🌗🌘
+  ctx.fillStyle = secondFill;
+  ctx.strokeStyle = secondFill;
+  //if (!phaseDisplay.endsWith("Crescent")) {
+  const counterCW = phaseDisplay === "Waning Gibbous" || phaseDisplay === "Waxing Crescent" || phaseDisplay.startsWith("Last");
+  ctx.beginPath();
+  ctx.arc(x + xOffset, y + yOffset, miniRadius, -Math.PI / 2, Math.PI / 2, counterCW);
+  // ctx.fill();
+  // ctx.stroke();
+
+  if (!phaseDisplay.endsWith("Quarter")) {
+    //ctx.beginPath();
+    ctx.ellipse(x + xOffset, y + yOffset, miniRadius / 2, miniRadius, 0, -Math.PI / 2, Math.PI / 2, !counterCW);
+  }
+    ctx.fill();
+    ctx.stroke();
+  //}
 }
 
 function render() {
@@ -209,16 +247,19 @@ function render() {
 
   ctx.save();
 
-  const fontPercent = width / maxMoonSize;
-  const fontSize = Math.floor(fontPercent * 30);
+  // const fontPercent = width / maxMoonSize;
+  // const fontSize = Math.floor(fontPercent * 30);
 
-  ctx.font = fontSize + "pt Verdana";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  // ctx.font = fontSize + "pt Verdana";
+  // ctx.textAlign = "center";
+  // ctx.textBaseline = "middle";
 
-  drawMoonPhase(ctx, x, y, solinari.value.phaseDisplay, solinariMax, solinari.value.day, textRadiusSolinari);
-  drawMoonPhase(ctx, x, y, lunitari.value.phaseDisplay, lunitariMax, lunitari.value.day, textRadiusLunitari);
-  drawMoonPhase(ctx, x, y, nuitari.value.phaseDisplay, nuitariMax, nuitari.value.day, textRadiusNuitari);
+  const maxMiniMoon = 32;
+  const miniMoonSize = maxMiniMoon * width / maxMoonSize / 2;
+
+  drawMoonPhase(ctx, x, y, miniMoonSize, solinari.value.phaseDisplay, solinariMax, solinari.value.day, textRadiusSolinari);
+  drawMoonPhase(ctx, x, y, miniMoonSize, lunitari.value.phaseDisplay, lunitariMax, lunitari.value.day, textRadiusLunitari);
+  drawMoonPhase(ctx, x, y, miniMoonSize, nuitari.value.phaseDisplay, nuitariMax, nuitari.value.day, textRadiusNuitari);
   ctx.restore();
 }
 

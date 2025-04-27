@@ -2,12 +2,14 @@ import { Ref } from "vue";
 
 export type MoonPhase = "New" | "Waxing" | "Full" | "Waning";
 
+export type MoonSize = "New Moon" | "Waxing Crescent" | "First Quarter" | "Waxing Gibbous" | "Full Moon" | "Waning Gibbous" | "Last Quarter" | "Waning Crescent";
+
 export interface MoonState {
   name: string;
   day: Ref<number>;
   dayDisplay: Ref<number>;
   phase: Ref<MoonPhase>;
-  phaseDisplay: Ref<string>;
+  phaseDisplay: Ref<MoonSize>;
   bonus: Ref<number>;
 }
 
@@ -17,7 +19,7 @@ export interface MoonStateProps {
   day: number;
   dayDisplay: number;
   phase: MoonPhase;
-  phaseDisplay: string;
+  phaseDisplay: MoonSize;
   bonus: number;
 }
 
