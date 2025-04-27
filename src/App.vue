@@ -29,22 +29,35 @@ import Clocks from "@/pages/Clocks.vue";
 import Encounters from "@/pages/Encounters.vue";
 import Timer from "@/pages/Timers.vue";
 import WordFormatter from "@/pages/WordFormatter.vue";
+import MoonTracker from "@/pages/MoonTracker.vue";
 
 import Tile from "@/types/Tile";
 import { clearCaches } from "@/utils/Cache";
 import Settings from "@/components/settings/Settings.vue";
-import { useTilesStore } from "@/stores/tiles";
+import { useTilesStore, tileIds } from "@/stores/tiles";
 import { getUnique } from "./utils/helpers";
 
 const tilesStore = useTilesStore();
 
-const tiles = [
-  { visible: tilesStore.openTiles.includes("Timers"), title: "Timers", component: shallowRef(Timer) },
-  { visible: tilesStore.openTiles.includes("Clocks"), title: "Clocks", component: shallowRef(Clocks) },
-  { visible: tilesStore.openTiles.includes("Encounters"), title: "Encounters", component: shallowRef(Encounters) },
-  { visible: tilesStore.openTiles.includes("WordFormatter"), title: "Word Formatter", component: shallowRef(WordFormatter) }
-];
-const allTiles = new Map(tiles.map(t => [t.title, t]));
+function* buildTiles() {
+  function buildTile(id: string, shallow: any) {
+    const t = {
+      id: id,
+      visible: tilesStore.openTiles.includes(id),
+      title: tilesStore.tileIdToName(id)!,
+      component: shallow
+    };
+    return [id, t] as const;
+  }
+
+  yield buildTile(tileIds.Timer, shallowRef(Timer));
+  yield buildTile(tileIds.Clock, shallowRef(Clocks));
+  yield buildTile(tileIds.Encounter, shallowRef(Encounters));
+  yield buildTile(tileIds.WordFormatter, shallowRef(WordFormatter));
+  yield buildTile(tileIds.MoonTracker, shallowRef(MoonTracker));
+}
+
+const allTiles = new Map(buildTiles());
 
 const activeTiles = ref<Map<string, Tile>>(new Map());
 setActiveTiles();

@@ -1,7 +1,22 @@
 import { defineStore } from "pinia";
 import { useStorage } from "@vueuse/core";
 
-const tiles = ["Timers", "Clocks", "Encounters", "Word Formatter"];
+export const tileIds = {
+  get Timer() { return "Timers" },
+  get Clock() { return "Clocks" },
+  get Encounter() { return "Encounters" },
+  get WordFormatter() { return "WordFormatter" },
+  get MoonTracker() { return "MoonTracker" },
+};
+
+const tiles = [tileIds.Timer, tileIds.Clock, tileIds.Encounter, tileIds.WordFormatter, tileIds.MoonTracker];
+const tilesName = new Map([
+  [tileIds.Timer, "Timers"],
+  [tileIds.Clock, "Clocks"],
+  [tileIds.Encounter, "Encounters"],
+  [tileIds.WordFormatter, "Word Formatter"],
+  [tileIds.MoonTracker, "Krynn Moon Tracker"],
+]);
 
 export const useTilesStore = defineStore("tiles", () => {
 
@@ -19,5 +34,9 @@ export const useTilesStore = defineStore("tiles", () => {
     return tiles;
   }
 
-  return { allTiles, openTiles, selectedTiles };
+  function tileIdToName(id: string) {
+    return tilesName.get(id);
+  }
+
+  return { allTiles, openTiles, selectedTiles, tileIdToName };
 });
