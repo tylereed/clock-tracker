@@ -1,6 +1,6 @@
 import { getMonsterCached, MonsterO5e } from "@/utils/Open5e";
-import { HalfDragonOptions } from "./types";
-import { appendList, modifyBlindSight, modifyDarkvision, stringToCr } from "./utils";
+import { HalfDragonOptions } from "../types";
+import { appendList, modifyBlindSight, modifyDarkvision, stringToCr } from "../utils";
 
 // The template says that it's the lowest cr of that age group, but we cheat a bit and just take the average
 const ancientCr = 24;

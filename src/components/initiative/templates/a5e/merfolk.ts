@@ -1,6 +1,6 @@
 import { MonsterO5e } from "@/utils/Open5e";
-import { MerfolkOptions } from "./types";
-import { addOrReplaceIfBetter, crToPb, formatDescription, modifyDarkvision, stringToCr } from "./utils";
+import { MerfolkOptions } from "../types";
+import { addOrReplaceIfBetter, crToPb, formatDescription, modifyDarkvision, stringToCr } from "../utils";
 import Dice from "@/utils/Dice";
 import { Action } from "@/utils/Attack";
 

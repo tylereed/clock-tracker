@@ -3,7 +3,7 @@ import pluralize from "pluralize";
 import { parse as parseAttack } from "@/utils/Attack";
 import Dice from "@/utils/Dice";
 import { MonsterO5e, } from "@/utils/Open5e";
-import { crToPb, formatDescription, increaseSize, stringToCr } from "./utils";
+import { crToPb, formatDescription, increaseSize, stringToCr } from "../utils";
 
 function increaseSquadDamage(dice: Dice) {
   const damageDice = new Dice(5 * dice.Count, dice.Sides, 5 * dice.Modifier);

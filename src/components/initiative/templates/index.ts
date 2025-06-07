@@ -1,12 +1,12 @@
 import { MonsterO5e } from "@/utils/Open5e";
 
 import { HalfDragonOptions, MerfolkOptions, TemplateOptions, TemplateType, ZombieOptions } from "./types";
-import { applySquadTemplate } from "./squad";
-import { appplySkeletonTemplate } from "./skeleton";
-import { applyZombieTemplate } from "./zombie";
-import { applyMerfolkTemplate } from "./merfolk";
-import { applySahuaginTemplate } from "./sahuagin";
-import { applyHalfDragonTemplate } from "./halfDragon";
+import { applySquadTemplate } from "./a5e/squad";
+import { appplySkeletonTemplate } from "./a5e/skeleton";
+import { applyZombieTemplate } from "./a5e/zombie";
+import { applyMerfolkTemplate } from "./a5e/merfolk";
+import { applySahuaginTemplate } from "./a5e/sahuagin";
+import { applyHalfDragonTemplate } from "./a5e/halfDragon";
 
 export async function applyTemplate(template: TemplateType, stats: MonsterO5e, options?: TemplateOptions): Promise<MonsterO5e> {
   switch (template) {

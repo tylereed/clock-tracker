@@ -1,9 +1,9 @@
 import { Action, parse as parseAttack } from "@/utils/Attack";
 import { MonsterO5e } from "@/utils/Open5e";
-import { ZombieOptions } from "./types";
+import { ZombieOptions } from "../types";
 import Dice from "@/utils/Dice";
 import * as h from "@/utils/helpers";
-import { addOrReplaceIfBetter, addPlusDamage, appendList, crToPb, formatDescription, getSizeNumber, modifyDarkvision, notMagic } from "./utils";
+import { addOrReplaceIfBetter, addPlusDamage, appendList, crToPb, formatDescription, getSizeNumber, modifyDarkvision, notMagic } from "../utils";
 
 function* buildZombieAbilities(options: Partial<ZombieOptions>, dc: number) {
 
