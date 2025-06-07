@@ -1,6 +1,6 @@
 import debounce from "debounce";
 
-import Initiative, { Actions, InitiativeColumns, Initiatives, InitKey } from "@/types/Initiative";
+import Initiative, { ActionDescription, InitiativeColumns, Initiatives, InitKey, InitWithId } from "@/types/Initiative";
 import Dice from "@/utils/Dice";
 import { Command, Executor } from "@/utils/Executor";
 import { MonsterO5e } from "@/utils/Open5e";
@@ -93,7 +93,7 @@ export function buildInitiativeColumns(columns: Partial<InitiativeColumns>) {
   return { ...defaultColumns, ...columns };
 }
 
-function* buildActions(...args: ({ name: string, desc: string }[] | undefined)[]): Generator<Actions> {
+function* buildActions(...args: ({ name: string, desc: string }[] | undefined)[]): Generator<ActionDescription> {
 
   for (const arg of args) {
     if (arg) {

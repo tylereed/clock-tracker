@@ -15,9 +15,9 @@
 </template>
 
 <script setup lang="ts">
-import { Actions } from "@/types/Initiative";
+import { ActionDescription } from "@/types/Initiative";
 
-const props = defineProps<{ label: string, actions?: Actions[] }>();
+const props = defineProps<{ label: string, actions?: ActionDescription[] }>();
 
 const emit = defineEmits<{
   (e: "addAction"): void,

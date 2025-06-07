@@ -1,4 +1,4 @@
-import { Action } from "@/utils/Attack";
+import { AttackDetails } from "@/utils/Attack";
 import Dice from "@/utils/Dice";
 import { MonsterO5e } from "@/utils/Open5e";
 import { addOrReplaceIfBetter, crToPb, formatDescription, modifyDarkvision } from "./utils";
@@ -37,7 +37,7 @@ export function applySahuaginTemplate(stats: MonsterO5e): MonsterO5e  {
 
   template.actions ??= [];
   const clawDice = new Dice(1, 8, strBonus);
-  const clawAction: Action = {
+  const clawAction: AttackDetails = {
     isMelee: true,
     isRanged: false,
     isWeapon: true,
@@ -53,7 +53,7 @@ export function applySahuaginTemplate(stats: MonsterO5e): MonsterO5e  {
 
   template.bonus_actions ??= [];
   const biteDice = new Dice(1, 4, strBonus);
-  const biteAction: Action = {
+  const biteAction: AttackDetails = {
     isMelee: true,
     isRanged: false,
     isWeapon: true,

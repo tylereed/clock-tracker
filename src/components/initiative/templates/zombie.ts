@@ -1,4 +1,4 @@
-import { Action, parse as parseAttack } from "@/utils/Attack";
+import { AttackDetails, parse as parseAttack } from "@/utils/Attack";
 import { MonsterO5e } from "@/utils/Open5e";
 import { ZombieOptions } from "./types";
 import Dice from "@/utils/Dice";
@@ -70,7 +70,7 @@ export function applyZombieTemplate(stats: MonsterO5e, options: ZombieOptions): 
   const dc = 8 + pb + Math.max(strMod, dexMod);
 
   const biteAttackDice = new Dice(1 + sizeIncrease, 10, strMod);
-  const biteAttack: Action = {
+  const biteAttack: AttackDetails = {
     isMelee: true,
     isRanged: false,
     isWeapon: true,
@@ -93,7 +93,7 @@ export function applyZombieTemplate(stats: MonsterO5e, options: ZombieOptions): 
   const biteAction = { name: "Bite", desc: formatDescription(biteAttack) };
 
   const grabAttackDice = new Dice(1 + sizeIncrease, 6, strMod);
-  const grabAttack: Action = {
+  const grabAttack: AttackDetails = {
     isMelee: true,
     isRanged: false,
     isWeapon: true,

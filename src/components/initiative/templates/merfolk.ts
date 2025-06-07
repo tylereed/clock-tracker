@@ -2,7 +2,7 @@ import { MonsterO5e } from "@/utils/Open5e";
 import { MerfolkOptions } from "./types";
 import { addOrReplaceIfBetter, crToPb, formatDescription, modifyDarkvision, stringToCr } from "./utils";
 import Dice from "@/utils/Dice";
-import { Action } from "@/utils/Attack";
+import { AttackDetails } from "@/utils/Attack";
 
 
 export function applyMerfolkTemplate(stats: MonsterO5e, options: MerfolkOptions): MonsterO5e  {
@@ -30,7 +30,7 @@ export function applyMerfolkTemplate(stats: MonsterO5e, options: MerfolkOptions)
   const versatileDice = new Dice(1, 8, strMod);
 
   if (options.includeTrident) {
-    const trident: Action = {
+    const trident: AttackDetails = {
       isMelee: true,
       isRanged: true,
       isWeapon: true,

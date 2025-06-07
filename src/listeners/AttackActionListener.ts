@@ -1,11 +1,11 @@
 import AttackListener from "@/generated/parsers/AttackListener";
 import { AttackContext, DamageContext, MeleeRangedContext, PlusDamageContext, RangeContext, ReachContext, TargetsContext, ToHitContext, VersatileDamageContext, WeaponSpellContext } from "@/generated/parsers/AttackParser";
-import { Action } from "@/utils/Attack";
+import { AttackDetails } from "@/utils/Attack";
 import Dice from "@/utils/Dice";
 
 export default class AttackActionListener extends AttackListener {
 
-  #action: Action;
+  #action: AttackDetails;
 
   constructor() {
     super();
