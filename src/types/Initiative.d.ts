@@ -15,22 +15,24 @@ export default interface Initiative {
   conditions: Conditions;
   level?: number;
   cr?: string;
-  traits?: Actions[];
-  actions?: Actions[];
-  bonusActions?: Actions[];
-  reactions?: Actions[];
-  legendaryActions?: Actions[];
+  traits?: ActionDescription[];
+  actions?: ActionDescription[];
+  bonusActions?: ActionDescription[];
+  reactions?: ActionDescription[];
+  legendaryActions?: ActionDescription[];
   saves?: { str: number, dex: number, con: number, int: number, wis: number, cha: number };
-  [key: InitiativeActionKey]: Actions[];
+  [key: InitiativeActionKey]: ActionDescription[] | undefined;
 }
 
-export interface Actions {
+export interface ActionDescription {
   name: string;
   desc: string;
 }
 
 export type InitWithId = Initiative & { id: number };
+export type MonsterInitiative = InitWithId & { cr: string };
 export type Initiatives = InitWithId[];
+export type Encounter = MonsterInitiative[];
 
 export interface InitiativeColumns {
   hasInitiative: boolean,

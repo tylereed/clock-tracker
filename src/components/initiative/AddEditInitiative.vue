@@ -99,7 +99,7 @@ import ShowStats from "./ShowStats.vue";
 import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
 
 import Dice from "@/utils/Dice";
-import Initiative, { Actions, InitiativeActionKey, InitWithId } from "@/types/Initiative";
+import Initiative, { ActionDescription, InitiativeActionKey, InitWithId } from "@/types/Initiative";
 import { MonsterO5e } from "@/utils/Open5e";
 import v from "./InitiativeRules";
 import { monsterO5eToInitiative } from "./initiativeHelpers";
@@ -130,7 +130,7 @@ function setMonster(monster: MonsterO5e) {
   newInit.value = monsterO5eToInitiative(monster);
 }
 
-function cloneActions(actions?: Actions[]): Actions[] {
+function cloneActions(actions?: ActionDescription[]): ActionDescription[] {
   if (actions?.length) {
     return actions.map(x => ({ ...x }));
   }
@@ -197,7 +197,7 @@ function asInt(item?: number | string) {
   return undefined;
 }
 
-function cleanActions(actions?: Actions[]): Actions[] {
+function cleanActions(actions?: ActionDescription[]): ActionDescription[] {
   if (actions?.length) {
     return actions.filter(x => x.name && x.desc);
   }

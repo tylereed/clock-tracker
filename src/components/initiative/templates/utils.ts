@@ -1,4 +1,4 @@
-import { Action, parse as parseAttack } from "@/utils/Attack";
+import { AttackDetails, parse as parseAttack } from "@/utils/Attack";
 import Dice from "@/utils/Dice";
 import { Size } from "@/utils/Open5e";
 import pluralize from "pluralize";
@@ -80,7 +80,7 @@ export function intToWord(n: number) {
   return intWords[n];
 }
 
-export function formatDescription(attack: Action) {
+export function formatDescription(attack: AttackDetails) {
   let result = "";
 
   if (attack.isMelee && attack.isRanged) {
@@ -148,7 +148,7 @@ export function formatDescription(attack: Action) {
   return result;
 }
 
-export function addPlusDamage(action: Action, plus: Dice, damageType: string) {
+export function addPlusDamage(action: AttackDetails, plus: Dice, damageType: string) {
 
   if ((action.plusDamageAverage ?? 0) > plus.Average) {
     // existing plus damage is better.  Leave it.
@@ -160,7 +160,7 @@ export function addPlusDamage(action: Action, plus: Dice, damageType: string) {
   action.plusDamageType = damageType;
 }
 
-export function addOrReplaceIfBetter(actions: { name: string; desc: string }[], newAction: { name: string; desc: string; }, newAttack: Action) {
+export function addOrReplaceIfBetter(actions: { name: string; desc: string }[], newAction: { name: string; desc: string; }, newAttack: AttackDetails) {
   const index = actions.findIndex(a => a.name === newAction.name);
   if (index === -1) {
     actions.push(newAction);

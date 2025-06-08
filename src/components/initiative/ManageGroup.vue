@@ -1,7 +1,7 @@
 <template>
   <v-container fluid>
     <v-row>
-      <v-col cols="11">
+      <v-col>
         <v-combobox :label="label" v-model="search" @update:model-value="setSelected" :items="groupStore.names"
           @keyup.enter="createNewGroup" :hide-no-data="false">
           <template v-slot:no-data>
@@ -14,12 +14,20 @@
           </template>
         </v-combobox>
       </v-col>
-      <v-col>
+      <v-col cols="1">
         <div class="pt-2">
           <v-btn :disabled="groupStore.names.length <= 1">
             <v-icon icon="mdi-delete-forever" color="error" @click="deleteSelectedGroup()" />
           </v-btn>
         </div>
+      </v-col>
+      <v-col cols="4" v-if="showMonster">
+        <v-card flat>
+          <v-card-text class="pa-0">
+            <b class="ma-4 ps-2" style="font-size: 1.25rem;">Dice</b>
+            <v-chip class="ma-1" v-for="(count, sides) in diceCount">{{ sides }}: {{ count }}</v-chip>
+          </v-card-text>
+        </v-card>
       </v-col>
     </v-row>
   </v-container>
@@ -28,12 +36,13 @@
     @edit-initiative="editInitiative" @insert-init-command="insertInitCommand" />
   <v-container fluid>
     <v-row>
-      <v-col>
+      <v-col cols="1">
         <v-btn variant="elevated" color="primary" @click="addEntry()">Add</v-btn>
       </v-col>
       <v-col>
         <v-btn variant="elevated" color="primary" @click="sendToInit()">Send to Initiative</v-btn>
       </v-col>
+      <v-spacer />
     </v-row>
   </v-container>
   <monster-search v-if="showMonster" @add-monster="addExistingMonster" />
@@ -60,7 +69,7 @@ import { useGroupStoreNamed } from "@/stores/groups";
 import Initiative, { Initiatives, InitWithId } from "@/types/Initiative";
 import { Executor } from "@/utils/Executor";
 import { first } from "@/utils/helpers";
-import { newEntry } from "./encounterHelpers";
+import { filterToMonsters, getEncounterDice, newEntry } from "./encounterHelpers";
 
 const props = defineProps<{
   label: string,
@@ -85,17 +94,30 @@ const initiatives = ref<Initiatives>([]);
 const search = ref<string>("Default");
 const selectedGroup = useStorage("selected-" + props.groupNamePrefix, "Default", sessionStorage);
 
+const diceCount = ref<{ [key: string]: number | undefined }>({});
+
+function updateDiceCount() {
+  if (props.showMonster) {
+    const monsters = filterToMonsters(initiatives.value);
+    diceCount.value = getEncounterDice(monsters);
+  }
+}
+
 watch(selectedGroup, (value) => {
   if (value) {
     initiatives.value = groupStore.allInitiatives.get(value) ?? [];
   } else {
     initiatives.value = [];
   }
+  updateDiceCount();
 });
 
 const columns = i.buildInitiativeColumns({ hasDex: true, hasEdit: true, hasCr: !!props.showMonster, hasLevel: !props.showMonster });
 
-const executor = new Executor(() => i.saveInits(initiatives.value, i.makeKey(`${groupNamePrefix.value}-${selectedGroup.value}`)));
+const executor = new Executor(() => {
+  i.saveInits(initiatives.value, i.makeKey(`${groupNamePrefix.value}-${selectedGroup.value}`));
+  updateDiceCount();
+});
 
 const groupStore = useGroupStoreNamed(groupNamePrefix.value);
 
@@ -183,6 +205,8 @@ function updateInit(id: number, init: Initiative) {
       setSelected(selected);
       initiatives.value[id] = { ...toRemove };
     });
+
+  updateDiceCount();
 }
 
 function sendToInit() {

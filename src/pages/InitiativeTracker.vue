@@ -9,7 +9,8 @@
         <v-col><v-btn @click="addInitiative()" variant="elevated" color="primary">Add
             Initiative</v-btn></v-col>
         <v-col cols="8"><v-btn @click="clearInitiative()" variant="outlined" color="error">Clear</v-btn></v-col>
-      </v-row></v-container>
+      </v-row>
+    </v-container>
     <monster-search @add-monster="addMonster" />
     <v-card-actions>
       <ts-undo-redo :executor="executor" />
@@ -21,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, watch } from "vue";
 
 import AddEditInitiative from "@/components/initiative/AddEditInitiative.vue";
 import InitiativeTable from "@/components/initiative/InitiativeTable.vue";
