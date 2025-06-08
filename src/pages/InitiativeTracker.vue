@@ -1,11 +1,5 @@
 <template>
   <div>
-    <v-card>
-      <v-card-title>Dice</v-card-title>
-      <v-card-text>
-        <v-chip class="ma-1" v-for="(count, sides) in diceCount">{{ sides }}: {{ count }}</v-chip>
-      </v-card-text>
-    </v-card>
     <initiative-table :initiatives="initiatives" :turn="turn" :round="round" :columns="columns"
       @apply-condition="applyCondition" @remove-condition="removeCondition" @delete-initiative="deleteInitiative"
       @increment-turn="incrementTurn" @decrement-turn="decrementTurn" @reset-turn="resetTurn"
@@ -15,7 +9,8 @@
         <v-col><v-btn @click="addInitiative()" variant="elevated" color="primary">Add
             Initiative</v-btn></v-col>
         <v-col cols="8"><v-btn @click="clearInitiative()" variant="outlined" color="error">Clear</v-btn></v-col>
-      </v-row></v-container>
+      </v-row>
+    </v-container>
     <monster-search @add-monster="addMonster" />
     <v-card-actions>
       <ts-undo-redo :executor="executor" />
@@ -38,18 +33,8 @@ import Conditions from "@/types/Conditions";
 import { Executor, Command } from "@/utils/Executor";
 import Initiative, { Initiatives } from "@/types/Initiative";
 import * as i from "@/components/initiative/initiativeHelpers";
-import { filterToMonsters, getEncounterDice } from "@/components/initiative/encounterHelpers";
 
 const initiatives = ref<Initiatives>([]);
-
-const diceCount = ref<{ [key: string]: number | undefined }>({});
-
-function updateDiceCount() {
-  const monsters = filterToMonsters(initiatives.value);
-  diceCount.value = getEncounterDice(monsters);
-}
-
-watch(initiatives, () => updateDiceCount());
 
 const columns = i.buildInitiativeColumns({ hasInitiative: true, hasHp: true, hasConditions: true });
 

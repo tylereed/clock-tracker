@@ -73,17 +73,28 @@ function* getMonsterDice(monster: MonsterInitiative) {
 }
 
 export function getEncounterDice(monsters: Encounter) {
-  const result: { [key: string]: number | undefined } = {};
+  const maxSides: { [key: string]: number | undefined } = {};
+
   for (const monster of monsters) {
     for (const dice of getMonsterDice(monster)) {
-      const currentCount = result[dice.sides] ?? 0;
+      const currentCount = maxSides[dice.sides] ?? 0;
       if (dice.count > currentCount) {
-        result[dice.sides] = dice.count;
+        maxSides[dice.sides] = dice.count;
       }
     }
   }
 
-  return result;
+  // object iteration is insertion order
+  // re-insert all properties into a new object in sorted order
+  const sides = Object.keys(maxSides);
+  sides.sort((a, b) => +b.substring(1) - +a.substring(1));
+
+  const sortedResult: { [key: string]: number | undefined } = {};
+  for (const s of sides) {
+    sortedResult[s] = maxSides[s];
+  }
+
+  return sortedResult;
 }
 
 export function filterToMonsters(group: Initiatives) {
