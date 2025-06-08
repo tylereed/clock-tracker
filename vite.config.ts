@@ -28,7 +28,10 @@ export default defineConfig({
       },
     }),
   ],
-  define: { "process.env": {} },
+  define: {
+    "process.env": {},
+    "import.meta.vitest": "undefined"
+  },
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
@@ -39,6 +42,7 @@ export default defineConfig({
     port: 3000,
   },
   test: {
+    includeSource: ['src/**/*.{js,ts}'],
     globals: true,
     environment: "jsdom",
     testTimeout: 10000,

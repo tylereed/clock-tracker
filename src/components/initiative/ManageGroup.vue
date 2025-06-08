@@ -24,6 +24,13 @@
     </v-row>
   </v-container>
 
+  <v-card v-if="showMonster">
+    <v-card-title>Dice</v-card-title>
+    <v-card-text>
+      <v-chip class="ma-1" v-for="(count, sides) in diceCount">{{ sides }}: {{ count }}</v-chip>
+    </v-card-text>
+  </v-card>
+
   <initiative-table :initiatives="initiatives" :columns="columns" @delete-initiative="deleteInitiative"
     @edit-initiative="editInitiative" @insert-init-command="insertInitCommand" />
   <v-container fluid>
@@ -60,7 +67,7 @@ import { useGroupStoreNamed } from "@/stores/groups";
 import Initiative, { Initiatives, InitWithId } from "@/types/Initiative";
 import { Executor } from "@/utils/Executor";
 import { first } from "@/utils/helpers";
-import { newEntry } from "./encounterHelpers";
+import { filterToMonsters, getEncounterDice, newEntry } from "./encounterHelpers";
 
 const props = defineProps<{
   label: string,
@@ -84,6 +91,17 @@ function editInitiative(id: number) {
 const initiatives = ref<Initiatives>([]);
 const search = ref<string>("Default");
 const selectedGroup = useStorage("selected-" + props.groupNamePrefix, "Default", sessionStorage);
+
+const diceCount = ref<{ [key: string]: number | undefined }>({});
+
+function updateDiceCount() {
+  if (props.showMonster) {
+    const monsters = filterToMonsters(initiatives.value);
+    diceCount.value = getEncounterDice(monsters);
+  }
+}
+
+watch(initiatives, () => updateDiceCount());
 
 watch(selectedGroup, (value) => {
   if (value) {

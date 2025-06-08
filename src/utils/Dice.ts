@@ -14,7 +14,7 @@ export default class Dice {
     this.modifier = modifier;
   }
 
-  static D20 = {
+  static readonly D20 = {
     ofStat(stat: number) {
       const mod = Dice.calculateModifier(stat);
       return new Dice(1, 20, mod);

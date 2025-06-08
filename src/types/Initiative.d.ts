@@ -30,7 +30,7 @@ export interface ActionDescription {
 }
 
 export type InitWithId = Initiative & { id: number };
-export type MonsterInitiative = InitWithId & { cr: number };
+export type MonsterInitiative = InitWithId & { cr: string };
 export type Initiatives = InitWithId[];
 export type Encounter = MonsterInitiative[];
 
