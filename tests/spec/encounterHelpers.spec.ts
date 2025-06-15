@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import * as e from "../src/components/initiative/encounterHelpers";
+import * as e from "../../src/components/initiative/encounterHelpers";
 
 describe("getEncounterDice", () => {
 
