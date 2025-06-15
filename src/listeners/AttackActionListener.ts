@@ -22,7 +22,7 @@ export default class AttackActionListener extends AttackListener {
     };
   }
 
-  build() {
+  build(): AttackDetails {
     return { ...this.#action };
   }
 

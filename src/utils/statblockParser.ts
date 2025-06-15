@@ -67,10 +67,10 @@ function createScoreAbilityMatchFunc(header: string) {
 
     if ((match.indices?.length ?? 0) >= 1) {
       const wholeMatch = match.indices![0];
-      if (text.charAt(wholeMatch[0] - 1) === "\n") {
+      if (text.charAt(wholeMatch![0] - 1) === "\n") {
         score += 0.25;
       }
-      if (text.charAt(wholeMatch[1]) === "\n") {
+      if (text.charAt(wholeMatch![1]) === "\n") {
         score += 0.25;
       }
     }
@@ -497,5 +497,5 @@ export default function parseCustomMonster(text: string): StatBlock {
     bonusActions,
     legendaryActions,
     reactions
-  } as StatBlock;
+  };
 }

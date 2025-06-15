@@ -32,7 +32,6 @@ import { ref } from 'vue';
 import { useToast } from 'vue-toast-notification';
 
 import AddEditInitiative from '@/components/initiative/AddEditInitiative.vue';
-import { stat } from 'fs';
 
 const words = ref("");
 const loading = ref(false);

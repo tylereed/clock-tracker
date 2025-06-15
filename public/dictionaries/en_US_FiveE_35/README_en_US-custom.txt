@@ -342,10 +342,10 @@ and Australian word list.  It is under the following copyright:
   OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
   SUCH DAMAGE.
 
-Build Date: Sat Mar  1 08:12:48 MST 2025
+Build Date: Sun Jun 29 18:37:24 MDT 2025
 With Parameters:
   diacritic: strip
   max_size: 35
-  max_variant: 0
-  special: <none>
+  max_variant: 2
+  special: roman-numerals
   spelling: US
