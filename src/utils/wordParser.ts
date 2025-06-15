@@ -1,5 +1,6 @@
 import Typo from "typo-js";
 import { sleep } from "./helpers";
+import { appendFile, write, writeFile } from "fs";
 
 function addCustomWords(dict: Typo, ...words: string[]) {
   const d: any = dict;
@@ -125,7 +126,7 @@ function* fixupWords(words: string[], testWord: (w: string) => boolean) {
   yield previousWord;
 }
 
-function buildWords(text: string, testWord: (w: string) => boolean): string {
+function buildWordsForward(text: string, testWord: (w: string) => boolean): string[] {
 
   const letters = text.split(/\s+/).filter(x => x !== "");
   const size = letters.length;
@@ -178,10 +179,98 @@ function buildWords(text: string, testWord: (w: string) => boolean): string {
 
   if (unusedWords.length) {
     const allWords: string[] = [...combine(words, unusedWords)];
-    return [...fixupWords(allWords, testWord)].join(" ");
+    return [...fixupWords(allWords, testWord)];
   } else {
-    return words.map(x => x.word).join(" ");
+    return words.map(x => x.word);
   }
+}
+
+function buildWordsBackwards(text: string, testWord: (w: string) => boolean): string[] {
+
+  const letters = text.split(/\s+/).filter(x => x !== "");
+  const size = letters.length;
+
+  let currentWord = "";
+  let currentStartIndex = -1;
+
+  const covered = Array(size).fill(false);
+  const words: IndexedWord[] = [];
+
+  let start = size - 1;
+  let end = size;
+
+  while (true) {
+    let possiblyWord = letters.slice(start, end).join('');
+
+    if (testWord(possiblyWord)) {
+      currentWord = possiblyWord;
+      currentStartIndex = start;
+    }
+
+    start--;
+    if ((start < 0) || (end - start > 13)) {
+      if (currentWord) {
+        words.push({ start: currentStartIndex, end, word: currentWord });
+
+        for (let i = currentStartIndex; i < end; i++) {
+          covered[i] = true;
+        }
+      }
+
+      end = currentStartIndex === -1 ? end - 1 : currentStartIndex;
+      start = end - 1;
+
+      currentWord = "";
+      currentStartIndex = -1;
+      if (end <= 0) {
+        break;
+      }
+
+    }
+  }
+  words.reverse();
+
+  const unusedIndexes = [...findUnused(covered)];
+  const unusedWords: IndexedWord[] = [];
+  for (const u of unusedIndexes) {
+    const w = letters.slice(u.start, u.end).join("");
+    unusedWords.push({ ...u, word: w });
+  }
+
+  if (unusedWords.length) {
+    const allWords: string[] = [...combine(words, unusedWords)];
+    return [...fixupWords(allWords, testWord)];
+  } else {
+    return words.map(x => x.word);
+  }
+}
+
+function buildConsensus(forwards: string[], backwards: string[], testWord: (w: string) => boolean): string[] {
+  const fAllWords = forwards.map(testWord).every(x => x);
+  const bAllWords = backwards.map(testWord).every(x => x);
+
+  if (fAllWords != bAllWords) {
+    return fAllWords ? forwards : backwards;
+  }
+
+  //TODO: implement a consensus algorithm
+  return backwards;
+}
+
+function buildWords(text: string, testWord: (w: string) => boolean): string {
+  const forwards = buildWordsForward(text, testWord);
+  const backwards = buildWordsBackwards(text, testWord);
+
+  const forwardsResult = forwards.join(" ");
+  //return forwardsResult;
+
+  if (forwards.length != backwards.length || forwardsResult != backwards.join(" ")) {
+    const consensus = buildConsensus(forwards, backwards, testWord);
+    return consensus.join(" ");
+  } else {
+    return forwardsResult;
+  }
+
 }
 
 function findSpecialChars(text: string): string | symbol {
@@ -215,8 +304,8 @@ function isNumber(text: string) {
   return !!text.match(/^\d+$/);
 }
 
-function isThrow(text: string) {
-  return !!text.match(/^(\d+)?d(\d+)((\+|-)\d+)?$/);
+function isDiceThrow(text: string) {
+  return !!text.match(/^(?:\d+)?d(?:\d+)(?:(?:\+|-)\d+)?$/);
 }
 
 function endsWithNumber(text: string | null) {
@@ -260,16 +349,48 @@ function buildParagraph(words: (string | SpecialChar)[]): string[] {
   return paragraph;
 }
 
-export default async function formatParagraph(text: string, customWords: string[]) {
+let cacheKey: string | null = null;
+let cachedDictionary: Typo | null = null;
 
-  const dictionary = new Typo("en_US-custom", null, null, { dictionaryPath: "dictionaries", asyncLoad: true });
+async function loadDictionary(customWords: string[]) {
+  const key = customWords.join("|");
+  if (cachedDictionary != null && cacheKey === key) {
+    return cachedDictionary;
+  }
+
+  const dictionary = new Typo("en_FiveE", null, null, { dictionaryPath: "dictionaries", asyncLoad: true });
   while (!dictionary.loaded) {
     await sleep(100);
   }
   addCustomWords(dictionary, ...customWords);
+  cacheKey = key;
+  cachedDictionary = dictionary;
+  return dictionary;
+}
+
+export default async function formatParagraph(text: string, customWords: string[]) {
+  const dictionary = await loadDictionary(customWords);
+
+  //writeFile("./wordlist.csv", "", () => { });
+
+  // let realWords = "";
+  // let fakeWords = "";
+
+  // for (const foo of allWords.split("\n")) {
+  //   const isWord = dictionary.check(foo);
+  //   if (isWord) {
+  //     realWords += foo + "\n";
+  //   } else {
+  //     fakeWords += foo + "\n";
+  //   }
+  // }
+  // writeFile("./real_wordlist.csv", realWords, (err) => { if (err) console.error(err) });
+  // writeFile("./fake_wordlist.csv", fakeWords, (err) => { if (err) console.error(err) });
+
+  // return;
 
   const testWord = function (possiblyWord: string) {
-    return dictionary.check(possiblyWord) || isNumber(possiblyWord) || isThrow(possiblyWord);
+    return dictionary.check(possiblyWord) || isNumber(possiblyWord) || isDiceThrow(possiblyWord);
   }
 
   const lines = splitInput(text).map(findSpecialChars).filter(x => x !== "");
