@@ -1,586 +1,6 @@
-import Typo from "typo-js";
-import { sleep } from "./helpers";
-import { appendFile, readFile, writeFile } from "fs/promises";
-
-function addCustomWords(dict: Typo, ...words: string[]) {
-  const d: any = dict;
-  for (const w of words) {
-    d.dictionaryTable[w] = null;
-  }
-}
-
-interface SpecialChar {
-  symbol: symbol,
-  regex: RegExp,
-  text: string
-}
-
-interface IndexedWord {
-  start: number,
-  end: number,
-  word: string
-}
-
-const newline = Symbol("newline");
-const period = Symbol("period");
-const plus = Symbol("+");
-const minus = Symbol("-");
-const comma = Symbol(",");
-const colon = Symbol(":");
-const possessive = Symbol("possessive");
-const upperPossessive = Symbol("upperPossessive");
-const openParen = Symbol("openParen");
-const closeParen = Symbol("closeParen");
-const openQuote = Symbol("openQuote");
-const closeQuote = Symbol("closeQuote");
-
-const specialChars: SpecialChar[] = [
-  { symbol: newline, regex: /^\r?\n$/, text: "\n" },
-  { symbol: period, regex: /^\.$/, text: "." },
-  { symbol: plus, regex: /^\+$/, text: "+" },
-  { symbol: minus, regex: /^-$/, text: "-" },
-  { symbol: comma, regex: /^,$/, text: "," },
-  { symbol: colon, regex: /^:$/, text: ":" },
-  { symbol: possessive, regex: /^(?:'|’)s$/, text: "'s" },
-  { symbol: upperPossessive, regex: /^(?:'|’)S$/, text: "'S" },
-  { symbol: openParen, regex: /\(/, text: "(" },
-  { symbol: closeParen, regex: /\)/, text: ")" },
-  { symbol: openQuote, regex: /“/, text: '“' },
-  { symbol: closeQuote, regex: /”/, text: '”' }
-];
-
-function splitInput(text: string): string[] {
-  return text.split(/(\r?\n|\.|,|\+|-|:|(?:'|’)s|\(|\)|“|”)/i);
-}
-
-function* findUnused(covered: boolean[]) {
-  let start = 0;
-
-  while (true) {
-    let firstFalse = covered.indexOf(false, start);
-    if (firstFalse === -1) {
-      return;
-    }
-
-    let next = covered.indexOf(true, firstFalse);
-    if (next === -1) {
-      yield { start: firstFalse, end: covered.length };
-      return;
-    }
-    yield { start: firstFalse, end: next };
-    start = next;
-  }
-}
-
-function* combine(used: IndexedWord[], unused: IndexedWord[]) {
-  used = used.toReversed();
-  unused = unused.toReversed();
-
-  while (used.length && unused.length) {
-    if (used[used.length - 1].start < unused[unused.length - 1].start) {
-      yield used.pop()!.word;
-    } else {
-      yield unused.pop()!.word;
-    }
-  }
-
-  while (used.length) yield used.pop()!.word;
-  while (unused.length) yield unused.pop()!.word;
-}
-
-function splitWords(word1: string, word2: string, testWord: (w: string) => IsWordSource) {
-  const newWords = word1 + word2;
-
-  for (let i = 1; i < newWords.length; i++) {
-    const first = newWords.substring(0, i);
-    const second = newWords.substring(i);
-    if (testWord(first) && testWord(second)) {
-      return [first, second];
-    }
-  }
-
-  return [word1, word2];
-}
-
-function* fixupWords(words: string[], testWord: (w: string) => IsWordSource) {
-  if (words.length === 0) {
-    return;
-  }
-  if (words.length === 1) {
-    yield words[0];
-    return;
-  }
-  words = [...words];
-
-  let previousWord = words[0];
-  let isPreviousValid = testWord(previousWord);
-
-  for (let i = 1; i < words.length; i++) {
-    let isCurrentValid = testWord(words[i]);
-    if (isPreviousValid && !isCurrentValid) {
-      const [first, second] = splitWords(previousWord, words[i], testWord);
-      yield first;
-      words[i] = second;
-      isCurrentValid = testWord(words[i]);
-    } else {
-      yield previousWord;
-    }
-    previousWord = words[i];
-    isPreviousValid = isCurrentValid;
-  }
-
-  yield previousWord;
-}
-
-function buildWordsForward(text: string, testWord: (w: string) => IsWordSource): string[] {
-
-  const letters = text.split(/\s+/).filter(x => x !== "");
-  const size = letters.length;
-
-  let currentWord = "";
-  let currentEndIndex = -1;
-
-  const covered = Array(size).fill(false);
-  const words: IndexedWord[] = [];
-
-  let start = 0
-  let end = 1;
-
-  while (true) {
-    let possiblyWord = letters.slice(start, end).join('');
-
-    if (testWord(possiblyWord)) {
-      currentWord = possiblyWord;
-      currentEndIndex = end;
-    }
-
-    end++;
-    if ((end > size) || (end - start > 13)) {
-      if (currentWord) {
-        words.push({ start, end: currentEndIndex, word: currentWord });
-
-        for (let i = start; i < currentEndIndex; i++) {
-          covered[i] = true;
-        }
-      }
-
-      start = currentEndIndex === -1 ? start + 1 : currentEndIndex;
-      end = start + 1;
-
-      currentWord = "";
-      currentEndIndex = -1;
-      if (start >= size || start === -1) {
-        break;
-      }
-
-    }
-  }
-
-  const unusedIndexes = [...findUnused(covered)];
-  const unusedWords: IndexedWord[] = [];
-  for (const u of unusedIndexes) {
-    const w = letters.slice(u.start, u.end).join("");
-    unusedWords.push({ ...u, word: w });
-  }
-
-  if (unusedWords.length) {
-    const allWords: string[] = [...combine(words, unusedWords)];
-    return [...fixupWords(allWords, testWord)];
-  } else {
-    return words.map(x => x.word);
-  }
-}
-
-function buildWordsBackwards(text: string, testWord: (w: string) => IsWordSource): string[] {
-
-  const letters = text.split(/\s+/).filter(x => x !== "");
-  const size = letters.length;
-
-  let currentWord = "";
-  let currentStartIndex = -1;
-
-  const covered = Array(size).fill(false);
-  const words: IndexedWord[] = [];
-
-  let start = size - 1;
-  let end = size;
-
-  while (true) {
-    let possiblyWord = letters.slice(start, end).join('');
-
-    if (testWord(possiblyWord)) {
-      currentWord = possiblyWord;
-      currentStartIndex = start;
-    }
-
-    start--;
-    if ((start < 0) || (end - start > 13)) {
-      if (currentWord) {
-        words.push({ start: currentStartIndex, end, word: currentWord });
-
-        for (let i = currentStartIndex; i < end; i++) {
-          covered[i] = true;
-        }
-      }
-
-      end = currentStartIndex === -1 ? end - 1 : currentStartIndex;
-      start = end - 1;
-
-      currentWord = "";
-      currentStartIndex = -1;
-      if (end <= 0) {
-        break;
-      }
-
-    }
-  }
-  words.reverse();
-
-  const unusedIndexes = [...findUnused(covered)];
-  const unusedWords: IndexedWord[] = [];
-  for (const u of unusedIndexes) {
-    const w = letters.slice(u.start, u.end).join("");
-    unusedWords.push({ ...u, word: w });
-  }
-
-  if (unusedWords.length) {
-    const allWords: string[] = [...combine(words, unusedWords)];
-    return [...fixupWords(allWords, testWord)];
-  } else {
-    return words.map(x => x.word);
-  }
-}
-
-function toScore(source: IsWordSource): number {
-  switch (source) {
-    case false:
-      return -1;
-    case "number":
-      return 2;
-    case "dictionary":
-      return 3;
-    case "dice":
-      return 1;
-  }
-}
-
-function whichMin(first: number, ...x: number[]) {
-  let index = 0;
-  let value = first;
-
-  for (let i = 0; i < x.length; i++) {
-    if (x[i] < value) {
-      index = i + 1;
-      value = x[i];
-    }
-  }
-
-  return { index, value };
-}
-
-type Alignment = "=" | "S" | "I" | "D";
-function getModifications(forwards: string[], backwards: string[]): Alignment[] {
-  const matrix = Array.from({ length: forwards.length }).map(_ => Array.from({ length: backwards.length }).fill(0)) as number[][];
-  for (let i = 1; i < backwards.length; i++) {
-    matrix[0][i] = i;
-  }
-  for (let i = 1; i < forwards.length; i++) {
-    matrix[i][0] = i;
-  }
-
-  for (let i = 1; i < forwards.length; i++) {
-    for (let j = 1; j < backwards.length; j++) {
-      const subsitutionCost = forwards[i] === backwards[j] ? 0 : 1;
-
-      const min = whichMin(matrix[i - 1][j] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j - 1] + subsitutionCost);
-      matrix[i][j] = min.value;
-    }
-  }
-
-  let modifications: Alignment[] = [];
-  let x = forwards.length - 1, y = backwards.length - 1;
-  while (x > 0 && y > 0) {
-    if (forwards[x] === backwards[y]) {
-      modifications.push("=");
-    }
-    const min = whichMin(matrix[x - 1][y], matrix[x][y - 1], matrix[x - 1][y - 1]);
-    if (min.index === 0) {
-      x--;
-      modifications.push("I");
-    } else if (min.index === 1) {
-      y--;
-      modifications.push("D");
-    } else {
-      if (forwards[x] !== backwards[y]) {
-        modifications.push("S");
-      }
-      x--;
-      y--;
-    }
-  }
-
-  if (x == 0 && y == 0 && forwards[x] === backwards[y]) {
-    modifications.push("=");
-  }
-
-  while (x-- > 0) {
-    modifications.push("I");
-  }
-  while (y-- > 0) {
-    modifications.push("D");
-  }
-
-  return modifications.reverse();
-}
-
-type WordWithSource = { word: string; source: IsWordSource; };
-
-function getBestByScore(fMismatch: WordWithSource[], bMismatch: WordWithSource[]) {
-  const fScore = fMismatch.map(f => toScore(f.source)).reduce((x, y) => x + y, 0) / fMismatch.length;
-  const bScore = bMismatch.map(b => toScore(b.source)).reduce((x, y) => x + y, 0) / bMismatch.length;
-
-  return fScore > bScore ? fMismatch.map(f => f.word) : bMismatch.map(b => b.word);
-}
-
-function* buildConsensus(mods: Alignment[], forwards: string[], backwards: string[],
-  fWordSource: IsWordSource[], bWordSource: IsWordSource[]) {
-
-  forwards = forwards.toReversed();
-  fWordSource = fWordSource.toReversed();
-  backwards = backwards.toReversed();
-  bWordSource = bWordSource.toReversed();
-
-  let fMismatch: WordWithSource[] = [];
-  let bMismatch: WordWithSource[] = [];
-
-  for (const m of mods) {
-    if (m === "=") {
-
-      if (fMismatch.length || bMismatch.length) {
-        yield* getBestByScore(fMismatch, bMismatch);
-        fMismatch = [];
-        bMismatch = [];
-      }
-
-      backwards.pop();
-      bWordSource.pop();
-      yield forwards.pop()!;
-      fWordSource.pop();
-    } else if (m === "S") {
-      fMismatch.push({
-        word: forwards.pop()!,
-        source: fWordSource.pop()!
-      });
-      bMismatch.push({
-        word: backwards.pop()!,
-        source: bWordSource.pop()!
-      });
-    } else if (m === "D") {
-      bMismatch.push({
-        word: backwards.pop()!,
-        source: bWordSource.pop()!
-      });
-    } else if (m === "I") {
-      fMismatch.push({
-        word: forwards.pop()!,
-        source: fWordSource.pop()!
-      });
-    } else {
-      throw "Unknown modification type: " + m;
-    }
-  }
-
-  if (fMismatch.length || bMismatch.length) {
-    yield* getBestByScore(fMismatch, bMismatch);
-  }
-
-}
-
-function getBest(forwards: string[], backwards: string[], testWord: (w: string) => IsWordSource): string[] {
-  const fWordSource = forwards.map(testWord);
-  const bWordSource = backwards.map(testWord);
-
-  const fAllWords = fWordSource.every(x => x);
-  const bAllWords = bWordSource.every(x => x);
-
-  if (fAllWords != bAllWords) {
-    return fAllWords ? forwards : backwards;
-  }
-
-  if (forwards.length === backwards.length) {
-    let score = 0;
-    for (let i = 0; i < forwards.length; i++) {
-      score += toScore(fWordSource[i]) - toScore(bWordSource[i]);
-    }
-    return score > 0 ? forwards : backwards;
-  }
-
-  const mods = getModifications(forwards, backwards);
-  return [...buildConsensus(mods, forwards, backwards, fWordSource, bWordSource)];
-}
-
-function buildWords(text: string, testWord: (w: string) => IsWordSource): string {
-  const forwards = buildWordsForward(text, testWord);
-  const backwards = buildWordsBackwards(text, testWord);
-
-  const forwardsResult = forwards.join(" ");
-
-  if (forwards.length != backwards.length || forwardsResult != backwards.join(" ")) {
-    const bestResult = getBest(forwards, backwards, testWord);
-    return bestResult.join(" ");
-  } else {
-    return forwardsResult;
-  }
-
-}
-
-function findSpecialChars(text: string): string | symbol {
-  if (!text) return "";
-
-  for (let special of specialChars) {
-    if (text.match(special.regex)) {
-      return special.symbol;
-    }
-  }
-
-  return text;
-}
-
-function format(text: string | symbol, testWord: (w: string) => IsWordSource): string | SpecialChar {
-  const type = typeof text;
-
-  if (type === "string") {
-    return buildWords(text as string, testWord);
-  }
-
-  for (let special of specialChars) {
-    if (text === special.symbol) {
-      return special;
-    }
-  }
-
-  throw `did not match text ${text.toString()} to anything`;
-}
-
-function isNumber(text: string) {
-  return !!text.match(/^\d+$/);
-}
-
-function isDiceThrow(text: string) {
-  return !!text.match(/^(?:\d+)?d(?:\d+)(?:(?:\+|-)\d+)?$/);
-}
-
-function endsWithNumber(text: string | null) {
-  if (text) {
-    return !!text.match(/\d+$/);
-  }
-  return false;
-}
-
-function buildParagraph(words: (string | SpecialChar)[]): string[] {
-  const paragraph: string[] = [];
-
-  let previousString = null;
-  for (const w of words) {
-    if (typeof w === "string") {
-      if (previousString) {
-        paragraph.push(" ");
-      }
-      paragraph.push(w);
-      previousString = w;
-    } else {
-      if (w.symbol === openParen || (w.symbol === plus && !endsWithNumber(previousString))) {
-        paragraph.push(" ");
-      }
-      paragraph.push(w.text);
-
-      switch (w.symbol) {
-        case period:
-        case comma:
-        case colon:
-        case possessive:
-        case upperPossessive:
-        case closeParen:
-          previousString = w.text;
-          break;
-        default:
-          previousString = null;
-      }
-    }
-  }
-
-  return paragraph;
-}
-
-let cacheKey: string | null = null;
-let cachedDictionary: Typo | null = null;
-
-async function loadDefaultDictionary() {
-  const dictionary = new Typo("en_US_FiveE_35", null, null, { dictionaryPath: "dictionaries", asyncLoad: true });
-  while (!dictionary.loaded) {
-    await sleep(100);
-  }
-  return dictionary;
-}
-
-async function loadCachedDictionary(customWords: string[], loadDictionary: () => Promise<Typo>) {
-  const key = customWords.join("|");
-  if (cachedDictionary != null && cacheKey === key) {
-    return cachedDictionary;
-  }
-
-  const dictionary = await loadDictionary();
-  addCustomWords(dictionary, ...customWords);
-  cacheKey = key;
-  cachedDictionary = dictionary;
-  return dictionary;
-}
-
-type IsWordSource = false | "dictionary" | "number" | "dice";
-
-  //writeFile("./wordlist.csv", "", () => { });
-
-  const words = await readFile("./public/dictionaries/en_US-massive/en_US-massive.dic");
-
-  let realWords = "";
-  let fakeWords = "";
-
-  for (const foo of allWords.split("\n")) {
-    const isWord = dictionary.check(foo);
-    if (isWord) {
-      realWords += foo + "\n";
-    } else {
-      fakeWords += foo + "\n";
-    }
-  }
-  try {
-    await writeFile("./real_wordlist.csv", realWords);
-    await writeFile("./fake_wordlist.csv", fakeWords);
-  } catch (err) {
-    if (err) console.error(err);
-  }
-
-  return;
-
-  // const testWord = function (possiblyWord: string) {
-  //   return dictionary.check(possiblyWord) || isNumber(possiblyWord) || isDiceThrow(possiblyWord);
-  // }
-
-  // const lines = splitInput(text).map(findSpecialChars).filter(x => x !== "");
-  // const words = lines.map(l => format(l, testWord));
-
-  // return buildParagraph(words).join("");
-}
-
-const allWords = `a
-aadvantage
-aalpamac
-aalpamacs
+a
 aardvark
-aasimars
-aatxe
 ab
-abaasy
 abacus
 abandon
 abandoned
@@ -589,7 +9,6 @@ abandonment
 abandons
 abase
 abating
-abbanith
 abbeys
 abdomen
 abdomens
@@ -614,10 +33,7 @@ abnormally
 aboard
 abode
 abodes
-aboleth
-aboleths
 abominable
-abominablebeauty
 abomination
 abominations
 abound
@@ -662,7 +78,6 @@ abyss
 abyssa
 abyssal
 abysses
-abysswalker
 ac
 academia
 academic
@@ -729,7 +144,6 @@ accuracy
 accurate
 accurately
 accursed
-accurseddefiler
 accusations
 accuse
 accused
@@ -748,7 +162,6 @@ achieves
 achieving
 aching
 acid
-acidfall
 acidic
 acidified
 acids
@@ -766,14 +179,12 @@ acquired
 acquires
 acquiring
 acquisition
-acreature
 acrid
 acrobatic
 acrobatics
 across
 act
 acted
-acti
 acting
 action
 actions
@@ -811,7 +222,6 @@ aday
 add
 added
 adder
-addi
 addicted
 addiction
 addicts
@@ -877,16 +287,9 @@ adroit
 adroitly
 adulation
 adult
-adultcavedragon
 adultery
-adultflamedragon
 adulthood
-adultmithraldragon
 adults
-adultseadragon
-adultvoiddragon
-adultwinddragon
-adungeon
 advance
 advanced
 advancement
@@ -899,7 +302,6 @@ advent
 adventure
 adventurer
 adventurers
-adventurersinteract
 adventures
 adventuring
 adventurous
@@ -923,9 +325,6 @@ aegir
 aegis
 aerate
 aerial
-aerodite
-aeshma
-aeshmagenie
 aesir
 aesthetic
 aesthetically
@@ -956,7 +355,6 @@ afflicts
 affluent
 afford
 affordability
-affrat
 affront
 aflame
 afloat
@@ -975,7 +373,6 @@ again
 against
 agape
 agate
-agathys
 age
 aged
 ageless
@@ -998,8 +395,6 @@ aging
 agitate
 agitated
 agitating
-agnes
-agnibarra
 ago
 agonizing
 agony
@@ -1014,8 +409,6 @@ agricultural
 agriculture
 ahead
 ahu
-ahuizotl
-ahunixta
 aid
 aide
 aided
@@ -1028,9 +421,7 @@ aiming
 aimlessly
 aims
 air
-airbefore
 airborne
-airbreathing
 airless
 airs
 airship
@@ -1039,29 +430,15 @@ airtight
 airways
 airy
 ajar
-ajump
-akaasit
-akaasits
-akanka
-akhlut
-akhluts
 akin
-akkorokamui
-aklea
-aklys
-akoman
-akyishigal
 al
 ala
 alabaster
-alabroza
 alacrity
-alance
 alarm
 alarming
 alarms
 alas
-alazai
 albatross
 albeit
 albino
@@ -1075,7 +452,6 @@ alcoholism
 alder
 ale
 alehouse
-alehousedrake
 alehouses
 alembic
 alert
@@ -1088,9 +464,6 @@ alexandrite
 alfalfa
 algae
 algid
-algiz
-algorith
-algoriths
 aliases
 alien
 alight
@@ -1102,8 +475,6 @@ alignments
 aligns
 alike
 alive
-alke
-alkonost
 all
 allaying
 allegiance
@@ -1111,7 +482,6 @@ allegiances
 alleviate
 alleviating
 alley
-alleybasher
 alleys
 alleyways
 alliance
@@ -1120,8 +490,6 @@ allied
 allies
 alligator
 alligators
-alliumite
-alliumites
 allosaurus
 allotment
 allotted
@@ -1130,7 +498,6 @@ allowed
 allowing
 allows
 alloys
-allucinatory
 allure
 alluring
 ally
@@ -1138,7 +505,6 @@ allying
 almanac
 almost
 alms
-alnaar
 aloe
 aloft
 alone
@@ -1150,10 +516,7 @@ alp
 alpha
 alphabetical
 alpine
-alquam
 already
-alseid
-alseids
 also
 alt
 altar
@@ -1198,7 +561,6 @@ ambitious
 ambivalence
 ambler
 ambles
-ambphibolt
 ambrosia
 ambulatory
 ambuscade
@@ -1220,7 +582,6 @@ amidst
 ammo
 ammonia
 ammunition
-ammut
 amnesia
 amoeba
 amoebas
@@ -1235,9 +596,6 @@ amphibian
 amphibians
 amphibious
 amphibiousness
-amphibolt
-amphiptere
-amphipteres
 ample
 amplification
 amplified
@@ -1253,16 +611,12 @@ amusing
 an
 ana
 anaconda
-anadventurer
 anaerobic
-anaislalovi
 analysis
 analytical
 analyze
 analyzed
-anansi
 anarchy
-anarea
 anathema
 anatomy
 ancestor
@@ -1274,27 +628,17 @@ anchored
 anchoring
 anchors
 ancient
-ancientcavedragon
-ancientflamedragon
-ancientmithraldragon
 ancients
-ancientseadragon
-ancienttitan
-ancientvoiddragon
-ancientwinddragon
 and
 anda
-andrenjinyi
 androgynous
 androsphinx
-andy
 anecdotes
 anemones
 anesthetic
 anesthetized
 anesthetizing
 anew
-angatra
 angel
 angelic
 angels
@@ -1304,7 +648,6 @@ angers
 angle
 angler
 anglers
-anglerworm
 angles
 angrily
 angry
@@ -1312,10 +655,8 @@ anguish
 anguished
 anguishes
 angular
-angurvadal
 animal
 animalistic
-animalistically
 animals
 animate
 animated
@@ -1324,16 +665,10 @@ animating
 animation
 animosity
 animus
-aniwye
 ankh
-ankheg
-ankhegqueenhas
-ankhegs
 ankle
-ankou
 ankylosaurus
 ann
-annelidast
 annihilate
 annihilating
 annihilation
@@ -1358,10 +693,8 @@ anomaly
 anonymity
 anonymous
 anonymously
-anophiloi
 another
 anoxic
-ansuz
 answer
 answerable
 answered
@@ -1385,52 +718,36 @@ anticipation
 anticipatory
 antics
 antilife
-antimagic
-antipaladin
-antipaladins
 antipathy
-antipathysympathy
 antiquarians
 antique
 antitoxin
 antler
 antlers
 ants
-anubian
-anubians
 anubis
-anumber
-anunlit
 anvil
 anxieties
 anxiety
 any
 anybody
-anyeffect
 anymore
 anyone
 anything
 anytime
 anyway
 anywhere
-anzu
 ap
 apart
 apathetic
-apau
-apauperape
-apaxrusl
 ape
-apep
 aperture
 apes
 apex
 apexes
-aphasian
 aphasic
 aphrodisiac
 aphrodite
-api
 apocalypse
 apocalyptic
 apollo
@@ -1466,7 +783,6 @@ appendage
 appendages
 appended
 appendix
-apperance
 appetite
 appetites
 appetizing
@@ -1505,7 +821,6 @@ approximates
 apron
 aptitude
 aquamarine
-aquan
 aquariums
 aquatic
 aqueous
@@ -1514,31 +829,21 @@ arabic
 arachnid
 arachnida
 arachnids
-arachnocrat
-arachnocrats
-arawai
 arawn
-arbeyach
 arbiter
 arbiters
 arbitrarily
 arbitrary
 arbitrators
-arborcyte
 arborea
 arboreal
-arborealgrappler
 arc
 arcadia
-arcamag
 arcana
-arcanaphage
 arcane
 arcanist
 arcanists
-arcanoplasm
 arcanum
-arcasynthesis
 arch
 archaeologist
 archaeologists
@@ -1546,7 +851,6 @@ archaeopteryx
 archaic
 archangel
 archdevil
-archdevils
 archdruid
 archduke
 arched
@@ -1558,16 +862,11 @@ arches
 archetypal
 archetype
 archetypes
-archfey
-archfeys
 archimandrite
 arching
 architectural
 architecture
 archives
-archmage
-archmages
-archmagi
 archon
 archons
 archpriest
@@ -1592,7 +891,6 @@ argument
 arguments
 arias
 arid
-aridni
 arise
 arises
 arising
@@ -1607,8 +905,6 @@ armadillos
 armament
 armaments
 armband
-armbar
-armblades
 armchair
 armed
 armies
@@ -1622,7 +918,6 @@ armors
 armory
 arms
 army
-arneson
 aroma
 aromas
 aromatic
@@ -1681,10 +976,6 @@ arts
 artwork
 arx
 as
-asanbosam
-asanbosams
-asasonbosam
-asbats
 ascend
 ascendant
 ascended
@@ -1693,20 +984,13 @@ ascends
 ascension
 ascertain
 ascetic
-asecret
 asexual
 asexually
 asgard
-asgardian
-asgardians
 ash
 ashamed
-ashdrake
 ashen
 ashes
-ashwalker
-ashwood
-asi
 aside
 ask
 asked
@@ -1714,8 +998,6 @@ asking
 asks
 asleep
 asmodeus
-asnormal
-asoozes
 asp
 aspect
 aspects
@@ -1724,7 +1006,6 @@ aspiration
 aspirations
 aspire
 aspiring
-asps
 assail
 assailant
 assailing
@@ -1772,7 +1053,6 @@ assortment
 assume
 assumed
 assumes
-assumesshort
 assuming
 assurances
 assured
@@ -1787,19 +1067,14 @@ astounding
 astoundingly
 astral
 astrally
-astralsupial
 astray
-astri
 astride
 astringent
 astrological
 astronomical
-asuccessful
 at
 atavist
 ate
-aten
-atha
 athena
 athlete
 athletic
@@ -1843,8 +1118,6 @@ attending
 attends
 attention
 attentive
-attercroppe
-attercroppes
 attire
 attitude
 attitudes
@@ -1880,7 +1153,6 @@ augury
 august
 aura
 aural
-auran
 auras
 aureate
 aurochs
@@ -1898,7 +1170,6 @@ authorized
 authorizes
 authors
 automata
-automatadevil
 automatic
 automatically
 automaton
@@ -1925,23 +1196,15 @@ avert
 averted
 averting
 averts
-avestruzi
-avestruzii
 avian
 avians
 avid
-aviere
-avieres
 avocation
 avoid
 avoidance
 avoided
 avoiding
 avoids
-avronin
-avronins
-avulzor
-avulzors
 await
 awaiting
 awaits
@@ -1968,28 +1231,14 @@ awning
 awoke
 awoken
 awry
-awww
 ax
 axe
 axes
-axespear
 axis
-ayakashi
-azathoth
-azeban
-azer
-azers
-azi
-aziza
 azure
-azza
-azzagremlin
 b
 ba
-baatezu
-baator
 baba
-babayagashorsemen
 babble
 babbles
 babbling
@@ -2002,7 +1251,6 @@ backed
 backers
 backflip
 background
-backgroundbenefit
 backgrounds
 backhand
 backing
@@ -2032,7 +1280,6 @@ baffles
 baffling
 bag
 bagged
-bagiennik
 bagpipes
 bags
 bailed
@@ -2044,16 +1291,12 @@ baking
 balance
 balanced
 balancing
-balara
-balbazu
 balconies
 balcony
 bald
 balder
-baldur
 baleful
 balefully
-baliri
 balk
 ball
 ballad
@@ -2067,8 +1310,6 @@ ballooning
 balloons
 ballroom
 balls
-balor
-balors
 bamboo
 bamboozles
 bamboozling
@@ -2079,9 +1320,7 @@ bandaged
 bandages
 bandana
 banded
-bandedlinespider
 bandit
-banditlord
 banditry
 bandits
 bandoliers
@@ -2091,7 +1330,6 @@ bane
 baneful
 bang
 bangles
-bangmangi
 banish
 banished
 banishing
@@ -2102,9 +1340,6 @@ banks
 banned
 banner
 banners
-bannik
-bannog
-bannogs
 banquet
 banquets
 banshee
@@ -2142,7 +1377,6 @@ bark
 barker
 barking
 barks
-barkskin
 barn
 barnacle
 barnacles
@@ -2191,8 +1425,6 @@ bass
 bast
 bastard
 bastards
-bastet
-bastettemplecat
 bastion
 bastions
 bat
@@ -2208,7 +1440,6 @@ batlike
 baton
 batons
 bats
-batsense
 batter
 battered
 batteries
@@ -2218,22 +1449,18 @@ batting
 battle
 battleaxe
 battleaxes
-battlecry
 battlefield
 battlefields
 battlement
 battlements
 battles
 battling
-batwinged
 bauble
 baur
 bawdy
 bay
 baying
 bayous
-bayun
-bayuns
 be
 beach
 beached
@@ -2260,18 +1487,12 @@ bearded
 beards
 bearer
 bearers
-bearfolk
 bearing
 bearings
-bearking
-bearmit
 bears
-bearserk
 bearskin
 beast
-beastlands
 beastly
-beastrider
 beasts
 beat
 beaten
@@ -2308,7 +1529,6 @@ bees
 beeswax
 beetle
 beetles
-beetleshaped
 befall
 befits
 befitting
@@ -2328,7 +1548,6 @@ beg
 began
 beget
 beggar
-beggarghoul
 beggars
 begging
 begin
@@ -2350,28 +1569,20 @@ behavior
 behaviors
 behead
 beheaded
-beheadedvengefulspirit
 behemoth
 behemoths
 behest
 behind
-behir
-behirs
 behold
 beholden
 beholder
 beholders
-behtu
-behtus
 beige
 being
 beings
-beisrudd
 bejeweled
 belch
 belches
-belenus
-beli
 belial
 belie
 belief
@@ -2405,7 +1616,6 @@ below
 belt
 belted
 belts
-belu
 belying
 ben
 bend
@@ -2426,18 +1636,13 @@ benevolent
 benign
 bent
 bequeathed
-berberoka
 bereaved
 bereft
-bereginyas
-beremoved
-berkanan
 berries
 berry
 berserk
 berserker
 berserkers
-berstuc
 berth
 bes
 beseech
@@ -2475,13 +1680,8 @@ bewildering
 bewilderment
 bewitching
 beyond
-beyondthat
-bf
-bfrd
-bhain
 bibliophile
 bibliophiles
-bibliotelekinesis
 bicker
 bickering
 bickers
@@ -2502,7 +1702,6 @@ billet
 billow
 billowing
 billows
-bilwis
 binary
 bind
 binding
@@ -2514,7 +1713,6 @@ biological
 biology
 bioluminescence
 bioluminescent
-biomineralize
 bipedal
 bipeds
 birch
@@ -2523,7 +1721,6 @@ birdcage
 birdlike
 birds
 birdsong
-birgemon
 birth
 birthed
 birthmark
@@ -2532,7 +1729,6 @@ birthright
 bishops
 bit
 bite
-biteks
 bites
 biting
 bits
@@ -2548,23 +1744,17 @@ blacken
 blackened
 blackens
 blackest
-blackflag
 blackguard
-blackguards
 blackish
-blackknightcommander
 blacklight
 blackmail
 blackness
 blacks
 blacksmith
 blacksmiths
-blacktooth
 bladder
 blade
 bladed
-blademaster
-blademasters
 blades
 blame
 blamed
@@ -2595,8 +1785,6 @@ blazing
 blazons
 bleached
 bleak
-bleakheart
-bleakhearts
 bleakness
 bleat
 bleating
@@ -2607,7 +1795,6 @@ bleeding
 bleeds
 blemished
 blemishes
-blemmyes
 blend
 blending
 blends
@@ -2616,7 +1803,6 @@ blessed
 blesses
 blessing
 blessings
-blestsessebe
 blew
 blight
 blighted
@@ -2628,9 +1814,7 @@ blindfold
 blinding
 blindly
 blindness
-blindnessdeafness
 blinds
-blindsense
 blindsight
 blink
 blinking
@@ -2641,7 +1825,6 @@ blistering
 blisters
 blizzard
 blizzards
-bloatblossom
 bloated
 bloating
 blob
@@ -2653,37 +1836,23 @@ blocks
 blog
 blond
 blood
-bloodbound
-bloodbow
 bloodcurdling
-blooddrinker
 blooded
-bloodfiend
-bloodfuel
-bloodhag
 bloodhound
 bloodhounds
 bloodied
 bloodier
-bloodiron
 bloodletting
 bloodline
 bloodlines
-bloodlink
 bloodlust
-bloodpearl
-bloodprice
-bloodsapper
 bloodshed
 bloodshot
-bloodspeed
 bloodstain
 bloodstained
 bloodstone
 bloodstream
 bloodthirsty
-bloodthisty
-bloodwhisper
 bloody
 bloom
 blooming
@@ -2702,7 +1871,6 @@ blown
 blows
 bludgeon
 bludgeoning
-bludgeoningdamage
 blue
 blueprints
 bluff
@@ -2732,13 +1900,11 @@ bob
 bobbers
 bobbing
 bobs
-bodhr
 bodies
 bodiless
 bodily
 bodkin
 body
-bodyblock
 bodyguard
 bodyguards
 bog
@@ -2746,7 +1912,6 @@ bogeymen
 boggard
 boggards
 boggy
-boghaid
 bogie
 bogies
 bogs
@@ -2761,10 +1926,7 @@ boisterousness
 bola
 bolas
 bold
-boldrei
 bole
-boloti
-bolotis
 bolster
 bolstered
 bolstering
@@ -2787,19 +1949,8 @@ bonding
 bonds
 bone
 bonebreaker
-bonebreaking
-bonecage
-bonecollective
-bonecrab
 boneless
-bonepowder
-bonepowderghoul
-bonerot
 bones
-boneshard
-bonespitter
-bonespitters
-boneswarm
 boney
 boneyards
 bonfire
@@ -2843,7 +1994,6 @@ borders
 bore
 boreal
 boreas
-boreass
 bored
 boredom
 borers
@@ -2853,7 +2003,6 @@ borne
 borrow
 borrowed
 borrower
-borrowers
 borrowing
 bors
 boscage
@@ -2872,7 +2021,6 @@ bottom
 bottomed
 bottomless
 bottoms
-bouda
 bough
 boughs
 bought
@@ -2955,7 +2103,6 @@ braving
 bravo
 brawl
 brawler
-brawlers
 brawling
 brawls
 brawn
@@ -2981,14 +2128,11 @@ breath
 breathable
 breathe
 breathes
-breathfor
 breathing
 breathless
 breaths
-breathstealer
 breathtaking
 breathtakingly
-breating
 brecciated
 bred
 breed
@@ -3003,17 +2147,13 @@ brewer
 brewers
 brews
 brian
-briand
 briar
-briarclick
-briarthorn
 bribable
 bribe
 bribed
 bribes
 brick
 bricks
-brics
 bridge
 bridged
 bridges
@@ -3024,20 +2164,15 @@ brief
 briefly
 brigandine
 brigands
-brigantia
-brighella
-brighellas
 bright
 brighten
 brightens
 brighter
 brightest
-brightlight
 brightly
 brightness
 brilliance
 brilliant
-brilliantfull
 brilliantly
 brim
 brimming
@@ -3067,17 +2202,12 @@ broken
 broker
 brokered
 brokers
-brokkr
 bronze
 bronzed
 bronzes
 brooch
 brood
-broodguard
-broodiken
-broodikens
 brooding
-broodmother
 brook
 broom
 broomstick
@@ -3099,7 +2229,6 @@ bruce
 bruise
 bruised
 bruisers
-brumalek
 brunt
 brush
 brushing
@@ -3114,7 +2243,6 @@ bubbles
 bubbling
 bubbly
 bucca
-buccas
 buck
 bucket
 bucketful
@@ -3144,12 +2272,8 @@ building
 buildings
 builds
 built
-bukavac
-bukavacs
 bulb
 bulbous
-bulette
-bulettekin
 bulge
 bulging
 bulk
@@ -3162,14 +2286,12 @@ bullies
 bulls
 bullseye
 bully
-bullywugs
 bulwark
 bulwarks
 bumblebee
 bump
 bumping
 bumps
-buncha
 bunches
 bundle
 bundled
@@ -3182,7 +2304,6 @@ buoyancy
 buoyant
 buoying
 bur
-buraq
 burble
 burbles
 burbling
@@ -3214,8 +2335,6 @@ burrowed
 burrower
 burrowers
 burrowing
-burrowling
-burrowlings
 burrows
 burst
 bursting
@@ -3230,7 +2349,6 @@ bust
 bustling
 busy
 but
-butatsch
 butcher
 butchers
 butchery
@@ -3250,7 +2368,6 @@ buzz
 buzzes
 buzzing
 by
-bya
 bygone
 bypass
 bypassed
@@ -3258,7 +2375,6 @@ bypasses
 bypassing
 byproduct
 bystanders
-bytopia
 byways
 c
 ca
@@ -3277,10 +2393,7 @@ cackling
 cacophonous
 cacophony
 cacti
-cactid
-cactids
 cactus
-cacus
 cadaver
 cadaverous
 cadences
@@ -3328,16 +2441,13 @@ calms
 caltrop
 caltrops
 calved
-camazotz
 cambion
-cambions
 cambium
 came
 camel
 camels
 cameo
 camera
-camoflage
 camouflage
 camouflaged
 camp
@@ -3349,8 +2459,6 @@ camps
 campsite
 can
 canals
-canbe
-canbreathe
 cancel
 canceled
 canceling
@@ -3358,7 +2466,6 @@ cancellation
 cancelling
 cancels
 cancerous
-cancover
 candidates
 candied
 candle
@@ -3388,7 +2495,6 @@ canon
 canopic
 canopies
 canopy
-cansummarize
 cant
 cantankerous
 canter
@@ -3415,7 +2521,6 @@ capricious
 caps
 capsizing
 captain
-captainless
 captains
 captivated
 captivates
@@ -3428,7 +2533,6 @@ capture
 captured
 captures
 capturing
-capybear
 carapace
 carapaces
 carats
@@ -3438,8 +2542,6 @@ caravanserai
 carbuncle
 carcass
 carcasses
-carceri
-carcolh
 card
 cardinal
 cards
@@ -3462,8 +2564,6 @@ caribou
 caricature
 caricatures
 caring
-carmello
-carmona
 carnage
 carnelian
 carnelians
@@ -3485,7 +2585,6 @@ carrier
 carriers
 carries
 carrion
-carrionbeetle
 carrot
 carrots
 carry
@@ -3495,7 +2594,6 @@ cartel
 cartilage
 cartographer
 cartographers
-cartwork
 carve
 carved
 carves
@@ -3511,13 +2609,11 @@ casinos
 cask
 cast
 castaways
-castcharm
 caste
 castellan
 caster
 casters
 castes
-castigas
 castigate
 casting
 castings
@@ -3557,36 +2653,26 @@ category
 catered
 catering
 caterpillar
-catfolk
 catkin
 catlike
 catnip
-catonoctrix
 cats
-catscratch
-cattack
-catterball
 cattle
 catty
 caught
 cauldron
-cauldronborn
 cause
 caused
 causes
 causing
 caustic
-causticcharger
 caution
 cautious
 cautiously
 cavaliers
 cavalry
 cave
-cavedragonwyrmling
 cavefish
-cavelight
-cavelightmoss
 cavern
 cavernous
 caverns
@@ -3595,17 +2681,7 @@ cavities
 cavity
 caw
 caws
-cbe
-cbeats
-cbirth
 cc
-ccdx
-cchair
-cclasp
-ccome
-ccreator
-cdefend
-cdraw
 ce
 cease
 ceased
@@ -3613,7 +2689,6 @@ ceaseless
 ceaselessly
 ceases
 ceasing
-ceido
 ceiling
 ceilings
 celebrate
@@ -3624,7 +2699,6 @@ celebratory
 celebrity
 celerity
 celeste
-celestia
 celestial
 celestials
 cell
@@ -3653,7 +2727,6 @@ centipede
 centipedes
 central
 centuries
-centuriespast
 century
 cephalopod
 ceramic
@@ -3671,16 +2744,13 @@ cesspools
 cestus
 cetacean
 cetaceans
-cfetch
 cg
 cha
 chafe
 chaff
 chafing
 chain
-chainbreaker
 chained
-chainedangel
 chaining
 chains
 chair
@@ -3705,7 +2775,6 @@ chamomile
 champion
 championed
 champions
-chamrosh
 chance
 chances
 chandelier
@@ -3729,15 +2798,11 @@ chaplet
 chapter
 char
 character
-characterclass
 characteristic
 characteristics
 characterization
 characterized
-charactermust
 characters
-charactersuffers
-charclass
 charcoal
 charge
 charged
@@ -3774,12 +2839,9 @@ chattel
 chatter
 chatterbox
 chattering
-chatterlome
-chatterlomes
 chatters
 chatting
 chatty
-chauntea
 cheap
 cheaper
 cheat
@@ -3797,23 +2859,16 @@ cheers
 cheery
 cheese
 cheesy
-cheiftain
 chelae
-chelicerae
 chemical
 chemically
 chemicals
 chemistry
-chemosit
 cherish
 cherished
-chernobog
-chernomoi
 cherry
 cherub
 cherubic
-cherufe
-ches
 chess
 chessboard
 chest
@@ -3830,10 +2885,8 @@ child
 childbirth
 childhood
 childishly
-childofthebriar
 children
 chill
-chillblain
 chilled
 chilling
 chills
@@ -3845,7 +2898,6 @@ chimes
 chimney
 chimneys
 chin
-chinlock
 chip
 chipped
 chips
@@ -3869,7 +2921,6 @@ choking
 choleric
 chomp
 chomper
-chompo
 chomps
 choose
 choosers
@@ -3885,25 +2936,18 @@ chord
 chords
 chores
 chort
-chortdevil
 chortle
 chortles
 chorus
 chose
 chosen
-chris
 christopher
 chroma
 chromatic
 chrome
 chronal
-chronalmental
-chronalmentals
 chronologic
 chronological
-chronomancer
-chronomancers
-chronomatic
 chrysalis
 chrysolite
 chrysoprase
@@ -3912,11 +2956,9 @@ chubby
 chuckle
 chuckles
 chuckling
-chuhaister
 chum
 chunk
 chunks
-chupacabra
 church
 churches
 churn
@@ -3925,20 +2967,12 @@ churning
 churns
 churr
 chute
-chuul
-chuuls
-chymus
-cikavak
-cikavaks
 cilice
-cin
 cinch
 cinder
 cinders
-cinderskull
 cinnabar
 cinnamon
-cipactli
 cipher
 ciphers
 circle
@@ -3966,14 +3000,12 @@ citizens
 citrine
 citrullus
 city
-citywatchcaptain
 civil
 civilians
 civility
 civilization
 civilizations
 civilized
-ckludde
 clack
 clacker
 clacking
@@ -3989,7 +3021,6 @@ clambers
 clamor
 clamorous
 clamp
-clamport
 clamps
 clams
 clamshell
@@ -3998,7 +3029,6 @@ clan
 clandestine
 clang
 clanging
-clanmates
 clans
 clap
 clarifying
@@ -4013,8 +3043,6 @@ clasps
 class
 classed
 classes
-classfeature
-classfeatureitem
 classic
 classical
 classified
@@ -4093,22 +3121,11 @@ clippings
 clips
 cloak
 cloaked
-cloaker
-cloakers
 cloaks
 clock
 clocks
 clockwork
-clockworkabomination
-clockworkbeetle
-clockworkbeetleswarm
-clockworker
-clockworkhound
-clockworkhuntsman
-clockworkmyrmidon
 clockworks
-clockworkwatchman
-clockworkweavingspider
 clog
 clogs
 cloister
@@ -4119,10 +3136,8 @@ clones
 cloning
 close
 closed
-closeknit
 closely
 closer
-closers
 closes
 closest
 closets
@@ -4138,11 +3153,7 @@ clots
 cloud
 cloudburst
 clouded
-cloudhoof
-cloudkill
 clouds
-cloudsight
-cloudstuff
 cloudy
 clout
 cloven
@@ -4150,7 +3161,6 @@ cloves
 clowder
 cloying
 club
-clublike
 clubs
 clue
 clues
@@ -4160,21 +3170,14 @@ clumsiest
 clumsily
 clumsiness
 clumsy
-clurichaun
-clurichauns
 cluster
 clusters
 clutch
 clutches
 clutching
-clutchmates
 clutter
 cluttered
 clutters
-clydno
-cmuse
-cn
-cnecrotic
 co
 coach
 coaching
@@ -4206,8 +3209,6 @@ cobbled
 cobbler
 cobblers
 cobbles
-cobbleswarm
-cobbleswarms
 cobra
 cobras
 cobwebs
@@ -4236,7 +3237,6 @@ coffin
 cog
 cogitate
 cognitive
-cognivore
 cogs
 coherent
 coherently
@@ -4257,12 +3257,9 @@ coins
 cold
 colder
 coldest
-coldfire
 coldly
-coldweather
 coll
 collaborating
-collais
 collapse
 collapsed
 collapses
@@ -4527,7 +3524,6 @@ confers
 confession
 confetti
 confidante
-confidantes
 confidants
 confidence
 confident
@@ -4588,7 +3584,6 @@ connective
 connects
 conniption
 connoisseur
-conowitch
 conquer
 conquered
 conquering
@@ -4639,7 +3634,6 @@ constituent
 constitute
 constitutes
 constitution
-constitutionsaving
 constrained
 constraining
 constrict
@@ -4807,21 +3801,15 @@ copier
 copies
 copious
 copper
-copperkill
 coppery
 copy
 copying
 copyright
 copyrighted
-copys
 coral
-coraldrake
-coralfish
 corals
-coranaal
 cord
 corded
-cordell
 cordial
 cording
 cords
@@ -4837,17 +3825,11 @@ cornered
 corners
 cornucopia
 corona
-coronaal
 coronation
 corporate
 corporeal
-corposanti
 corpse
-corpsehunter
-corpsehunters
-corpselight
 corpselike
-corpsemound
 corpses
 corpulent
 corral
@@ -4870,15 +3852,11 @@ corrosion
 corrosive
 corrupt
 corrupted
-corruptedchieftain
-corruptedushabti
 corrupter
 corrupters
 corruptible
 corrupting
-corruptingooze
 corruption
-corruptions
 corruptor
 corruptors
 corrupts
@@ -4903,8 +3881,6 @@ coterie
 cotta
 cottage
 cotton
-couatl
-couatls
 couched
 cough
 coughing
@@ -4933,7 +3909,6 @@ counterpart
 counterparts
 counterproposal
 counters
-countersong
 counterspell
 counterweight
 counting
@@ -4955,7 +3930,6 @@ courses
 coursing
 court
 courtesan
-courtesans
 courtier
 courtiers
 courting
@@ -4974,7 +3948,6 @@ covering
 coverings
 covers
 covert
-coverthe
 coves
 covet
 coveted
@@ -4993,10 +3966,8 @@ cowled
 cowls
 cozy
 cp
-cqiqirn
 cr
 crab
-crabaratus
 crabgrass
 crablike
 crabs
@@ -5037,11 +4008,9 @@ crates
 cravat
 crave
 craven
-cravens
 craves
 craving
 cravings
-crawford
 crawl
 crawled
 crawler
@@ -5058,18 +4027,10 @@ creating
 creation
 creations
 creative
-creativecommons
 creator
 creators
-creatu
 creature
-creatureaction
-creatureactionattack
-creaturelands
 creatures
-creatureset
-creaturetrait
-creaturetype
 credence
 credit
 credits
@@ -5084,7 +4045,6 @@ creeps
 cremated
 crenelated
 crenelations
-crenellations
 crescendo
 crescent
 crest
@@ -5108,9 +4068,6 @@ crimes
 criminal
 criminals
 crimson
-crimsondrake
-crinaea
-crinaeas
 cripple
 crippled
 crippling
@@ -5130,7 +4087,6 @@ crock
 crocodile
 crocodiles
 crocodilian
-crocotta
 crone
 crones
 crook
@@ -5147,7 +4103,6 @@ crossbreed
 crossbreeds
 crossed
 crosses
-crossguard
 crossing
 crossroads
 crotchety
@@ -5174,7 +4129,6 @@ crumbled
 crumbles
 crumbling
 crumpled
-crun
 crunched
 cruor
 crusader
@@ -5193,8 +4147,6 @@ crutch
 crux
 cry
 crying
-cryoceros
-cryoceroses
 cryophobia
 crypt
 cryptic
@@ -5202,15 +4154,11 @@ crypts
 crystal
 crystalized
 crystalline
-crystallinedevil
 crystallite
 crystallize
 crystallized
 crystallizes
 crystals
-cseek
-cshell
-cthulhu
 cube
 cubes
 cubic
@@ -5219,14 +4167,10 @@ cubs
 cudgel
 cudgels
 cues
-cueyatl
 cuff
 cuirass
 cuisine
 cul
-culd
-culdarath
-culicoid
 culinary
 cull
 culled
@@ -5282,7 +4226,6 @@ currents
 curry
 curse
 cursed
-curseless
 curses
 cursing
 cursive
@@ -5304,9 +4247,7 @@ customize
 customizing
 customs
 cut
-cuthbert
 cutlery
-cutli
 cutpurse
 cutpurses
 cuts
@@ -5326,34 +4267,23 @@ cylinders
 cylindrical
 cynically
 cynophobia
-cyonaxin
-cyphers
 cyst
 d
 dab
 dabbling
 dabs
-daeodon
-dagaz
 dagger
-daggerhawk
 daggerlike
 daggers
-daghdha
 dagon
-dahaka
 daily
 daisy
-dakini
 dal
 dalliance
 dalliances
-damag
 damage
 damaged
 damages
-damagesplits
-damagetype
 damaging
 damask
 damn
@@ -5384,31 +4314,19 @@ dangles
 dangling
 dank
 dappled
-darakhul
 dare
 dared
 dares
 daring
 dark
-darkbolt
 darken
 darkened
 darkens
 darker
 darkest
-darklight
 darkling
 darkly
-darkmantle
-darkmantles
 darkness
-darknessand
-darknessoutdoors
-darksight
-darkvision
-darkwood
-darrig
-darrin
 dart
 darting
 darts
@@ -5426,15 +4344,12 @@ dau
 daughter
 daughters
 daunting
-daus
 dave
 david
 dawn
-dawnfly
 day
 daylight
 days
-daysprovide
 daytime
 daze
 dazed
@@ -5443,16 +4358,12 @@ dazzle
 dazzling
 dazzlingly
 dc
-dcs
-ddg
-ddraig
 de
 deactivate
 deactivated
 deactivates
 deactivating
 dead
-deadbane
 deadens
 deadeye
 deadfall
@@ -5468,9 +4379,7 @@ deafening
 deafeningly
 deafens
 deafness
-deaftened
 deal
-dealbreaking
 dealer
 dealers
 dealing
@@ -5478,29 +4387,13 @@ dealings
 deals
 dealt
 dean
-deanimate
-deanimating
 dear
 dearly
 death
 deathbed
-deathbutterflyswarm
-deathcap
-deathcapmyconid
-deathcaps
 deathless
-deathlights
 deathly
-deathroll
 deaths
-deathspeak
-deathspeaker
-deathspeakers
-deathsworn
-deathweaver
-deathweavers
-deathwisp
-deathwisps
 debased
 debasement
 debate
@@ -5546,8 +4439,6 @@ decide
 decided
 decidedly
 decides
-decidethat
-decideto
 deciding
 decimal
 decimate
@@ -5613,22 +4504,12 @@ deem
 deemed
 deems
 deep
-deepchill
-deepdrake
 deepening
 deepens
 deeper
 deepest
 deeply
-deepm
-deepmagic
-deepmx
-deepone
-deeponearchimandrite
-deeponepriest
 deeps
-deepset
-deepstone
 deer
 deface
 default
@@ -5687,7 +4568,6 @@ defuse
 defy
 defying
 degenerate
-degeneratetitan
 degradation
 degree
 degrees
@@ -5722,7 +4602,6 @@ deliverer
 delivering
 delivers
 delivery
-delow
 deluding
 deluge
 delusion
@@ -5742,16 +4621,10 @@ dementing
 demesne
 demeter
 demigod
-demigods
-demilich
-demilichs
-demiplane
-demiplanes
 demise
 demogorgon
 demolishing
 demon
-demonfang
 demonic
 demons
 demonstrate
@@ -5769,7 +4642,6 @@ denominations
 denote
 dens
 dense
-densefoliage
 densely
 densest
 density
@@ -5817,14 +4689,12 @@ depths
 deranged
 derelict
 dereliction
-derendian
 derision
 derivative
 derive
 derived
 derives
 deriving
-derro
 dervish
 desaturated
 desc
@@ -5845,8 +4715,6 @@ desecrated
 desert
 deserted
 deserter
-deserters
-desertgiant
 desertion
 deserts
 deserve
@@ -5895,7 +4763,6 @@ destinations
 destined
 destinies
 destiny
-destinys
 destitute
 destrier
 destroy
@@ -5960,15 +4827,11 @@ developed
 developing
 development
 develops
-devestation
 deviating
 deviations
 device
 devices
 devil
-devilbound
-devilboundgnome
-devilflame
 devilish
 devilishness
 devils
@@ -5990,16 +4853,11 @@ devouring
 devours
 devout
 dew
-dewvine
 dex
-dexmod
 dexterity
 dexterous
 dextrous
-dhampir
-dhampirs
 dharma
-dhe
 diabolic
 diabolical
 diabolically
@@ -6017,7 +4875,6 @@ diameters
 diametrically
 diamond
 diamonds
-diancecht
 diaphanous
 diary
 dice
@@ -6067,7 +4924,6 @@ dilating
 dilemma
 diligence
 diligent
-dillon
 dim
 dimension
 dimensional
@@ -6089,9 +4945,7 @@ dining
 dinner
 dinosaur
 dinosaurs
-diomedian
 dionysus
-diopsid
 diorama
 dip
 diplodocus
@@ -6103,7 +4957,6 @@ dipped
 dipper
 dipping
 dips
-dipsa
 dipsas
 dire
 direct
@@ -6116,9 +4969,7 @@ directions
 directive
 directly
 directs
-dires
 dirge
-dirgeblade
 dirk
 dirks
 dirt
@@ -6128,7 +4979,6 @@ disable
 disabled
 disables
 disabling
-disad
 disadvantage
 disagree
 disallow
@@ -6178,7 +5028,6 @@ disclaimed
 disclaimer
 disclaimers
 disclosures
-discognitive
 discoloration
 discolored
 discombobulated
@@ -6191,7 +5040,6 @@ discontented
 discord
 discordant
 discorporate
-discorporates
 discount
 discourage
 discourse
@@ -6262,7 +5110,6 @@ disks
 dislike
 disliked
 dislocate
-dislocative
 dislodge
 dislodged
 dislodging
@@ -6299,7 +5146,6 @@ dispatch
 dispatched
 dispatches
 dispatching
-dispater
 dispel
 dispelled
 dispelling
@@ -6356,7 +5202,6 @@ dissemble
 dissemination
 dissension
 dissident
-dissimortuum
 dissipate
 dissipated
 dissipates
@@ -6459,19 +5304,13 @@ dizzy
 dizzying
 djinn
 djinni
-djinnis
 dm
-dmag
-dmage
-dmg
-dnd
 do
 docile
 docility
 dock
 docks
 doctor
-doctors
 document
 documentation
 documents
@@ -6487,14 +5326,9 @@ doffing
 dog
 dogma
 dogmatic
-dogmole
-dogmolejuggernaut
-dogmoles
 dogs
 doing
 doings
-dokkaebi
-doku
 doling
 doll
 dollop
@@ -6518,12 +5352,10 @@ domination
 dominator
 dominion
 dominions
-domovoi
 don
 donated
 donation
 donations
-donbettyr
 done
 dong
 donjon
@@ -6539,7 +5371,6 @@ dooming
 dooms
 doomsayer
 door
-doorbreaker
 doorframe
 doorknob
 doors
@@ -6547,18 +5378,8 @@ doorway
 doorways
 doppelganger
 doppelgangers
-doppeling
-doppelixir
-doppelrat
-doppelrats
-dopplerat
-dorcha
-dorei
 dormant
 dormitories
-dorocha
-dorreq
-dorreqi
 dorsal
 dose
 doses
@@ -6601,8 +5422,6 @@ dozen
 dozens
 drab
 draconic
-dracotaur
-drader
 draft
 drafts
 drafty
@@ -6610,24 +5429,10 @@ drag
 dragged
 dragging
 dragon
-dragonborn
-dragonbound
-dragonchess
-dragoneel
-dragonette
-dragonettes
-dragonflesh
 dragonflies
 dragonfly
-dragonkin
 dragonkind
-dragonleaf
-dragonleaftree
-dragonrider
 dragons
-dragonscale
-dragonslaying
-dragonstooth
 drags
 drain
 drained
@@ -6636,8 +5441,6 @@ drainpipe
 drains
 drake
 drakes
-drakon
-drakons
 dram
 drama
 dramatic
@@ -6646,8 +5449,6 @@ drank
 drape
 draped
 draping
-draught
-draughts
 draw
 drawbacks
 drawbridge
@@ -6657,13 +5458,11 @@ drawings
 drawn
 draws
 dread
-dreadblade
 dreaded
 dreadful
 dreading
 dreadnought
 dream
-dreameater
 dreamer
 dreamers
 dreaming
@@ -6671,9 +5470,6 @@ dreamlands
 dreamlike
 dreams
 dreamscapes
-dreamscrying
-dreamt
-dreamwine
 dreary
 dredged
 dregs
@@ -6682,12 +5478,9 @@ dress
 dressed
 dresses
 dretch
-dretches
 drew
 dribble
 dribbling
-drider
-driders
 dried
 dries
 drift
@@ -6704,7 +5497,6 @@ drinks
 drip
 dripping
 drips
-dritch
 drive
 driven
 driver
@@ -6723,13 +5515,11 @@ dropping
 droppings
 drops
 dross
-droth
 drought
 drove
 drow
 drown
 drowned
-drownedmaiden
 drowning
 drowns
 drudge
@@ -6738,7 +5528,6 @@ drudges
 drug
 drugs
 druid
-druidcraft
 druidic
 druidical
 druids
@@ -6758,10 +5547,7 @@ drying
 dryness
 dual
 duality
-dubh
-dubhs
 dubious
-dubius
 duck
 duckling
 ducks
@@ -6772,14 +5558,12 @@ dueled
 dueling
 duelist
 duelists
-duergar
 duffel
 dug
 duke
 dukes
 dulcimer
 dull
-dullahan
 dulled
 dulling
 dulls
@@ -6790,14 +5574,10 @@ dumped
 dumping
 dumps
 dun
-dunatis
 dune
-dunemimic
 dunes
 dung
 dungeon
-dungeoneer
-dungeoneers
 dungeons
 duping
 duplicate
@@ -6813,42 +5593,28 @@ duration
 durations
 duress
 during
-durinn
 dusk
-dusks
-duskthorn
-duskthorndryad
-duskwilt
 dusky
 dust
-dustgoblin
 dusting
 dusty
 duties
 duty
-dvarapala
 dwarf
 dwarfish
-dwarven
-dwarvenkind
-dwarvenringmage
 dwarves
-dwarvish
-dwashi
 dwell
 dweller
 dwellers
 dwelling
 dwellings
 dwells
-dwellunderground
 dwelt
 dwindles
 dye
 dyed
 dyeing
 dying
-dymwch
 dynamic
 dynamics
 dynastic
@@ -6863,7 +5629,6 @@ eagerly
 eagerness
 eagle
 eagles
-eala
 ean
 ear
 eared
@@ -6875,7 +5640,6 @@ earned
 earnest
 earning
 earns
-earpiercing
 earring
 earrings
 ears
@@ -6889,8 +5653,6 @@ earthquake
 earthquakes
 earths
 earthshaking
-earthskimmer
-earthstrike
 earthworks
 earthy
 earworm
@@ -6903,7 +5665,6 @@ easy
 eat
 eaten
 eater
-eaterofdust
 eaters
 eating
 eats
@@ -6946,18 +5707,14 @@ edible
 edibles
 edicts
 edifice
-edimmu
-edimmus
 edit
 edited
 edition
-edjet
 educated
 education
 educator
 educators
 eel
-eelhound
 eels
 eely
 eerie
@@ -6982,8 +5739,6 @@ efforts
 effulgence
 effusive
 efreet
-efreeti
-efreetis
 egg
 eggs
 eggshell
@@ -6991,16 +5746,11 @@ ego
 egress
 egret
 egyptian
-ehwaz
-eibon
-eiddyn
 eidetic
 eight
 eighteen
 eightfold
 eighth
-einherjar
-einherjars
 either
 eject
 ejected
@@ -7020,7 +5770,6 @@ elder
 elderberry
 elderly
 elders
-eldershadowdrake
 eldest
 eldritch
 elect
@@ -7036,19 +5785,15 @@ electrum
 elegance
 elegant
 elegantly
-eleinomae
 element
 elemental
 elementalism
 elementalist
-elementalists
-elementallocus
 elementally
 elementals
 elements
 elephant
 elephantine
-elephantines
 elephants
 elevate
 elevated
@@ -7057,8 +5802,6 @@ elevations
 eleven
 elf
 elfish
-elfmarked
-elfshadow
 eligible
 eliminate
 eliminated
@@ -7073,20 +5816,16 @@ elliptical
 elocution
 elongate
 elongated
-elophar
 eloquence
 eloquent
 else
-elsenian
 elsewhere
 elude
 eluded
 elusive
 elven
-elvenkind
 elves
 elvish
-elvishveteranarcher
 elysium
 elytra
 em
@@ -7130,8 +5869,6 @@ embryo
 embryonic
 emendation
 emerald
-emeraldeye
-emeraldordercultleader
 emeralds
 emerge
 emerged
@@ -7152,7 +5889,6 @@ emotions
 empathetically
 empathic
 empathizing
-empaths
 empathy
 emperor
 emperors
@@ -7178,13 +5914,10 @@ emptied
 empties
 emptiness
 empty
-emptycloak
 emptying
 empusa
-empusae
 empyrean
 empyreans
-emsp
 emulate
 emulates
 emulating
@@ -7252,7 +5985,6 @@ endangers
 endearing
 endeavor
 endeavors
-endeavours
 ended
 endemic
 ending
@@ -7270,7 +6002,6 @@ endures
 enduring
 enemies
 enemy
-enemys
 energetic
 energies
 energize
@@ -7290,7 +6021,6 @@ enforcement
 enforcer
 enforcers
 enforcing
-enforers
 engage
 engaged
 engagements
@@ -7329,7 +6059,6 @@ enjoys
 enkindle
 enlarge
 enlarged
-enlargereduce
 enlarges
 enlighten
 enlightened
@@ -7344,14 +6073,12 @@ enormous
 enormously
 enormousness
 enough
-enpublishingrpg
 enrage
 enraged
 enraging
 enrich
 enriched
 enrichment
-enroute
 ensconced
 enshroud
 enshrouded
@@ -7447,8 +6174,6 @@ envoys
 envy
 enwraps
 enzymes
-eonic
-eonicdrifter
 eons
 ep
 ephemeral
@@ -7474,7 +6199,6 @@ equip
 equipment
 equipped
 equitably
-equitox
 equity
 equivalent
 er
@@ -7491,11 +6215,7 @@ erect
 erected
 erecting
 ereshkigal
-erina
-erinadefender
-erinas
 erinyes
-erlik
 eroded
 erosion
 errands
@@ -7535,12 +6255,9 @@ especially
 espionage
 espouse
 esquire
-esquires
-esrd
 essay
 essence
 essences
-essense
 essential
 essentially
 establish
@@ -7548,12 +6265,10 @@ established
 establishes
 establishing
 establishment
-estaci
 estate
 estates
 esteem
 esteemed
-esteron
 esthetic
 estimate
 estimated
@@ -7600,7 +6315,6 @@ eve
 even
 evening
 evenings
-evenless
 evenly
 event
 events
@@ -7608,14 +6322,7 @@ eventual
 eventually
 ever
 everblooming
-everburning
-everchanging
-evercold
-everflowing
 everlasting
-evermaw
-eversmoking
-everwound
 every
 everyone
 everything
@@ -7643,7 +6350,6 @@ evolving
 ex
 exacerbate
 exact
-exactdistances
 exacting
 exactly
 exacts
@@ -7664,7 +6370,6 @@ example
 examples
 exarch
 excalibur
-excaliburs
 excavate
 excavation
 excavator
@@ -7717,7 +6422,6 @@ executed
 executes
 execution
 executioner
-executioners
 exemplar
 exemplary
 exemplify
@@ -7893,12 +6597,9 @@ extracting
 extraction
 extractions
 extractor
-extradimensional
-extradimensionally
 extralegal
 extraordinarily
 extraordinary
-extraplanar
 extrasensory
 extraterrestrial
 extravagant
@@ -7920,12 +6621,10 @@ eye
 eyeball
 eyeballs
 eyebeam
-eyebite
 eyebright
 eyebrow
 eyebrows
 eyed
-eyegolem
 eyeholes
 eyelash
 eyeless
@@ -7936,7 +6635,6 @@ eyes
 eyesight
 eyespots
 eyewash
-eyewatering
 f
 fa
 fable
@@ -7950,7 +6648,6 @@ fabrication
 fabricator
 fabricators
 fabulous
-faca
 facade
 facades
 face
@@ -7976,12 +6673,10 @@ factors
 facts
 faculties
 faculty
-fada
 fade
 faded
 fades
 fading
-faer
 faerie
 faeries
 fafnir
@@ -8010,7 +6705,6 @@ faithfully
 faiths
 fake
 fakeries
-falaya
 falchion
 falcon
 fall
@@ -8020,14 +6714,10 @@ falling
 fallow
 falls
 false
-falseheart
 falsehood
 falsehoods
-falseman
-falsemen
 falsifier
 falteringly
-famadihana
 fame
 famed
 familial
@@ -8060,10 +6750,8 @@ fantastical
 fantastically
 fantasy
 far
-fardarrig
 fare
 farer
-farhealing
 faring
 farm
 farmer
@@ -8074,9 +6762,7 @@ farms
 farmstead
 farmsteads
 farseer
-farshot
 fart
-farthe
 farther
 farthest
 fascinate
@@ -8093,18 +6779,14 @@ fasten
 fastened
 faster
 fastest
-fastpace
 fat
 fatal
 fate
 fated
-fateeater
-fateholder
 fates
 father
 fathom
 fathomer
-fathomers
 fatigue
 fatigued
 fattened
@@ -8114,7 +6796,6 @@ faultless
 faun
 fauna
 fauns
-faustin
 faux
 favor
 favorable
@@ -8124,7 +6805,6 @@ favoring
 favorite
 favorites
 favors
-fclmking
 fealty
 fear
 feared
@@ -8134,14 +6814,12 @@ fearless
 fearlessly
 fearlessness
 fears
-fearsmith
 fearsome
 feasibly
 feast
 feasting
 feasts
 feat
-featbenefit
 feather
 feathered
 feathers
@@ -8157,7 +6835,6 @@ fecundity
 fed
 fee
 feeble
-feeblemind
 feed
 feedback
 feeders
@@ -8170,8 +6847,6 @@ feelings
 feels
 fees
 feet
-feeton
-feetthat
 feign
 feigning
 feigns
@@ -8182,12 +6857,10 @@ felid
 feline
 felines
 fell
-fellforged
 felling
 fellow
 fellows
 fellowship
-fellspire
 felons
 felt
 female
@@ -8201,7 +6874,6 @@ fend
 fending
 fennec
 fennel
-fenris
 feral
 fermentation
 ferns
@@ -8211,7 +6883,6 @@ ferocity
 ferrous
 ferry
 ferryman
-ferrymans
 fertile
 fertility
 fertilize
@@ -8227,7 +6898,6 @@ festivals
 festivities
 festooned
 fetal
-fetalsavant
 fetch
 fetches
 fetching
@@ -8239,14 +6909,7 @@ feverish
 few
 fewer
 fewest
-fext
 fey
-feybane
-feysworn
-feyward
-feywardens
-feywardtree
-feywild
 fez
 fezzes
 fiars
@@ -8255,8 +6918,6 @@ fibers
 fibrous
 fickle
 fiddle
-fidele
-fideleangel
 fidelity
 fidgety
 field
@@ -8269,7 +6930,6 @@ fierce
 fiercely
 fiercer
 fiercest
-fierstjerren
 fiery
 fifteen
 fifth
@@ -8322,7 +6982,6 @@ find
 finder
 finders
 finding
-findinghidden
 findings
 finds
 fine
@@ -8332,7 +6991,6 @@ finery
 finesse
 finest
 finger
-fingerbone
 fingered
 fingerlike
 fingernail
@@ -8348,13 +7006,11 @@ finishes
 finishing
 finite
 finned
-finnigan
 fins
 fir
 fire
 firearm
 firearms
-firebal
 fireball
 fireballs
 firebird
@@ -8362,17 +7018,10 @@ firebirds
 firecracker
 fired
 firefly
-firegeist
-firegeists
 firelight
 fireproof
 fires
-firesight
 firestorm
-firetamer
-firetamers
-firewalk
-firewalker
 firework
 fireworks
 firing
@@ -8387,7 +7036,6 @@ fisherfolk
 fisherman
 fishermen
 fishes
-fishform
 fishing
 fishlike
 fishmongers
@@ -8414,11 +7062,9 @@ fizz
 fizzle
 fizzles
 fizzy
-fj
 fjords
 flab
 flabby
-flabgiant
 flag
 flagellating
 flagellation
@@ -8430,11 +7076,7 @@ flails
 flakes
 flamboyant
 flame
-flamecharm
-flamedragonwyrmling
-flameform
 flames
-flamescourged
 flaming
 flammable
 flanged
@@ -8500,15 +7142,8 @@ fleeting
 fleets
 flensing
 flesh
-fleshand
-fleshbag
-fleshdreg
-fleshdregs
-fleshpod
-fleshspurned
 fleshy
 fletcher
-fletchers
 fletching
 flex
 flexes
@@ -8528,7 +7163,6 @@ flightless
 flights
 flighty
 flinching
-flinderbeast
 flinders
 fling
 flinging
@@ -8542,8 +7176,6 @@ flips
 flirtation
 flirtatious
 flit
-flithidir
-flithidirs
 flits
 flittering
 flitting
@@ -8556,7 +7188,6 @@ floe
 flood
 flooded
 flooding
-floodmote
 floods
 floor
 floored
@@ -8566,8 +7197,6 @@ flops
 flora
 floral
 floret
-floriographer
-floriography
 flotation
 flotsam
 flounder
@@ -8599,8 +7228,6 @@ fluid
 fluidity
 fluids
 fluked
-flumph
-flumphs
 flung
 fluorescence
 fluorescing
@@ -8612,7 +7239,6 @@ fluted
 flutes
 fluting
 flutter
-flutterflesh
 fluttering
 flutters
 flux
@@ -8636,12 +7262,9 @@ focusing
 fodder
 foe
 foes
-fofi
 fog
-fogbanks
 foggy
 fogs
-fogshrouded
 foil
 foiling
 foils
@@ -8654,7 +7277,6 @@ folds
 foliage
 folk
 folklore
-folkofleng
 folks
 folktales
 follicles
@@ -8668,8 +7290,6 @@ folly
 foment
 fomor
 fomorian
-fomorians
-fomors
 fond
 fondly
 fondness
@@ -8688,18 +7308,14 @@ foolproof
 fools
 foot
 footbridge
-footby
 footed
 footfall
-foothigh
 footing
 footlong
 footman
 footmen
 footprints
-footradius
 footsteps
-foottall
 footwear
 footwork
 foppish
@@ -8715,11 +7331,9 @@ forbidden
 forbidding
 forbids
 force
-forcecage
 forced
 forceful
 forcefully
-forcelance
 forces
 forcibly
 forcing
@@ -8749,12 +7363,9 @@ forest
 forested
 forester
 foresters
-foresthunter
-forestmarauder
 forests
 foretell
 foretelling
-foretellings
 foretells
 foretold
 forever
@@ -8762,9 +7373,6 @@ forewarns
 forfeit
 forge
 forged
-forgefire
-forgemaster
-forgemasters
 forger
 forgeries
 forgery
@@ -8844,7 +7452,6 @@ founder
 foundling
 fountain
 fountains
-fountmail
 four
 fours
 fourteen
@@ -8852,11 +7459,8 @@ fourth
 fox
 foxes
 foxfire
-foxin
 foyer
-foyson
 fractal
-fractalize
 fractals
 fraction
 fractions
@@ -8869,7 +7473,6 @@ fragmenting
 fragments
 fragrance
 fragrant
-fragrite
 frail
 frailer
 frailties
@@ -8880,14 +7483,11 @@ frames
 framework
 frantically
 fraudulently
-fraugh
-fraughashar
 fraught
 fray
 frayed
 fraying
 frays
-fraz
 freakish
 freakishly
 free
@@ -8897,9 +7497,7 @@ freed
 freedom
 freeing
 freelance
-freelinking
 freely
-freerunner
 frees
 freestanding
 freeze
@@ -8942,15 +7540,10 @@ frills
 fringe
 fringes
 frippery
-frise
-frithiof
 frog
-frogheaded
 frogs
 frolicking
 from
-fromone
-fromthe
 frond
 fronds
 front
@@ -8959,13 +7552,7 @@ frontmost
 frost
 frostbite
 frostbitten
-frostbolt
 frosted
-frostfire
-frostjack
-frosttooth
-frostveil
-frostveils
 frosty
 froth
 frothing
@@ -8979,8 +7566,6 @@ fruiting
 fruition
 fruits
 fruity
-frunges
-frungilator
 frustrate
 frustrated
 frustrates
@@ -8993,10 +7578,6 @@ fueled
 fuels
 fugitive
 fugue
-fuit
-fukur
-fukurowashi
-fulad
 fulcrum
 fulfill
 fulfilled
@@ -9005,8 +7586,6 @@ fulfillment
 full
 fullest
 fully
-fulminar
-fulminars
 fulminating
 fumarole
 fumes
@@ -9045,7 +7624,6 @@ furrier
 furry
 furs
 further
-furtheradventure
 furthermore
 furthers
 furthest
@@ -9064,24 +7642,19 @@ futures
 fuzz
 fuzzy
 g
-gada
 gagged
 gagging
 gaggle
 gail
 gain
-gainbenefits
 gained
 gainful
 gaining
 gains
 gainsaid
-gaints
 gait
-gaki
 gale
 gales
-galidroo
 galleon
 galley
 gallon
@@ -9091,7 +7664,6 @@ galloping
 gallow
 gallows
 galls
-gambantein
 gambit
 gamble
 gambler
@@ -9101,9 +7673,7 @@ gambol
 game
 gamekeeper
 gamekeepers
-gameplay
 games
-gamesystem
 gaming
 gamut
 gang
@@ -9115,33 +7685,25 @@ gap
 gapes
 gaping
 gaps
-garanhir
 garb
 garbage
 garbed
 garbled
-garcia
 garden
 gardeners
 gardening
 gardens
 gargantuan
-gargoctopus
 gargoyle
 gargoyles
 garish
-garlicle
-garlicles
 garment
 garments
-garmvvolf
 garners
 garnet
 garnets
-garou
 garrote
 garroter
-garrotercrab
 gary
 gas
 gaseous
@@ -9169,7 +7731,6 @@ gaunt
 gauntlet
 gauntleted
 gauntlets
-gauth
 gauze
 gave
 gawky
@@ -9179,17 +7740,8 @@ gazelle
 gazes
 gazette
 gazing
-gbahali
-gbahalis
-gcan
 gear
-gearforged
-gearforgedtemplar
-gearmass
 gears
-gearsmiths
-gearworkers
-geas
 geese
 gehenna
 geist
@@ -9258,27 +7810,14 @@ ghastly
 ghasts
 ghillie
 ghost
-ghostheart
-ghostknight
-ghostlight
 ghostly
 ghosts
-ghostwalk
-ghostwalkspider
 ghoul
-ghoulbane
 ghoulish
 ghouls
-ghoulsteed
-ghts
-ghul
 giant
-giantant
-giantantqueen
-giantkin
 giantkind
 giants
-giantstrike
 gibber
 gibbering
 gibberish
@@ -9288,12 +7827,10 @@ gift
 gifted
 gifts
 gigantic
-gigantura
 giggle
 giggles
 giggling
 gilded
-gildeddevil
 gills
 gilt
 ginger
@@ -9301,9 +7838,6 @@ giraffes
 gird
 girdle
 girth
-github
-githyanki
-githzerai
 gits
 give
 given
@@ -9311,8 +7845,6 @@ givers
 gives
 giving
 gizzard
-glabrezu
-glabrezus
 glacial
 glacier
 glaciers
@@ -9324,7 +7856,6 @@ gladiators
 gladly
 glaive
 glaives
-glamer
 glamor
 glamored
 glamour
@@ -9339,7 +7870,6 @@ glass
 glassblower
 glassblowers
 glasses
-glassgator
 glassy
 glazed
 gleam
@@ -9381,14 +7911,10 @@ globs
 globular
 globule
 gloom
-gloomflower
 glooms
-gloomspittle
-gloomwrought
 gloomy
 glorious
 glory
-glorys
 glossy
 glove
 gloved
@@ -9407,13 +7933,9 @@ gluttonous
 gluttons
 gluttony
 glyph
-glyphed
 glyphs
 gm
-gms
 gnarled
-gnarljak
-gnarljaks
 gnarly
 gnash
 gnashing
@@ -9423,13 +7945,9 @@ gnaw
 gnawed
 gnawing
 gnaws
-gnoll
-gnollhavocrunner
-gnolls
 gnome
 gnomes
 gnomish
-gnyan
 go
 goads
 goal
@@ -9442,12 +7960,7 @@ gob
 gobbling
 goblet
 goblin
-goblinking
-goblinkings
-goblinoid
-goblinoids
 goblins
-goblinsare
 god
 goddess
 goddesses
@@ -9455,13 +7968,10 @@ godlike
 godlings
 godly
 gods
-godslayer
 goer
-goers
 goes
 gofers
 goggles
-goibhniu
 going
 goings
 gold
@@ -9469,25 +7979,17 @@ golden
 golem
 golems
 goliath
-golmana
 gone
 gong
 goo
 good
-goodaligned
-goodberry
 goodbye
 goodness
 goods
 gooey
 goop
 goose
-gorao
-gordolay
-gordolays
 gore
-goreling
-gorelings
 gores
 gorge
 gorged
@@ -9498,7 +8000,6 @@ gorging
 gorgon
 gorgons
 gorilla
-goristro
 gossamer
 gossip
 gossips
@@ -9519,7 +8020,6 @@ governmental
 governor
 gown
 gp
-gpg
 grab
 grabbed
 grabber
@@ -9532,7 +8032,6 @@ gracefully
 gracelessly
 graces
 gracious
-graddfeydd
 gradual
 gradually
 graduate
@@ -9541,8 +8040,6 @@ grafted
 grafts
 grain
 grains
-graknork
-graknorks
 gram
 grammar
 granaries
@@ -9565,14 +8062,11 @@ grape
 grapes
 grapevine
 graphic
-grappelvine
-grapping
 grapple
 grappled
 grappler
 grapplers
 grapples
-grapplevine
 grappling
 grasp
 grasped
@@ -9589,11 +8083,6 @@ grates
 grating
 gratitude
 grave
-gravebinder
-gravebinders
-gravebinding
-graveborn
-gravedust
 gravel
 gravelly
 gravely
@@ -9609,31 +8098,23 @@ gray
 graying
 grayish
 grays
-graythirster
 graze
 grazer
 grazing
 grease
 greasy
 great
-greataxe
-greatclub
 greater
-greaterdeathbutterflyswarm
 greatest
 greatly
 greatness
-greatsword
-greatswords
 greaves
 greed
 greedy
 greek
 green
-greenfire
 greenhouses
 greenish
-greenronin
 greens
 greet
 gregarious
@@ -9642,9 +8123,6 @@ gremlins
 grenade
 grew
 grey
-greyfur
-greyfurs
-grick
 grief
 grieve
 grieving
@@ -9655,23 +8133,16 @@ griffon
 griffons
 grift
 grifter
-grifters
 grim
 grimace
 grimalkin
 grime
-grimjester
-grimlock
-grimlocks
-grimmlet
-grimmlets
 grimoire
 grimy
 grin
 grind
 grinding
 grinds
-grindylow
 grinning
 grins
 grip
@@ -9682,12 +8153,10 @@ grisly
 grit
 gritless
 gritty
-grivid
 grizzled
 grizzly
 groan
 groans
-grolar
 groove
 grooves
 groping
@@ -9702,12 +8171,10 @@ grounding
 groundlings
 grounds
 groundskeeper
-grouo
 group
 grouping
 groups
 grove
-grovekeeper
 grovel
 groves
 grow
@@ -9752,9 +8219,6 @@ guessed
 guessing
 guest
 guests
-gug
-gugalanna
-gugs
 guidance
 guide
 guided
@@ -9763,8 +8227,6 @@ guides
 guiding
 guild
 guildhalls
-guildmasters
-guildmember
 guilds
 guile
 guilt
@@ -9775,16 +8237,11 @@ guitar
 gullet
 gullets
 gullible
-gullinkambi
-gullkin
 gulls
 gully
-gullylung
-gulon
 gulp
 gulper
 gum
-gumienniki
 gums
 gun
 gunpowder
@@ -9792,7 +8249,6 @@ gurgling
 gush
 gushes
 gust
-gustafson
 gusts
 gut
 guts
@@ -9800,18 +8256,11 @@ gutter
 guttersnipe
 guttural
 guzzle
-gwenddoleu
-gwyddno
-gygax
-gynosphinx
-gypsosphinx
-gypsosphinxes
 gypsum
 gyre
 gyros
 h
 ha
-haakjir
 habit
 habitable
 habitat
@@ -9822,16 +8271,12 @@ haboob
 hack
 hacks
 had
-hadar
 hades
-hadn
 hadrosaur
-haeck
 haft
 hafted
 hafts
 hag
-hagalaz
 hagfish
 haggled
 hagglers
@@ -9846,11 +8291,8 @@ haired
 hairless
 hairs
 hairy
-haladie
-haladron
 halberd
 halberds
-haleshi
 half
 halfling
 halflings
@@ -9882,7 +8324,6 @@ hamper
 hampered
 hamstring
 hand
-handaxe
 handaxes
 handbook
 handcrafted
@@ -9910,14 +8351,11 @@ handsome
 handwriting
 handy
 hang
-hangbui
 hangers
 hanging
 hangman
-hangmans
 hangover
 hangs
-hantu
 haphazard
 haphazardly
 hapless
@@ -9960,9 +8398,7 @@ hardtack
 hardwoods
 hardy
 hare
-harefolk
 harlequin
-harlequins
 harm
 harmed
 harmful
@@ -9986,7 +8422,6 @@ harpies
 harpoon
 harpoons
 harpy
-harpys
 harrier
 harries
 harris
@@ -10027,14 +8462,11 @@ hateful
 hater
 haters
 hates
-hathor
 hating
 hatpin
 hatred
 hats
 hauberk
-haugbui
-haugbuis
 haughtiest
 haughty
 haul
@@ -10066,7 +8498,6 @@ haze
 hazel
 hazelnuts
 hazelwood
-hazesight
 hazily
 hazy
 hd
@@ -10078,13 +8509,11 @@ headband
 headbutt
 headdress
 headed
-headedness
 headfirst
 heading
 headless
 headline
 headling
-headlings
 headlong
 headpiece
 headquarters
@@ -10092,7 +8521,6 @@ headrest
 heads
 headscarf
 headsman
-headsmans
 headwear
 headwind
 heady
@@ -10121,24 +8549,16 @@ heartache
 heartbeat
 heartbeats
 heartbreak
-heartbreaks
 heartbroken
 hearted
-heartglow
 hearth
 hearths
 hearts
-heartstone
-heartstop
-heartstopping
-heartstrike
 heartstring
-heartvine
 hearty
 heat
 heated
 heatless
-heatsense
 heatstroke
 heatwave
 heaven
@@ -10149,7 +8569,6 @@ heavier
 heavily
 heaviness
 heavy
-hebi
 hecate
 hecklers
 heckles
@@ -10158,8 +8577,6 @@ hedged
 hedgehog
 hedging
 hedonistic
-hedren
-hedrens
 heed
 heeded
 heedless
@@ -10169,7 +8586,6 @@ heels
 heft
 hefts
 hefty
-heggarna
 height
 heightened
 heights
@@ -10179,24 +8595,18 @@ heir
 heiress
 heirloom
 heirlooms
-heirophant
 heirs
 heist
 heists
-heithmir
 hel
-helashruu
 held
 heliotrope
 heliotropic
 helix
 hell
 hellfire
-hellforged
-hellforging
 hellish
 hells
-hellscape
 helm
 helmet
 helmets
@@ -10229,8 +8639,6 @@ hera
 herald
 heralded
 heraldic
-heraldofblood
-heraldofdarkness
 heraldry
 heralds
 herbalism
@@ -10239,7 +8647,6 @@ herbalists
 herbivore
 herbivores
 herbs
-hercharacter
 hercules
 herd
 herders
@@ -10260,7 +8667,6 @@ hermaphroditic
 hermes
 hermit
 hermits
-hermod
 hero
 heroes
 heroic
@@ -10270,22 +8676,16 @@ herons
 heros
 herself
 hesitant
-hesitantto
 hesitate
 hesitation
 hestia
 hewer
-hewers
 hewn
 hex
 hexagonal
-hexen
-hezrou
-hezrous
 hibernate
 hibernates
 hibernation
-hiccupping
 hickory
 hid
 hidden
@@ -10294,7 +8694,6 @@ hideous
 hideously
 hideouts
 hides
-hidey
 hiding
 hierarchies
 hierarchy
@@ -10302,7 +8701,6 @@ hieroglyph
 hieroglyphs
 hierophant
 hierophants
-hig
 high
 higher
 highest
@@ -10311,7 +8709,6 @@ highlight
 highlighted
 highlights
 highly
-highpitched
 highway
 hijacked
 hilariously
@@ -10328,7 +8725,6 @@ hind
 hinder
 hindered
 hindering
-hinderling
 hinders
 hindquarters
 hindrance
@@ -10337,7 +8733,6 @@ hinge
 hinged
 hinges
 hinging
-hinn
 hint
 hinted
 hinting
@@ -10358,8 +8753,6 @@ hires
 hiring
 hirsute
 hirudine
-hirvsth
-hirvsths
 his
 hiss
 hisses
@@ -10371,24 +8764,16 @@ historical
 histories
 history
 hit
-hitazard
 hitman
-hitomthe
-hitpoint
-hitpoints
 hits
 hitting
 hive
-hivebound
 hiveless
 hivemind
-hivequeen
 hives
-hjartakinde
 hoard
 hoarded
 hoarders
-hoardgolem
 hoards
 hoarfrost
 hoarse
@@ -10398,11 +8783,8 @@ hobby
 hobbyists
 hobgoblin
 hobgoblins
-hochhalter
 hocus
 hod
-hodag
-hodags
 hodge
 hodgepodge
 hods
@@ -10427,7 +8809,6 @@ hollowed
 hollows
 holly
 holsters
-holtrathamogg
 holy
 homages
 home
@@ -10452,8 +8833,6 @@ honeybees
 honeycomb
 honeyed
 honeypot
-hongaek
-hongaeks
 honing
 honor
 honorable
@@ -10464,7 +8843,6 @@ honoring
 honors
 hood
 hooded
-hooden
 hoods
 hoof
 hoofed
@@ -10492,9 +8870,6 @@ hoping
 hopper
 hopping
 hops
-horakh
-horakhs
-horakhty
 horde
 hordes
 horizon
@@ -10507,7 +8882,6 @@ horned
 hornet
 horns
 horrendous
-horribilis
 horrible
 horribly
 horrid
@@ -10523,7 +8897,6 @@ horsehair
 horsehide
 horselike
 horseman
-horsemans
 horsemen
 horses
 horseshoe
@@ -10544,8 +8917,6 @@ hot
 hotter
 hottest
 hound
-houndmaster
-houndofthenight
 hounds
 hour
 hourglass
@@ -10577,36 +8948,25 @@ howls
 hows
 hp
 hr
-hraesvelgr
-hraesvelgrs
-hriggala
-hrolf
 hrs
 http
-https
 hubris
 huddle
 huddled
 huddling
 hue
-huecambra
 hued
 hues
 huffing
 hug
 huge
 hugging
-hughes
-huginn
-huli
 hulk
 hulking
-hulkingwhelp
 hulks
 hulls
 hum
 human
-humanhalf
 humanity
 humankind
 humanlike
@@ -10626,7 +8986,6 @@ humor
 humorous
 humorously
 humors
-humour
 hums
 hunch
 hunchbacked
@@ -10634,8 +8993,6 @@ hunched
 hunches
 hundred
 hundreds
-hundun
-hunduns
 hung
 hunger
 hungering
@@ -10650,7 +9007,6 @@ hunters
 hunting
 hunts
 huntsman
-huntsmans
 huntsmen
 hurl
 hurled
@@ -10673,9 +9029,6 @@ husks
 hustled
 hut
 huts
-hvalfiskr
-hverhuldra
-hverhuldras
 hybrid
 hybrids
 hydra
@@ -10689,16 +9042,12 @@ hyenas
 hygiene
 hymn
 hymns
-hyperborea
-hyperfixate
 hyperlink
 hypersensitive
 hypersensitivity
 hypersusceptibility
 hypervigilance
-hypnagogia
 hypnic
-hypno
 hypnotic
 hypocrisy
 hypothalamus
@@ -10708,9 +9057,6 @@ hypothesized
 hysteria
 i
 ia
-iaaffrat
-iamh
-ibexian
 ibis
 ibises
 icarus
@@ -10719,10 +9065,6 @@ iceberg
 icebergs
 iceblink
 iced
-icemaiden
-iceshard
-icewalker
-iceworm
 ichneumon
 ichor
 ichorous
@@ -10755,16 +9097,10 @@ idiot
 idle
 idly
 idol
-idolic
-idolicdeity
 idolize
 idols
 idyllic
-ies
 if
-ifit
-ifthe
-ignan
 ignite
 ignited
 ignites
@@ -10777,17 +9113,12 @@ ignored
 ignores
 ignoring
 iguanas
-iievery
-ijiraq
-ikuchi
 ilk
 ill
 illegal
 illegible
 illegitimate
-illhveli
 illicit
-illithid
 illness
 illnesses
 illogical
@@ -10806,8 +9137,6 @@ illustrate
 illustrated
 illustration
 illustrations
-ilmater
-im
 image
 imagery
 images
@@ -10823,11 +9152,8 @@ imbibe
 imbibes
 imbue
 imbued
-imbuedwith
 imbues
 imbuing
-img
-imhotep
 imitate
 imitates
 imitating
@@ -10841,7 +9167,6 @@ immature
 immediacy
 immediate
 immediately
-immediatelybefore
 immemorial
 immense
 immensely
@@ -10902,7 +9227,6 @@ imperceptibly
 imperfect
 imperfections
 imperial
-imperialghoul
 imperious
 impermanent
 impersonate
@@ -10915,7 +9239,6 @@ impetus
 impish
 implacable
 implacably
-implaced
 implant
 implanted
 implanting
@@ -10957,7 +9280,6 @@ impresses
 impression
 impressions
 impressive
-impressivelooking
 impressively
 imprint
 imprinted
@@ -10981,9 +9303,7 @@ impulse
 impulses
 impulsively
 impurities
-imy
 in
-ina
 inability
 inaccessible
 inaccurate
@@ -11006,8 +9326,6 @@ incapacitate
 incapacitated
 incapacitating
 incapacitation
-incapacited
-incapactitated
 incarnate
 incarnation
 incautious
@@ -11023,7 +9341,6 @@ incidental
 incidentally
 incidents
 incinerate
-incinis
 incisors
 incite
 inciter
@@ -11094,7 +9411,6 @@ indeed
 indefinite
 indefinitely
 indelible
-indensely
 indentation
 indentured
 independence
@@ -11122,7 +9438,6 @@ indigo
 indirect
 indirectly
 indiscernible
-indiscrimate
 indiscriminate
 indiscriminately
 indispensability
@@ -11152,7 +9467,6 @@ inebriation
 inedible
 ineffective
 ineffectual
-inen
 inert
 inescapable
 inevitability
@@ -11193,8 +9507,6 @@ infiltrators
 infinite
 infinitely
 infinity
-infinitys
-infinum
 infirm
 infirmity
 inflamed
@@ -11242,7 +9554,6 @@ ingests
 inglorious
 ingrained
 ingredients
-ingwaz
 inhabit
 inhabitant
 inhabitants
@@ -11265,7 +9576,6 @@ inhumane
 inhumanly
 inimical
 initial
-initialheaderlevel
 initially
 initiate
 initiated
@@ -11285,11 +9595,9 @@ injuring
 injury
 injustice
 ink
-inkdevil
 inked
 inkling
 inklings
-inkpen
 inkpot
 inks
 inky
@@ -11304,7 +9612,6 @@ innately
 inner
 innermost
 innkeeper
-innkeeping
 innocence
 innocent
 innocents
@@ -11333,7 +9640,6 @@ inscriptions
 inscrutable
 insect
 insectlike
-insectoid
 insects
 insecurities
 insecurity
@@ -11382,7 +9688,6 @@ instills
 instinct
 instinctive
 instinctively
-instinctivelyknow
 instincts
 instinctual
 instinctually
@@ -11419,7 +9724,6 @@ integrated
 integrating
 integrity
 intel
-inteligence
 intellect
 intellectual
 intelligence
@@ -11453,7 +9757,6 @@ intercede
 intercept
 intercepted
 intercession
-interdimensional
 interest
 interested
 interesting
@@ -11473,7 +9776,6 @@ intermittent
 intermittently
 internal
 international
-interplanar
 interpose
 interposes
 interposing
@@ -11531,7 +9833,6 @@ intrigue
 intrigues
 intriguing
 intrinsically
-introcaso
 introduce
 introduced
 introduces
@@ -11580,7 +9881,6 @@ invested
 investigate
 investigating
 investigation
-investigationcheck
 investigator
 investigators
 investments
@@ -11613,8 +9913,6 @@ invulnerable
 inward
 ion
 ionic
-ioun
-ious
 irascible
 ire
 irid
@@ -11628,12 +9926,9 @@ irked
 irksome
 iron
 ironclad
-ironghoul
-ironhide
 ironic
 ironically
 ironmonger
-ironskin
 ironweed
 irrational
 irredeemably
@@ -11654,9 +9949,6 @@ irritated
 irritating
 is
 isabel
-isaz
-isconcerned
-isdying
 isis
 island
 islands
@@ -11668,28 +9960,20 @@ isolates
 isolation
 isolationism
 isolationists
-isonade
 issue
 issues
 issuing
-isthe
 it
 itching
 itchy
 item
-itemcategory
-itemrarity
 items
-itemset
 iterative
 its
-itsconstitution
 itself
-iumenta
 ivory
 ivy
 j
-jaanavar
 jab
 jabbed
 jabberwock
@@ -11698,18 +9982,13 @@ jabs
 jacinth
 jack
 jackal
-jackalope
-jackalwere
-jackalweres
 jacks
-jaculi
 jaculus
 jade
 jagged
 jail
 jailer
 jailor
-jal
 jam
 jambiya
 james
@@ -11719,7 +9998,6 @@ japes
 jar
 jargon
 jarl
-jarngreipr
 jarred
 jarring
 jars
@@ -11735,19 +10013,15 @@ jawless
 jawline
 jaws
 jay
-jba
-jbafofispider
 jealous
 jealously
 jealousy
 jeer
 jeers
 jeff
-jeholopterus
 jellies
 jelly
 jellyfish
-jellys
 jeopardize
 jeremy
 jerk
@@ -11767,18 +10041,14 @@ jewelers
 jewelled
 jewelry
 jewels
-jiangshi
 jiao
 jigs
 jilted
-jimenju
 jing
 jingle
 jingles
 jingling
 jingu
-jinmenju
-jinnborn
 jinx
 jittery
 job
@@ -11798,7 +10068,6 @@ jokester
 jolt
 jolting
 jolts
-jon
 jonathan
 jostle
 jostled
@@ -11814,12 +10083,9 @@ journeying
 journeys
 jovial
 joy
-joybuzzer
 joyfully
 joys
-json
 jubilant
-jubjub
 judge
 judged
 judgement
@@ -11852,8 +10118,6 @@ junk
 jurisdiction
 jury
 just
-justicar
-justicars
 justice
 justifiably
 justified
@@ -11864,43 +10128,21 @@ juvenile
 juveniles
 k
 ka
-kachlian
-kachlians
-kadag
-kaguani
 kaleidoscope
 kaleidoscopic
-kalke
-kalkes
-kalkydra
-kallikantzaros
 kama
-kamaitachi
-kamaitachis
-kamani
 kami
-kapi
 kappa
-karakura
-kareef
-kareefs
-karkadann
-kartika
-kaunen
-kaveph
 kayaking
 kazoo
-kech
 keel
 keelboat
 keelboats
-keelbreaker
 keen
 keener
 keening
 keenly
 keenness
-keensense
 keep
 keeper
 keepers
@@ -11912,9 +10154,6 @@ keg
 kegs
 kelly
 kelp
-kembingur
-kenku
-kennich
 kept
 keratin
 keratinous
@@ -11925,32 +10164,20 @@ key
 keyed
 keyhole
 keyholes
-keyrole
 keys
 keystone
-kezai
-khalkos
-khalkoss
-khamaseen
 khan
-khargi
-khodumodumo
-khodumodumos
-khopesh
 ki
 kick
 kicked
 kicking
 kicks
-kickstarter
 kid
 kidnap
 kidnapped
 kidnappers
 kidnapping
 kids
-kikimora
-kikimoras
 kill
 killed
 killer
@@ -11973,11 +10200,7 @@ kingdom
 kingdoms
 kingpins
 kings
-kinnara
 kinship
-kiputytto
-kirikari
-kishi
 kiss
 kissed
 kisses
@@ -11987,16 +10210,11 @@ kitchen
 kite
 kites
 kits
-kitsune
-kledde
 kleptomaniacs
-kleure
-kludde
 knack
 knacks
 knee
 kneel
-kneelength
 kneeling
 knees
 knell
@@ -12006,7 +10224,6 @@ knight
 knighthood
 knightly
 knights
-knightsergeant
 knit
 knits
 knives
@@ -12033,35 +10250,12 @@ knuckle
 knuckles
 kob
 kobold
-koboldpress
 kobolds
-kogukhpak
-kokopelli
-kongamato
-kongamatos
-koralk
 korrigan
-koschei
-koscheis
-kot
-kotbayun
-koth
-kp
-kpstore
-krake
 kraken
 krakens
-krakespawn
-kraki
-kryt
-kuk
 kukri
-kuks
-kulmking
-kuunganisha
 kwai
-kyshaarth
-kyshaarths
 l
 la
 lab
@@ -12079,10 +10273,8 @@ labrys
 labyrinth
 labyrinthine
 labyrinths
-labyrs
 lace
 laced
-lacedon
 lacerate
 lacerated
 lacerating
@@ -12103,8 +10295,6 @@ ladles
 lads
 lady
 ladybugs
-laestrigonian
-laevateinn
 lagoons
 laid
 lair
@@ -12112,9 +10302,6 @@ laired
 lairs
 lake
 lakes
-lakescourge
-laketroll
-lamassu
 lamba
 lambent
 lambing
@@ -12127,7 +10314,6 @@ lamia
 lamias
 lamina
 lamp
-lampfruit
 lamprey
 lamps
 lance
@@ -12139,12 +10325,10 @@ landing
 landmark
 landmarks
 landowner
-landprone
 lands
 landscape
 landscapes
 landslide
-landv
 lane
 lanes
 language
@@ -12154,9 +10338,7 @@ languorous
 lank
 lanky
 lantern
-lanterndragonette
 lanternfish
-lanternfishs
 lanterns
 lanyard
 lap
@@ -12172,12 +10354,10 @@ largely
 larger
 largesse
 largest
-larkmail
 lars
 larva
 larvae
 larval
-larwood
 lash
 lashed
 lashes
@@ -12189,7 +10369,6 @@ lassos
 last
 lasted
 lasting
-lastlonger
 lasts
 latch
 latched
@@ -12200,9 +10379,7 @@ lateen
 latent
 later
 latest
-lathander
 latitude
-latorre
 latter
 latticed
 laugh
@@ -12211,7 +10388,6 @@ laughing
 laughingstock
 laughs
 laughter
-laukaz
 launch
 launched
 launches
@@ -12233,8 +10409,6 @@ layers
 laying
 layout
 lays
-lazavik
-lazaviks
 laze
 laziness
 lazuli
@@ -12283,7 +10457,6 @@ leatherworking
 leathery
 leave
 leaves
-leavesrot
 leaving
 leavings
 lecture
@@ -12303,7 +10476,6 @@ leftover
 leg
 legacy
 legal
-legalcode
 legality
 legally
 legend
@@ -12321,11 +10493,8 @@ legitimate
 legless
 legs
 legume
-lemmink
 lemur
-lemure
 lemures
-lemurfolk
 lend
 lending
 lends
@@ -12339,10 +10508,7 @@ lengthy
 lens
 lenses
 leonine
-leonino
-leoninos
 leprechauns
-leshy
 lesion
 lesions
 less
@@ -12365,8 +10531,6 @@ letting
 level
 leveling
 levels
-levelspellcaster
-levelup
 lever
 leverage
 leveraged
@@ -12386,15 +10550,12 @@ liability
 liable
 liar
 liars
-liath
 libation
 liberated
 liberating
 liberty
-libram
 libraries
 library
-libraryautomaton
 license
 licensed
 licensee
@@ -12402,11 +10563,8 @@ licenses
 licensing
 licensor
 lich
-lichdom
 lichen
 liches
-lichhound
-lichs
 lick
 licking
 licks
@@ -12424,15 +10582,10 @@ lieu
 lieutenants
 life
 lifeblood
-lifecycle
-lifedrinker
-lifeforce
 lifeforms
 lifeless
 lifelike
 lifelong
-lifepath
-lifesapping
 lifespan
 lifestyle
 lifestyles
@@ -12449,15 +10602,11 @@ light
 lighted
 lighter
 lightfoot
-lightfoots
-lightform
 lighting
 lightless
 lightly
 lightning
-lightnings
 lights
-lightwalking
 lightweight
 like
 liked
@@ -12467,7 +10616,6 @@ likeness
 likenesses
 likes
 likewise
-likho
 liking
 lilies
 lilting
@@ -12480,9 +10628,6 @@ lime
 limelight
 limestone
 liminal
-liminalities
-liminality
-liminists
 limit
 limitation
 limitations
@@ -12492,8 +10637,6 @@ limits
 limns
 limp
 limply
-lindwurm
-lindwurms
 line
 lineage
 lined
@@ -12506,19 +10649,15 @@ lingering
 lingers
 linguist
 linguistics
-linguists
 lining
 link
 linked
 linking
 links
-linnorm
-linnorms
 lion
 lioness
 lionfish
 lions
-liosalfar
 lip
 lips
 liquefaction
@@ -12549,7 +10688,6 @@ literally
 literary
 literature
 lithe
-lithlord
 litter
 littered
 littering
@@ -12566,17 +10704,10 @@ livery
 lives
 livestock
 living
-livingwick
 lizard
-lizardfolk
-lizardfolks
 lizards
 ll
-llawfrodedd
-llc
-lmking
 ln
-lnir
 load
 loaded
 loading
@@ -12607,14 +10738,11 @@ location
 locations
 loci
 lock
-lockbreaker
 locked
 locket
 lockets
-lockey
 locking
 lockjaw
-lockpicker
 lockpicks
 locks
 locksmith
@@ -12623,8 +10751,6 @@ locksmiths
 locomotion
 locus
 locust
-locusthound
-locusthounds
 locusts
 lodestone
 lodestones
@@ -12644,7 +10770,6 @@ logistically
 logos
 logs
 loki
-lokis
 loll
 lolls
 lone
@@ -12657,22 +10782,16 @@ long
 longboats
 longbow
 longbows
-longdead
 longer
 longest
 longhouse
 longhouses
 longitude
-longlasting
 longlegs
-longlimbed
-longlived
 longs
 longship
 longstanding
-longstrider
 longsword
-longswords
 longterm
 look
 looked
@@ -12700,10 +10819,8 @@ lord
 lorded
 lordlings
 lordly
-lordofthehunt
 lords
 lore
-lorekeeper
 lorelei
 lose
 loses
@@ -12715,8 +10832,6 @@ lot
 lotion
 lots
 lotus
-lotuscraft
-lou
 loud
 louder
 loudest
@@ -12732,7 +10847,6 @@ lover
 lovers
 loves
 lovesick
-loviatar
 loving
 low
 lower
@@ -12742,9 +10856,6 @@ lowers
 lowest
 lowliest
 lowly
-loxoda
-loxodan
-loxodas
 loyal
 loyally
 loyalties
@@ -12754,12 +10865,9 @@ lubricious
 luck
 luckily
 luckless
-luckstone
 lucky
 lucrative
 ludicrous
-lugax
-lugh
 luke
 lukewarm
 lullaby
@@ -12779,11 +10887,6 @@ lump
 lumps
 lumpy
 lunar
-lunarbeam
-lunarchida
-lunarchidna
-lunarchidnas
-lunardevil
 lunarian
 lunarians
 lunatic
@@ -12811,26 +10914,21 @@ lust
 luster
 lustrous
 lute
-luu
 luxuriant
 luxuriated
 luxuriating
 luxuries
 luxurious
 luxury
-lvinsm
-lwyd
 lycanthrope
 lycanthropes
 lycanthropy
 lyceum
 lying
-lymarien
 lynx
 lynxes
 lyre
 lyrics
-lystrosaurus
 m
 ma
 mab
@@ -12859,25 +10957,19 @@ maelstrom
 maelstroms
 magazine
 mage
-magebane
-magecan
 mages
 maggot
 maggots
 magi
 magic
 magical
-magicaldarkness
 magically
 magicians
-magicitem
-magicitems
 magics
 magister
 magistrate
 magistrates
 magma
-magmin
 magnates
 magnetic
 magnetically
@@ -12891,12 +10983,9 @@ magnifies
 magnify
 magnifying
 magnitude
-magocracy
-magocratic
 magpie
 magus
 maha
-mahoru
 maid
 maiden
 maidens
@@ -12926,16 +11015,12 @@ making
 malachite
 maladies
 malady
-malakbel
 malcontent
 malcontents
-malcubus
-malcubuss
 male
 malediction
 maledictions
 malefactors
-maleficarum
 males
 malevolence
 malevolent
@@ -12954,15 +11039,10 @@ malkins
 mallard
 malleability
 malleable
-malleables
 mallet
-mallqui
-malmbjorn
 malnourished
 malnutrition
 malodorous
-malphas
-mambele
 mammal
 mammalian
 mammals
@@ -12970,13 +11050,9 @@ mammon
 mammons
 mammoth
 mammoths
-mamura
-mamuras
 man
 mana
-manabane
 manacles
-manaencrusted
 manage
 manageable
 managed
@@ -12984,15 +11060,12 @@ management
 manages
 managing
 manannan
-manastorm
 mandate
 mandible
 mandibles
 mandrake
-mandriano
 mandrill
 mane
-maneaters
 manes
 maneuver
 maneuverability
@@ -13001,7 +11074,6 @@ maneuvered
 maneuvering
 maneuverings
 maneuvers
-manggus
 mangled
 mangler
 mangles
@@ -13012,7 +11084,6 @@ mania
 maniac
 maniacal
 manic
-manica
 manicured
 manifest
 manifestation
@@ -13032,7 +11103,6 @@ manipulative
 manipulator
 manipulators
 mankind
-mannaz
 manner
 mannered
 mannerism
@@ -13042,9 +11112,7 @@ mans
 mansion
 mansions
 manta
-manteia
 manticore
-manticores
 mantis
 mantises
 mantle
@@ -13057,7 +11125,6 @@ manuscript
 many
 map
 maple
-mapmimic
 mapped
 mapping
 maps
@@ -13073,15 +11140,12 @@ marcher
 marches
 marching
 mare
-marena
 margin
 marginalia
 margins
 mari
 marid
 marids
-marilith
-mariliths
 marine
 mariner
 mariners
@@ -13113,7 +11177,6 @@ martyrs
 marvel
 marveled
 marvelous
-marzanna
 mascot
 mascots
 mases
@@ -13123,7 +11186,6 @@ mask
 masked
 masking
 masks
-maskwight
 mason
 masons
 masquerade
@@ -13167,7 +11229,6 @@ maternal
 mates
 math
 mathematical
-mathonwy
 mating
 matriarch
 matriarchs
@@ -13194,10 +11255,7 @@ mauling
 mausoleum
 mauve
 mavericks
-mavka
-mavkas
 maw
-mawblade
 maws
 max
 maximize
@@ -13211,9 +11269,6 @@ mayoral
 maze
 mazelike
 mazes
-mbielu
-mbielus
-mcfarland
 me
 mead
 meadow
@@ -13232,7 +11287,6 @@ means
 meant
 meantime
 meanwhile
-mearls
 measure
 measured
 measurements
@@ -13241,7 +11295,6 @@ measuring
 meat
 meats
 meaty
-mechadron
 mechanic
 mechanical
 mechanically
@@ -13249,9 +11302,6 @@ mechanics
 mechanism
 mechanisms
 mechanist
-mechanon
-mechanus
-mechuiti
 med
 medal
 medallion
@@ -13264,15 +11314,11 @@ medic
 medical
 medically
 medicine
-medics
 meditate
 meditating
 meditation
 meditative
 medium
-medjai
-medjais
-medum
 medusa
 medusas
 meek
@@ -13283,11 +11329,6 @@ meeting
 meetings
 meets
 megafauna
-megaloceros
-megantereon
-megapede
-megingj
-megingjord
 mei
 mein
 melancholic
@@ -13296,7 +11337,6 @@ meld
 melding
 melds
 melee
-meleeweapon
 mellows
 melodies
 melodious
@@ -13329,11 +11369,9 @@ menagerie
 mend
 mended
 mender
-menders
 mendicant
 mending
 mends
-mengl
 menhir
 menial
 menstrual
@@ -13346,9 +11384,7 @@ mentioning
 mentor
 meow
 mephistopheles
-mephit
 mephitic
-mephits
 mercantile
 mercenaries
 mercenary
@@ -13362,7 +11398,6 @@ merciful
 mercifully
 merciless
 mercilessly
-merclops
 mercurial
 mercury
 mercy
@@ -13380,7 +11415,6 @@ merriment
 merrow
 merry
 merrymaking
-merwin
 mesmeric
 mesmerize
 mesmerized
@@ -13402,7 +11436,6 @@ metals
 metalsmiths
 metalworkers
 metalworking
-metamagic
 metamorphosis
 metaphor
 metaphorical
@@ -13428,16 +11461,12 @@ miasmic
 mica
 mice
 microscopic
-mictl
 mid
 midair
 midas
 midday
 middle
 midgard
-midir
-midirs
-midjump
 midnight
 midpoint
 midsection
@@ -13445,7 +11474,6 @@ midsize
 midst
 mien
 might
-mightallow
 mightier
 mightiest
 mighty
@@ -13474,8 +11502,6 @@ millennium
 million
 millions
 millipede
-millitaur
-millitaurs
 milt
 mimic
 mimicked
@@ -13484,23 +11510,14 @@ mimicry
 mimics
 min
 mind
-mindblade
 minded
 mindedly
 mindedness
-mindfire
 mindful
-mindleech
 mindless
 mindlessly
-mindrazor
-mindrot
-mindrotthrall
 minds
 mindset
-mindshard
-mindshatter
-mindshield
 mine
 miner
 mineral
@@ -13534,28 +11551,21 @@ mint
 minus
 minuscule
 minute
-minuteday
 minutes
 minutiae
 miracle
 miracles
 miraculous
 mirage
-mirager
 mire
 mired
-miremal
-miremals
-miremuck
 mirror
 mirrored
-mirrorhag
 mirrors
 mirth
 mirthful
 misalign
 miscellaneous
-mischeif
 mischief
 mischiefs
 mischievous
@@ -13568,14 +11578,12 @@ misdirection
 miser
 miserable
 miserly
-misers
 misery
 misfire
 misfits
 misfortune
 misfortunes
 misguided
-mishakal
 mishap
 mishaps
 mishmash
@@ -13608,35 +11616,24 @@ mistress
 mistrust
 mistrustful
 mists
-mistwolf
-mistwood
 misty
 misunderstand
 misunderstanding
 misunderstandings
 misuse
 misusing
-mithral
-mithraldragonwyrmling
-mithril
 mitigate
 mitigated
 mitigating
 mitten
-mittinz
-mittinzs
 mix
 mixed
 mixes
 mixing
 mixture
-mj
-mjolnir
 mm
 mnemonic
 mnemonics
-mngwa
-mngwas
 moan
 moaning
 mob
@@ -13650,7 +11647,6 @@ mockeries
 mockery
 mocking
 mockingbird
-mockmire
 mocks
 mod
 mode
@@ -13671,7 +11667,6 @@ modifier
 modifiers
 modify
 modifying
-modrons
 modulate
 moist
 moisture
@@ -13685,7 +11680,6 @@ molds
 moldy
 mole
 molech
-molechs
 moles
 mollusks
 molt
@@ -13693,7 +11687,6 @@ molten
 moment
 momentarily
 momentary
-momentblade
 momentous
 moments
 momentum
@@ -13709,8 +11702,6 @@ moneylender
 moneylenders
 mongoose
 mongooses
-mongrelmaker
-mongrelmakers
 moniker
 monitor
 monk
@@ -13719,8 +11710,6 @@ monkeys
 monks
 monochrome
 monolith
-monolithchampion
-monolithfootman
 monolithic
 monoliths
 monologue
@@ -13728,7 +11717,6 @@ monotone
 monsoon
 monster
 monsters
-monsterspell
 monstrosities
 monstrosity
 monstrous
@@ -13744,29 +11732,18 @@ moods
 moody
 moon
 moonbeam
-moonbound
-moonchild
 moondust
-moonfield
-moonkite
-moonkites
 moonless
 moonlight
 moonlit
-moonlitking
 moonrise
 moons
 moonseed
-moonsilver
-moonsong
-moonsteel
 moonstone
-moonweb
 moor
 mop
 moping
 moppet
-moradin
 moral
 morale
 morality
@@ -13775,19 +11752,13 @@ morass
 morbid
 morbidly
 mordant
-mordantsnare
-mordovermis
 more
 morel
 moreover
 mores
-mori
-morko
-morlocks
 morning
 morningstar
 morphic
-morphoi
 morrigan
 morsel
 morsels
@@ -13796,14 +11767,12 @@ mortality
 mortals
 mortar
 mortared
-mortifera
 mosaic
 mosquito
 mosquitoes
 mosquitos
 moss
 mosses
-mosslurker
 mossy
 most
 mostly
@@ -13839,7 +11808,6 @@ mounds
 mount
 mountain
 mountaineer
-mountaineers
 mountainous
 mountains
 mountainside
@@ -13867,8 +11835,6 @@ movement
 movements
 moves
 moving
-movingover
-moxug
 mph
 much
 muck
@@ -13878,7 +11844,6 @@ mud
 muddied
 muddled
 muddy
-mudmutt
 muds
 muffled
 muffling
@@ -13887,16 +11852,11 @@ mugger
 mulch
 mulcher
 mule
-mulitattack
 mulligan
 multi
-multiattack
-multiclass
-multiclassing
 multicolored
 multifaceted
 multiheaded
-multiphonic
 multiple
 multiplied
 multiplies
@@ -13905,7 +11865,6 @@ multiplying
 multitude
 multitudinous
 multiverse
-multiweapon
 mumbles
 mumbling
 mummies
@@ -13913,9 +11872,7 @@ mummified
 mummify
 mumming
 mummy
-mummys
 mundane
-muninn
 muraenid
 murals
 murder
@@ -13926,8 +11883,6 @@ murdering
 murderous
 murderousness
 murders
-murgrik
-murgriks
 murk
 murky
 murmur
@@ -13942,7 +11897,6 @@ muse
 museum
 mush
 mushroom
-mushroomfolk
 mushrooms
 music
 musical
@@ -13971,7 +11925,6 @@ muted
 mutilate
 mutilated
 mutineer
-mutineers
 muting
 mutinied
 mutiny
@@ -13988,16 +11941,8 @@ muzzles
 my
 mycelial
 mycelium
-mycolid
-mycolids
-myconid
-myconids
-mydnari
-myling
-mylings
 mynah
 myriad
-myrmex
 myrmidon
 myrmidons
 myself
@@ -14013,51 +11958,18 @@ mystics
 mystique
 myth
 mythic
-mytholabe
 mythos
 myths
 n
 na
-nabboot
-naberrations
-nabout
-nachzehrer
-nacid
-naction
-nactions
-nactivating
-nactivation
-nadditionally
-nadventurers
-naffected
-nafter
 naga
-nagainst
 nagas
 naiad
 nail
 nailed
 nails
-naina
-naizu
 naked
-nakhluts
 nalas
-nalbatross
-nalehouse
-nalfeshnee
-nalfeshnees
-nalgoriths
-nalignment
-nall
-nalpha
-nalready
-nalso
-nalternatively
-nalthough
-nalusa
-namaze
-namber
 name
 named
 nameless
@@ -14066,42 +11978,17 @@ names
 namesake
 naming
 nan
-nand
-nandrenjinyi
-nangelic
-nangels
-nanghant
-nanimal
-nanimated
-nany
-nanyone
-nanything
-napart
-napaxrusl
 nape
-napex
 napping
-narachnocrats
-narcane
 narcissism
 nare
-naridni
-nariphon
-narmor
-narms
 narrator
 narrators
 narrow
-narshark
-narsharks
 narwhal
 nas
 nasal
 nash
-naside
-nasleep
-nassociated
-nassume
 nastier
 nasty
 nat
@@ -14110,27 +11997,20 @@ nationalities
 nations
 native
 natives
-nattack
-nattacking
-nattacks
 nattering
-nattuning
 natural
 naturally
 nature
 natured
 natures
-naudiz
 naught
 nauseating
 nauseatingly
 nauseous
-nauthveli
 nautical
 nautiloid
 nautilus
 naval
-navieres
 navigable
 navigate
 navigated
@@ -14138,116 +12018,12 @@ navigating
 navigation
 navigational
 navigator
-navigators
-nazza
-nbards
-nbasalt
-nbasilisk
-nbecause
-nbecoming
-nbefore
-nbefriending
-nbeginning
-nbeing
-nbelow
-nbelts
-nbeneath
-nbetween
-nbeyond
-nbless
-nblue
-nbone
-nbonespitters
-nbonus
-nboth
-nbrimstone
-nburrowlings
-nby
-ncanines
-ncantrip
-ncantrips
-ncapacity
-ncarrion
-ncasting
-ncaught
-ncave
-ncertain
-nchanges
-ncharacters
-ncharisma
-nchatterlomes
-nchoose
-nchoosing
-nchronomatic
-nclerics
-nclockwork
-ncombatants
-ncombining
-ncommunication
-ncompatible
-ncomplex
-nconcussive
-nconfused
-nconfusion
-nconnected
-nconstant
-nconstitution
-nconstructs
-ncontorted
-ncoral
-ncorrupted
-ncount
-ncrawling
-ncreating
-ncreature
-ncreatures
-ncrinaea
-ncrystalline
-ncursed
 nd
-ndamage
-ndark
-ndaytime
-ndeath
-ndeathweavers
-ndeep
-ndemiplanes
-ndepending
-ndescribe
-ndescription
-ndesert
-ndesignated
-ndespite
-ndestroying
-ndetermine
-ndexterity
-ndid
-ndifferent
-ndiscord
-ndispel
-ndistance
-ndivinity
-ndragon
-ndragonflesh
-ndrawing
-ndread
-ndrifters
-ndrown
-ndruids
-ndue
-ndumping
-nduring
-ndust
-ndwelling
 ne
-neach
-neala
 near
 nearby
 nearer
 nearest
-nearestmagic
-nearestto
 nearing
 nearly
 nears
@@ -14264,18 +12040,14 @@ necked
 necklace
 necklaces
 necks
-necrohydra
 necromancer
 necromancers
 necromancy
-necromancys
 necromantic
-necrophage
 necropoli
 necropolis
 necropolises
 necrosis
-necrotech
 necrotic
 necrotize
 necrotizing
@@ -14316,26 +12088,15 @@ neighboring
 neighbors
 neither
 nemesis
-nemthyr
-nenchantment
-nend
-nenemies
-nenlarged
-nentangling
 neophron
 neophyte
-neothelids
-nephirron
 nephthys
 nergal
-nerinas
 nerve
 nerves
 nervous
 nervously
-nescaping
 nest
-nesteron
 nesting
 nestle
 nestled
@@ -14359,10 +12120,7 @@ neutralizing
 neven
 never
 nevertheless
-nevery
-nevil
 new
-newblood
 newborn
 newborns
 newcomers
@@ -14370,246 +12128,64 @@ newer
 newly
 news
 newt
-nexpended
-nexplosive
 next
 nexus
-neyes
-nfalse
-nfamiliarity
-nfar
-nfear
-nfeet
-nfew
-nfield
-nfiendish
-nfinally
-nfinishing
-nfirebirds
-nfirst
-nflame
-nflaring
-nfoiling
-nfood
-nfor
-nforbiddance
-nfound
-nfour
-nfrom
 ng
-ngiant
-ngiving
-ngobou
-ngobous
-ngraveyard
-ngreat
-ngreen
-ngroup
-nguilds
-nhand
-nharmed
-nharyth
-nhead
-nhealing
-nheartstone
-nheavy
-nhematite
-nheralds
-nhere
-nhideous
-nhighly
-nhiring
-nhit
-nhive
-nhodags
-nhopelessness
-nhow
-nhowever
-nhttps
-nhuge
-nhunters
-nhunting
-nhuntsmen
-nhusks
-nian
 nib
 nice
 nicer
 nicest
 niche
-nichny
-nichor
 nick
 nickname
 nicknamed
 nicks
-nideally
-nif
 niflheim
-niggurath
 nigh
 night
-nightengale
 nightfall
-nightgarm
-nightgarms
-nightgaunt
 nightly
 nightmare
 nightmares
 nightmarish
 nightmarishly
 nights
-nightscorpion
 nightshade
-nightstalker
 nightstand
 nighttime
-nightwing
-nihileth
-nihilethic
-nihilethicdominator
-nihilethiczombie
-nihileths
 nihilistic
-nihilith
 nike
-nilbog
-nilbogfor
-nilbogs
 nimble
 nimbleness
 nimbly
 nimbus
-nimmediately
-nimmunity
-nimpale
-nimploring
-nimproved
-nin
-ninanimate
-nincreased
-nindigo
 nine
-ninecourse
 ninefold
-ninfernal
-ningyo
-ninitiative
 ninjas
-nink
-ninspired
-ninstead
-nintelligence
-ninteracting
 ninth
 nip
 nipping
 nips
-nirids
 nirvana
 nis
 nit
-nitems
 nithing
-nithling
-nittworthy
 nixies
-nixta
-niya
-njackdaw
 njord
-njust
-nkelp
-nknown
-nkobold
-nkobolds
-nkosi
-nkosipridelord
-nkraken
 nl
-nlabyrinthine
-nlapis
-nlarge
-nlearn
-nlifestyle
-nlightfoots
-nlike
-nlingering
-nlittle
-nliving
-nlocated
-nlong
-nluminescent
-nmad
-nmade
-nmadness
-nmagic
-nmagical
-nmagnetic
-nmake
-nmalleables
-nmamuras
-nmanabane
-nmanggus
-nmangrove
-nmanta
-nmany
-nmarble
-nmassive
-nmead
-nmedium
-nmi
-nmiremals
-nmisfortune
-nmishap
-nmonks
-nmonsters
-nmoon
-nmore
-nmost
-nmounting
-nmounts
-nmovement
-nmoving
-nmultiple
-nmyconids
-nnarwhal
-nneck
-nnecrotic
-nno
-nnoctiny
-nnone
-nnormal
-nnormally
-nnote
-nnothing
 no
-noasis
 nobility
-nobject
-nobjects
 noble
 nobles
 nobody
-noccasionally
 nock
 nocked
-noctini
-noctiny
-noctopus
-noctural
 nocturnal
 nod
 node
 nodes
-nodin
-nodosaurus
 nodule
 nodules
-nof
-noff
-noften
 noise
 noiselessly
 noisemakers
@@ -14619,7 +12195,6 @@ noisy
 nomad
 nomadic
 nomads
-nomagical
 non
 nonce
 noncombatants
@@ -14627,7 +12202,6 @@ nonconsecutive
 noncorporeal
 nondamaging
 nondescript
-nondetection
 none
 nonetheless
 nonexistence
@@ -14638,41 +12212,27 @@ nonfunctional
 nonhazardous
 nonhostile
 nonhuman
-nonhumanoid
 nonliving
 nonly
-nonmagic
-nonmagical
-nonmagically
-nonplayer
 nonpotable
 nonreflective
-nonroachlings
 nonsense
 nonsensical
 nonsensically
 nonsilver
 nonsolid
-nonsubek
 nonthreatening
 nontransparent
 nonverbal
 nonviolence
 nonvisual
-noonan
 noose
 noosed
-nopen
 nor
-norange
 norm
 normal
-normaland
 normally
 norms
-norns
-norren
-norrens
 norse
 north
 northeast
@@ -14695,12 +12255,9 @@ notebooks
 noted
 notes
 noteworthy
-noth
 nother
-notherwise
 nothing
 nothingness
-nothnorren
 notice
 noticeable
 noticeably
@@ -14729,164 +12286,7 @@ nowhere
 nowl
 noxious
 nozzles
-npain
-npaladins
-npanicked
-npaper
-npc
-npcs
-npeople
-nperforming
-npermanent
-npiercing
-npillar
-nplacing
-nplague
-nplayers
-npoisons
-npomberos
-npossessed
-npreparing
-nprerequisite
-nprior
-nproficiency
-npurple
-nputrescent
-nquicksilver
-nradiant
-nrange
-nrapid
-nrarely
-nravenfolk
-nreactions
-nrecall
-nred
-nredirect
-nreducing
-nregardless
-nresistance
-nresisting
-nresurrecting
-nreturning
-nrime
-nroachling
-nrogues
-nroll
-nround
-nsalt
-nsand
-nsasori
-nsasquatches
-nsatarre
-nsaving
-nscribe
-nsculptures
-nsea
-nsecond
-nsection
-nsee
-nseen
-nselect
-nsentient
-nsewer
-nshadow
-nshapechangers
-nshooting
-nshould
-nshove
-nshriekbats
-nsickened
-nsight
-nsimilar
-nsince
-nsix
-nskilled
-nskin
-nskofnung
-nskrivena
-nsku
-nsleep
-nsmaller
-nso
-nsolitary
-nsome
-nsomeone
-nsometimes
-nsoul
-nspawning
-nspecial
-nspecify
-nspell
-nspellcasters
-nspellcasting
-nspells
-nspending
-nsphinx
-nsrd
-nstake
-nstarting
-nstatistics
-nsteam
-nstored
-nstorm
-nstr
-nstrangely
-nstrength
-nstructures
-nstuhacs
-nstunning
-nsturdy
-nsubek
-nsuccessful
-nsummon
-nsummoned
-nsunflower
-nsunlight
-nswallow
-nswarms
-nsword
-nsymptoms
-nsystem
 nt
-ntable
-ntarget
-ntelepathy
-nteleport
-nteleportation
-ntemple
-nthat
-nthe
-nthere
-nthese
-nthey
-nthieves
-nthird
-nthis
-nthornheart
-nthose
-nthough
-nthree
-nthursir
-ntide
-ntieflings
-ntin
-nto
-ntome
-ntoo
-ntophets
-ntosculi
-ntraps
-ntravel
-ntreacles
-ntreasure
-ntricenatoruses
-ntrollkin
-ntumbleweed
-nturns
-ntwice
-ntypically
-ntyrfing
-nuada
 nuances
 nub
 nubs
@@ -14895,47 +12295,27 @@ nugget
 nuggets
 nuisance
 nuisances
-nuizamo
 null
-nullicorn
 nullified
 nullifier
-nullifiers
 nullify
 nullifying
 numb
 numbed
 number
 numbering
-numberof
 numbers
 numbing
 numeral
 numerical
 numerous
 nunchaku
-nuncounted
-nunda
-nundead
-nunhallowed
-nunholy
-nunless
 nunlike
-nunsecured
-nuntil
-nunused
-nup
-nupon
-nurian
 nurses
 nurture
 nurtured
 nurtures
 nurturing
-nuse
-nused
-nusing
-nusually
 nut
 nutrients
 nutrition
@@ -14943,49 +12323,8 @@ nutritional
 nutritionally
 nuts
 nutty
-nvaporize
-nvarious
-nvery
-nviewed
-nvile
-nviolet
-nvisual
-nwampus
-nweapon
-nweapons
-nwearing
-nwebs
-nwedging
-nweeping
-nwere
-nwhat
-nwhatever
-nwhen
-nwhenever
-nwhere
-nwherever
-nwhether
-nwhile
-nwhipped
-nwhy
-nwind
-nwisdom
-nwith
-nwithin
-nwithout
-nwizards
-nxanka
-nxorn
-nyaojing
-nyarlathotep
-nyctli
-nyellow
 nymph
 nymphs
-nyou
-nyour
-nyowlers
-nyth
 o
 oak
 oaken
@@ -14996,18 +12335,10 @@ oars
 oases
 oasis
 oath
-oathbound
-oathbow
-oathbreaker
-oathbreaking
-oathless
-oathrot
 oaths
-oathseeker
 obedience
 obedient
 obeisance
-obeleric
 oberon
 obese
 obey
@@ -15019,7 +12350,6 @@ object
 objective
 objectives
 objects
-objectsalways
 obligation
 obligations
 obliged
@@ -15094,12 +12424,9 @@ oceans
 ochre
 octahedron
 octave
-octopoid
 octopus
 octopuses
 oculi
-oculo
-oculoswarm
 oculus
 odd
 oddities
@@ -15107,16 +12434,12 @@ oddity
 oddly
 odds
 odin
-odins
 odious
 odor
 odorless
 odors
-odur
 odyssey
-oed
 of
-ofattacks
 off
 offal
 offend
@@ -15147,16 +12470,7 @@ offspring
 oft
 often
 oftentimes
-ofthe
-oftwilight
-ofwalking
-ogen
-oghma
-ogl
 ogre
-ogrekin
-ogrepede
-ogrepedes
 ogres
 oh
 oil
@@ -15171,8 +12485,6 @@ old
 older
 oldest
 olfactory
-oliphaunt
-oliphaunts
 olive
 olympian
 olympus
@@ -15190,31 +12502,21 @@ ona
 once
 oncoming
 one
-onecreature
-onemelee
 ones
 oneself
 ongoing
 oni
 online
 only
-onlyhalf
-onlyshades
 onset
 onsight
 onslaught
-onthe
-onthem
 onto
 onward
 onyx
-oozasis
 ooze
-oozer
-oozers
 oozes
 oozing
-oozling
 opal
 opalescent
 opals
@@ -15233,12 +12535,7 @@ operational
 operations
 operator
 operators
-ophanim
 ophidian
-ophidiotaur
-ophidiotaurs
-ophinix
-ophio
 opinion
 opium
 opponent
@@ -15290,10 +12587,7 @@ orchard
 orchestra
 orchestral
 orchestration
-orcish
-orclicense
 orcs
-orculturecheck
 orcus
 ordeal
 order
@@ -15317,7 +12611,6 @@ organizer
 organizes
 organizing
 organs
-orher
 orichalcum
 orient
 orientation
@@ -15334,7 +12627,6 @@ originated
 originates
 originating
 origins
-ork
 ornament
 ornamental
 ornamentation
@@ -15342,18 +12634,9 @@ ornaments
 ornate
 ornately
 ornery
-orniraptor
-orniraptors
-orobas
-orobasdevil
 orphan
 orphanage
 orphans
-orslow
-orswimming
-orthrus
-ortifex
-ortifexes
 oscillates
 oscillating
 osiris
@@ -15365,25 +12648,16 @@ ostinato
 ostinatos
 ostracized
 ostrich
-oth
 other
-otherborn
-otherdimensional
-otherforms
 others
 otherwise
 otherworld
 otherworldly
-othur
 otter
-otterfolk
 otters
-otyugh
-otyughs
 ounce
 ounces
 our
-ouroban
 ouroboros
 ourselves
 oust
@@ -15454,8 +12728,6 @@ overboard
 overcame
 overcast
 overchannel
-overclock
-overclocked
 overcoat
 overcome
 overcomes
@@ -15534,9 +12806,6 @@ owed
 owes
 owing
 owl
-owlbear
-owlbears
-owlharpy
 owls
 own
 owned
@@ -15553,11 +12822,9 @@ oxygen
 oyster
 oysters
 ozone
-ozzacath
 p
 pace
 paced
-pacemakes
 pacifistic
 pacify
 pacifying
@@ -15567,14 +12834,10 @@ package
 packed
 packet
 packing
-packmate
-packmates
 packs
 pact
 pacts
-pactvampire
 pad
-padarn
 padded
 padding
 paddle
@@ -15584,7 +12847,6 @@ padlock
 pads
 page
 pages
-pahu
 paid
 pain
 pained
@@ -15603,7 +12865,6 @@ paints
 pair
 paired
 pairs
-paizo
 pal
 palace
 paladin
@@ -15619,7 +12880,6 @@ palpable
 pan
 panache
 pandemonium
-pandorum
 pane
 panel
 panels
@@ -15627,25 +12887,20 @@ pangolin
 pangs
 panic
 panicked
-panopy
 panpipes
 pans
 pantheon
 pantheons
 panther
-pantheran
-pantherans
 panting
 pantomime
 pantomimes
 pants
 paper
-paperdrake
 papers
 papery
 papier
 papyrus
-paraceratherium
 parade
 paradise
 paradises
@@ -15664,7 +12919,6 @@ param
 parameters
 paramount
 paramour
-paramours
 paranoia
 paranoid
 paraphernalia
@@ -15684,8 +12938,6 @@ parentheses
 parenthetical
 parents
 parfum
-parfumier
-parfumiers
 paring
 parka
 parlayed
@@ -15723,9 +12975,6 @@ partners
 partnership
 parts
 party
-parzelon
-parzz
-parzzval
 pass
 passage
 passages
@@ -15743,7 +12992,6 @@ passionately
 passions
 passive
 passivism
-passwall
 password
 passwords
 past
@@ -15767,7 +13015,6 @@ patient
 patiently
 patina
 patinated
-patreon
 patrician
 patrick
 patrol
@@ -15781,18 +13028,15 @@ patsy
 pattern
 patterned
 patterns
-patzinaki
 paul
 pauldrons
 pauper
-paupers
 pause
 pausing
 paved
 pavilion
 paving
 paw
-pawlik
 pawn
 pawns
 paws
@@ -15802,11 +13046,7 @@ payment
 payments
 pays
 pb
-pbh
 pc
-pcs
-pdf
-pdfs
 peace
 peaceable
 peaceably
@@ -15849,19 +13089,15 @@ peer
 peering
 peerless
 peers
-pegana
-pegasi
 pegasus
 pelagic
 pele
 pell
 pellet
 pellets
-pelor
 pelt
 pelted
 pelts
-peluda
 pelvis
 pen
 penalize
@@ -15869,7 +13105,6 @@ penalized
 penalties
 penalty
 penance
-penanggal
 penchant
 pencil
 pendant
@@ -15899,8 +13134,6 @@ people
 peoples
 pepper
 per
-perape
-perapes
 perceivable
 perceive
 perceived
@@ -15919,7 +13152,6 @@ perched
 perches
 perching
 percussion
-perdita
 perfect
 perfected
 perfecting
@@ -15944,7 +13176,6 @@ peri
 periapt
 peridot
 peril
-periland
 perils
 perimeter
 perimeters
@@ -15959,13 +13190,11 @@ perishes
 perishing
 perkins
 permafrost
-permalink
 permanent
 permanently
 permeable
 permeated
 permeates
-permenant
 permission
 permissions
 permits
@@ -16008,9 +13237,6 @@ persuasively
 pertain
 pertaining
 pertains
-perto
-perun
-peruns
 peruses
 pervades
 perverse
@@ -16018,11 +13244,7 @@ perversely
 perversion
 pervert
 perverting
-peryton
-pescavitus
 pesky
-pessurized
-pesta
 pester
 pestered
 pestilence
@@ -16045,7 +13267,6 @@ petting
 petty
 pew
 pewter
-pez
 pg
 ph
 phantasm
@@ -16060,18 +13281,15 @@ pharaohs
 phase
 phases
 phasing
-phb
 pheasant
 phenomena
 phenomenon
 pheromone
 pheromones
 phial
-phidjetz
 philandering
 philanthropist
 philip
-phillip
 philosopher
 philosophers
 philosophical
@@ -16081,13 +13299,11 @@ phlegmatic
 phlogiston
 phobia
 phoenix
-phoenixborn
 phoenixes
 phosphorescence
 phosphorescent
 phosphorus
 photo
-photoadaptive
 photochemical
 photograph
 photographic
@@ -16107,7 +13323,6 @@ physiology
 physique
 physiques
 pianoforte
-piasa
 pick
 pickaxe
 picked
@@ -16132,7 +13347,6 @@ piercer
 pierces
 piercing
 piercings
-piericing
 pies
 piety
 pig
@@ -16205,7 +13419,6 @@ pirates
 pirouette
 pirouettes
 piscine
-pishacha
 pistol
 piston
 pistons
@@ -16229,7 +13442,6 @@ pitting
 pity
 pixie
 pixies
-pixiu
 pk
 placate
 placated
@@ -16243,7 +13455,6 @@ plagiarizing
 plague
 plagued
 plagues
-plaguetouched
 plaguing
 plain
 plainly
@@ -16255,11 +13466,8 @@ plan
 planar
 plane
 planes
-planetar
-planetars
 planetary
 planets
-planewatcher
 plank
 planks
 planned
@@ -16273,7 +13481,6 @@ planted
 planting
 plantlike
 plants
-plaresh
 plasma
 plaster
 plate
@@ -16298,7 +13505,6 @@ players
 playful
 playing
 plays
-playtest
 plaything
 playthings
 plea
@@ -16357,22 +13563,18 @@ plush
 ply
 plying
 pneumatic
-png
-pnir
 po
 poachers
 pocket
 pocketbook
 pocketed
 pockets
-pocketwatch
 pockmark
 pockmarked
 pocus
 pod
 podge
 pods
-podthrower
 poem
 poems
 poet
@@ -16384,9 +13586,7 @@ pointed
 pointing
 pointless
 points
-pointsinstead
 pointy
-poision
 poison
 poisoned
 poisoner
@@ -16403,9 +13603,7 @@ polaris
 polarity
 pole
 polearm
-polearms
 poles
-polevoi
 police
 policing
 policy
@@ -16432,12 +13630,9 @@ poltergeists
 polychromatic
 polymath
 polymorph
-polymorphed
 polymorphs
 polyp
 pomanders
-pombero
-pomberos
 pommel
 pommeled
 pommels
@@ -16464,8 +13659,6 @@ populated
 populating
 population
 porcelain
-porcellina
-porcillina
 porcupine
 pores
 poring
@@ -16512,7 +13705,6 @@ positive
 positively
 possess
 possessed
-possessedpillar
 possesses
 possessing
 possession
@@ -16524,8 +13716,6 @@ possible
 possibly
 post
 poster
-posthumes
-postosuchus
 postponed
 posts
 postulate
@@ -16674,7 +13864,6 @@ preparing
 preposterous
 prerequisite
 prerequisites
-prerequistes
 presage
 prescience
 prescribed
@@ -16709,7 +13898,6 @@ pretending
 pretensions
 preternatural
 pretty
-prety
 prevails
 prevalent
 prevent
@@ -16729,12 +13917,9 @@ prickly
 pricks
 pride
 prideful
-pridelord
-pridelords
 prides
 pried
 priest
-priestcan
 priestess
 priestesses
 priesthood
@@ -16968,20 +14153,13 @@ prudent
 pruned
 pruning
 pry
-pseudocorporeal
-pseudodragon
-pseudodragons
 pseudonym
 pseudopod
 pseudopods
 psion
 psionic
-psionically
 psionics
 psions
-psoglav
-psyblade
-psyblades
 psyche
 psyches
 psychic
@@ -16989,7 +14167,6 @@ psychically
 psychoactive
 psychological
 psychology
-psychophant
 psychopomp
 psychopomps
 psychotic
@@ -17014,8 +14191,6 @@ puddle
 puddles
 puff
 puffed
-pufferfish
-puffinfolk
 puffing
 pugilist
 pugilists
@@ -17038,7 +14213,6 @@ pulverized
 pumice
 pummel
 pummeling
-pummelstone
 pumping
 pumpkin
 pumps
@@ -17065,7 +14239,6 @@ pup
 pupil
 pupils
 puppet
-puppeteering
 puppeteers
 puppets
 puppy
@@ -17110,15 +14283,12 @@ push
 pushed
 pushes
 pushing
-pustakam
-pustulent
 pustules
 put
 putrefaction
 putrefies
 putrescent
 putrid
-putridhaunt
 puts
 putting
 putty
@@ -17133,17 +14303,13 @@ pyramids
 pyre
 pyres
 pyrite
-pyroclasm
 pyroclastic
-pyrohydra
 pyromancers
 pyromancy
 pyrotechnic
 pyrrhic
 python
 qi
-qiqirn
-qorgeth
 quadruped
 quadrupedal
 quadrupeds
@@ -17174,11 +14340,7 @@ quarterstaves
 quartet
 quartz
 quasi
-quasit
-quasits
 queen
-queenofnightandmagic
-queenofwitches
 queens
 quell
 quench
@@ -17201,10 +14363,7 @@ quickest
 quickly
 quickness
 quicksand
-quickserpent
-quickserpents
 quicksilver
-quicksilversiegeorb
 quickstep
 quiescent
 quiet
@@ -17229,13 +14388,8 @@ quiver
 quivering
 quivers
 quivery
-qumdaq
-qumdaqs
 quo
-quoreq
-quoreqs
 quote
-qwyllion
 r
 ra
 rabbit
@@ -17260,18 +14414,13 @@ radiating
 radical
 radius
 radiuses
-rafflesian
 rafters
 rafts
 rage
-ragecaster
-ragecasting
 raged
-rageipede
 rages
 ragged
 raging
-ragnar
 ragnarok
 rags
 rai
@@ -17279,16 +14428,13 @@ raid
 raider
 raiders
 raiding
-raido
 raids
-raijin
 rail
 railing
 rails
 raiment
 rain
 rainbow
-rainbowcolored
 rainbows
 rainforest
 raining
@@ -17310,7 +14456,6 @@ rallied
 rally
 rallying
 ram
-ramag
 rambling
 ramblings
 ramp
@@ -17365,13 +14510,8 @@ rashes
 rasping
 raspy
 rat
-ratatosk
-ratatosks
 rate
-rateliff
 rates
-ratfolk
-ratfolkrogue
 rather
 rating
 ratings
@@ -17379,36 +14519,24 @@ rational
 rationality
 rationalizes
 rations
-ratking
 rats
 rattan
 ratted
 rattle
-rattleback
 rattled
 rattles
 rattling
-rattok
 raucous
 ravage
 ravaged
 ravager
-ravagers
 ravages
 ravaging
 raven
 ravenala
-ravenalas
-ravenelas
-ravenfolk
-ravenfolkdoomcroaker
-ravenfolkscout
-ravenfolkwarrior
 ravening
 ravenous
 ravens
-ravenwing
-ravenwings
 raves
 raw
 rawhide
@@ -17417,10 +14545,7 @@ rays
 razed
 razor
 razorback
-razorfeather
-razorleaf
 razors
-razorsharp
 rd
 re
 reabsorb
@@ -17506,7 +14631,6 @@ rebelled
 rebellion
 rebellious
 rebels
-rebezahls
 rebirth
 rebirths
 reborn
@@ -17562,8 +14686,6 @@ reclaiming
 reclines
 recluse
 reclusive
-recoalesces
-recognisable
 recognition
 recognizable
 recognize
@@ -17626,14 +14748,12 @@ redeemed
 redeemers
 redemption
 redemptions
-redhag
 redheaded
 redirect
 redirected
 redirection
 redirects
 redistributed
-redman
 redolent
 redoubt
 redoubtable
@@ -17756,7 +14876,6 @@ regurgitate
 regurgitated
 regurgitates
 reheated
-reid
 reign
 reincarnate
 reincarnated
@@ -17793,7 +14912,6 @@ relationship
 relationships
 relative
 relatively
-relativelysimple
 relatives
 relaxation
 relay
@@ -17841,7 +14959,6 @@ reluctant
 reluctantly
 rely
 relying
-relyingon
 remade
 remain
 remainder
@@ -17867,8 +14984,6 @@ remnant
 remnants
 remodeled
 remolded
-remorhaz
-remorhazs
 remorse
 remorseless
 remote
@@ -17931,7 +15046,6 @@ repertoires
 repetitive
 replace
 replaced
-replacedwith
 replacement
 replacements
 replaces
@@ -18079,7 +15193,6 @@ respecting
 respective
 respectively
 respects
-respirate
 respiration
 respite
 resplendent
@@ -18205,8 +15318,6 @@ reverted
 reverting
 reverts
 review
-revilock
-revilocks
 revised
 revisit
 revitalize
@@ -18238,13 +15349,10 @@ rewrite
 rewrites
 rewritten
 rex
-rhinam
 rhino
 rhinoceros
 rhomboid
-rhopalocerex
 rhubarb
-rhygenydd
 rhyme
 rhymes
 rhyming
@@ -18252,7 +15360,6 @@ rhythm
 rhythmic
 rhythmically
 rhythms
-ri
 rib
 ribald
 ribbing
@@ -18294,10 +15401,7 @@ riding
 rids
 rife
 rift
-rifthopper
-rifthoppers
 rifts
-riftswine
 rig
 rigged
 rigging
@@ -18316,20 +15420,14 @@ rigors
 riled
 rim
 rime
-rimecaster
 rimed
-rimepacted
 rimes
-rimewing
-rimeworm
-rimewormgrub
 riming
 rind
 ring
 ringed
 ringing
 ringleader
-ringmage
 rings
 riot
 rioter
@@ -18346,7 +15444,6 @@ rips
 riptide
 rise
 risen
-risenreaver
 rises
 rising
 risk
@@ -18370,22 +15467,14 @@ riverbanks
 riverbeds
 riverboat
 riverine
-riverking
 rivers
 riversides
 riveted
 rivets
 rivulet
 rm
-rnged
-rngreipr
 roach
 roaches
-roachlike
-roachling
-roachlinglord
-roachlings
-roachlingskirmisher
 road
 roadblock
 roads
@@ -18410,27 +15499,20 @@ robes
 robot
 robust
 roc
-rochade
 rock
-rockchewer
 rocket
 rockfall
 rocking
 rocks
 rockslide
-rockslider
 rockwood
 rocky
 rocs
 rod
 rodent
-rodentius
-rodentlike
 rodents
 rodney
-rodrigo
 rods
-roggenwolf
 rogue
 rogues
 roguish
@@ -18446,7 +15528,6 @@ rollers
 rolling
 rollover
 rolls
-rollsthe
 romance
 romances
 romantic
@@ -18487,15 +15568,10 @@ rotate
 rotating
 rote
 rotgut
-rothenian
-rothfuss
 rots
-rotsam
-rotsams
 rotted
 rotten
 rotting
-rottingwind
 rouge
 rough
 roughhouse
@@ -18521,7 +15597,6 @@ rowan
 rowboat
 rowboats
 rowdy
-rowdys
 rowed
 rowels
 rowing
@@ -18529,14 +15604,10 @@ rows
 royal
 royalties
 royalty
-rp
-rpg
 rub
 rubbery
 rubbing
 rubble
-rubezahl
-rubezahls
 rubies
 rubs
 ruby
@@ -18544,7 +15615,6 @@ rubylike
 ruddy
 rude
 rudimentary
-rudnogg
 ruff
 rug
 rugged
@@ -18555,20 +15625,17 @@ ruined
 ruinous
 ruins
 rule
-rulebreakers
 ruled
 ruler
 rulers
 rulership
 rules
-ruleset
 ruling
 rulings
 rum
 rumble
 rumbles
 rumbling
-rumgremlin
 rummaging
 rumor
 rumored
@@ -18578,19 +15645,9 @@ run
 runaway
 runaways
 rune
-runecast
-runechild
-runechildren
 runed
 runes
-runespear
-runespears
 runestaff
-runestaves
-runestone
-runestones
-runeswarm
-runeswarms
 rung
 rungs
 runic
@@ -18605,7 +15662,6 @@ ruptures
 rupturing
 rusalka
 rusalkas
-rusalki
 ruse
 ruses
 rush
@@ -18613,7 +15669,6 @@ rushes
 rushing
 russet
 rust
-rustdrake
 rusted
 rusting
 rustle
@@ -18622,11 +15677,9 @@ rusts
 rusty
 ruthless
 ruthlessly
-ruyi
 s
 sa
 saber
-sabertoothed
 sable
 sabotage
 sabotaging
@@ -18665,7 +15718,6 @@ sagas
 sage
 sages
 saguaros
-sahuagin
 said
 sail
 sailcloth
@@ -18687,10 +15739,7 @@ salmon
 salons
 saloon
 salt
-saltdevil
 salted
-saltencrusted
-saltgolem
 salting
 salts
 saltwater
@@ -18703,8 +15752,6 @@ salves
 salvo
 samaritans
 same
-sameway
-sammael
 sample
 samples
 samurai
@@ -18718,22 +15765,13 @@ sand
 sandals
 sandalwood
 sandcastle
-sanddrift
 sandglass
-sandhag
 sandman
-sandmans
 sandmen
 sands
-sandships
-sandsilhouette
-sandslash
-sandspider
 sandstone
 sandstorm
 sandstorms
-sandwyrm
-sandwyrms
 sandy
 sane
 sang
@@ -18741,7 +15779,6 @@ sanguine
 sanity
 sanskrit
 sap
-sapdemon
 sapient
 sapling
 saplings
@@ -18752,26 +15789,16 @@ sapphire
 sapphires
 sapping
 sarcophagus
-sarcophagusslime
 sardonic
-sarkomand
-sarsaok
-sarsaoks
-sarvar
 sash
 sashes
-sasori
 sasquatch
 sasquatches
 sat
-satarre
-satarres
 satchel
 satchels
 sate
 sated
-sathaq
-sathaqworm
 satiate
 satin
 satirical
@@ -18790,7 +15817,6 @@ satyr
 satyrs
 saucer
 saurian
-sav
 savage
 savaged
 savagely
@@ -18804,7 +15830,6 @@ savants
 save
 saved
 saves
-savesucceeds
 saving
 savings
 savior
@@ -18813,25 +15838,21 @@ savoring
 savory
 savvy
 saw
-sawatsky
 sawing
 say
 saying
 says
-sazakan
 sc
 scabbard
 scabbards
 scabbed
 scabrous
 scabs
-scah
 scald
 scalded
 scalding
 scale
 scaled
-scalehide
 scales
 scaling
 scalp
@@ -18859,7 +15880,6 @@ scarlet
 scarred
 scarring
 scars
-scarsupial
 scarves
 scary
 scathing
@@ -18888,8 +15908,6 @@ scheme
 schemers
 schemes
 scheming
-scheznyki
-scheznykis
 scholar
 scholarly
 scholars
@@ -18897,7 +15915,6 @@ school
 schooled
 schooling
 schools
-schwalb
 science
 scientifically
 scientists
@@ -18907,7 +15924,6 @@ scintillating
 scion
 scissor
 scissors
-scitalis
 scoff
 scoop
 scooped
@@ -18917,7 +15933,6 @@ scorch
 scorched
 scorches
 scorching
-scorchrunner
 score
 scored
 scores
@@ -18925,8 +15940,6 @@ scoring
 scorn
 scorned
 scorpion
-scorpioncultist
-scorpionfolk
 scorpions
 scoundrel
 scoundrels
@@ -18982,8 +15995,6 @@ script
 scripted
 scriptoria
 scriptures
-scrofin
-scrofins
 scroll
 scrolls
 scrounged
@@ -18997,7 +16008,6 @@ scruples
 scrupulous
 scrutiny
 scry
-scrye
 scrying
 scuff
 scuffle
@@ -19006,7 +16016,6 @@ scullions
 sculpt
 sculpted
 sculpting
-sculptings
 sculptor
 sculpture
 sculptures
@@ -19023,7 +16032,6 @@ se
 sea
 seabird
 seabirds
-seadragonwyrmling
 seafarer
 seafarers
 seafaring
@@ -19035,7 +16043,6 @@ seahorse
 seal
 sealable
 sealed
-sealife
 sealing
 seals
 seamless
@@ -19061,11 +16068,8 @@ seasons
 seat
 seated
 seats
-seawalking
 seawater
 seaweed
-seawise
-seawolf
 secluded
 seclusion
 second
@@ -19109,13 +16113,11 @@ seedpod
 seedpods
 seeds
 seeing
-seeinto
 seek
 seeker
 seekers
 seeking
 seeks
-seelie
 seem
 seemed
 seeming
@@ -19139,8 +16141,6 @@ seized
 seizes
 seizing
 seizure
-selang
-selangs
 seldom
 select
 selected
@@ -19150,12 +16150,9 @@ selective
 selectively
 selects
 self
-selfdestruction
 selfish
 selfishness
 selflessly
-selket
-selkets
 sell
 selling
 selves
@@ -19171,7 +16168,6 @@ sender
 sending
 sends
 seneschal
-seneschals
 senior
 sensation
 sensations
@@ -19223,12 +16219,9 @@ series
 serious
 seriously
 serpent
-serpentfolk
 serpentine
 serpentlike
 serpents
-serpopard
-serpopards
 serrated
 serum
 serums
@@ -19236,7 +16229,6 @@ servant
 servants
 serve
 served
-serveros
 serves
 service
 serviceable
@@ -19286,7 +16278,6 @@ sextant
 sextants
 sh
 shabbily
-shabti
 shack
 shackle
 shackled
@@ -19294,30 +16285,10 @@ shackles
 shade
 shaded
 shades
-shadesight
-shadhavar
 shadier
 shadow
-shadowantipaladin
-shadowbeam
-shadowbeast
-shadowcaster
-shadowdancer
-shadowdancers
-shadowdancing
 shadowed
-shadowfell
-shadowfey
-shadowfrost
-shadowhound
-shadowhounds
-shadowmancer
-shadown
-shadowplay
 shadows
-shadowseeker
-shadowseekers
-shadowstrike
 shadowy
 shady
 shaft
@@ -19338,8 +16309,6 @@ shaman
 shamanic
 shamans
 shamble
-shambler
-shamblers
 shambles
 shambling
 shame
@@ -19348,21 +16317,11 @@ shames
 shamrock
 shank
 shanked
-shantak
 shape
-shapechange
-shapechanger
-shapechangers
-shapechanging
 shaped
 shapeless
 shapes
-shapeshift
-shapeshifted
 shapeshifter
-shapeshifters
-shapeshifts
-shapewear
 shaping
 shard
 shards
@@ -19371,8 +16330,6 @@ shared
 shares
 sharing
 shark
-sharkjaw
-sharkjawskeleton
 sharklike
 sharks
 sharkskin
@@ -19385,13 +16342,10 @@ sharpest
 sharply
 sharpness
 sharpshooter
-shashka
 shatter
 shattered
 shattering
 shatters
-shattershot
-shatterstone
 shaved
 shaving
 shavings
@@ -19416,16 +16370,13 @@ sheep
 sheepdog
 sheepdogs
 sheer
-sheeshah
 sheet
 sheets
 sheikh
-sheild
 shelf
 shell
 shells
 shellycoat
-shellycoats
 shelter
 sheltered
 sheltering
@@ -19435,11 +16386,8 @@ shelves
 shepherd
 shepherds
 sheriff
-sheriffs
-shetani
 shi
 shield
-shieldbearer
 shielded
 shielding
 shields
@@ -19447,8 +16395,6 @@ shift
 shifted
 shifting
 shifts
-shiftshroom
-shiftshrooms
 shillelagh
 shimmer
 shimmering
@@ -19458,7 +16404,6 @@ shine
 shines
 shingled
 shining
-shinobi
 shiny
 ship
 shipmates
@@ -19470,13 +16415,11 @@ shipwrecks
 shire
 shirk
 shirking
-shirling
 shirt
 shirts
 shiv
 shiver
 shivering
-shiveringthat
 shivers
 shoal
 shoals
@@ -19484,14 +16427,10 @@ shock
 shocking
 shocks
 shockwave
-shockwaves
-shockwing
 shod
 shoe
 shoelaces
 shoes
-shoggoth
-shoggoths
 shook
 shoot
 shooting
@@ -19505,24 +16444,17 @@ shoreline
 shores
 shorn
 short
-shortbow
-shortbows
 shortcomings
 shortcut
 shorten
 shortens
 shorter
 shortest
-shortlived
-shortlong
 shortly
 shorts
-shortspear
 shortsword
 shortswords
 shot
-shotel
-shoth
 shots
 shou
 should
@@ -19557,8 +16489,6 @@ shredding
 shreds
 shrew
 shriek
-shriekbat
-shriekbats
 shrieker
 shriekers
 shrieking
@@ -19584,22 +16514,16 @@ shrug
 shrugging
 shrunk
 shrunken
-shrutinandan
-shub
 shuck
 shudders
 shuffle
 shuffles
 shuffling
-shukankor
-shukankors
 shun
 shunned
 shuns
 shunted
 shunting
-shurale
-shurales
 shushing
 shut
 shuts
@@ -19609,7 +16533,6 @@ shutters
 shuttle
 shy
 shysters
-siabhra
 sibilant
 sibilants
 sibling
@@ -19638,17 +16561,12 @@ sift
 sifts
 sigh
 sight
-sightburst
 sighted
 sightings
 sightless
 sights
 sigil
-sigilian
-sigilic
 sigils
-sigmund
-sigmundsson
 sign
 signal
 signaling
@@ -19667,10 +16585,8 @@ signify
 signifying
 signing
 signs
-sigrud
 sigurd
 sila
-silenal
 silence
 silenced
 silences
@@ -19690,25 +16606,20 @@ silky
 sill
 silliness
 silly
-silouetted
 silt
 silty
 silvanus
 silver
 silvered
-silvershout
 silvery
-simhamukha
 simian
 simians
 similar
 similarities
 similarity
 similarly
-simone
 simple
 simpler
-simpleto
 simplicity
 simply
 sims
@@ -19720,7 +16631,6 @@ simurg
 sin
 since
 sincerity
-sindri
 sinew
 sinews
 sinewy
@@ -19743,12 +16653,9 @@ sinkhole
 sinkholes
 sinking
 sinks
-sinmara
 sinner
-sinners
 sinoper
 sins
-sinstar
 sinuous
 sinuously
 siphon
@@ -19756,7 +16663,6 @@ siphoning
 siphons
 sir
 siren
-sirencan
 sirens
 sirocco
 sisters
@@ -19781,8 +16687,6 @@ sized
 sizes
 sizzles
 sizzling
-sj
-skadi
 skald
 skaldic
 skalds
@@ -19792,7 +16696,6 @@ skates
 skating
 skein
 skeins
-skeinwitch
 skeletal
 skeletally
 skeleton
@@ -19816,54 +16719,36 @@ skillfully
 skills
 skim
 skin
-skinbat
-skinchanger
-skinchangers
-skinchanging
 skinned
 skinner
 skins
 skip
 skipping
-skipstone
-skipstones
 skirmish
 skirmisher
 skirt
 skis
 skitter
 skittered
-skitterhaunt
-skitterhaunts
 skittering
 skitters
 skittish
-skofnung
 skraeling
-skrivena
 skulk
 skulked
 skulker
 skulking
 skulks
 skull
-skullbloom
-skullboom
 skullcap
 skulled
-skullpopper
 skulls
 skunk
 skunks
 sky
-skydancer
-skydancers
-skyfish
 skysail
 skysails
-skywing
 skywrite
-slaadi
 slab
 slabs
 slackers
@@ -19886,8 +16771,6 @@ slasher
 slashes
 slashing
 slate
-slatelight
-slaughs
 slaughter
 slaughtered
 slaughtering
@@ -19913,7 +16796,6 @@ sleeps
 sleet
 sleeve
 sleight
-sleipnir
 slender
 slept
 slew
@@ -19933,13 +16815,11 @@ slightly
 slighty
 slim
 slime
-slimeblade
 slimes
 slimmer
 slimy
 sling
 slings
-slingsnare
 slingstone
 slink
 slinks
@@ -19953,7 +16833,6 @@ slippery
 slipping
 slips
 slipshod
-slirghs
 slit
 slither
 slithered
@@ -19972,11 +16851,9 @@ sloppy
 sloshes
 slot
 sloth
-sloths
 slots
 slouches
 sloughed
-sloughide
 sloughing
 sloughs
 slow
@@ -19985,9 +16862,6 @@ slowest
 slowing
 slowly
 slows
-slowstorm
-sluagh
-sluaghs
 sludge
 sludgy
 slue
@@ -20013,7 +16887,6 @@ small
 smaller
 smallest
 smaragdine
-smaragdinegolem
 smart
 smarter
 smartest
@@ -20047,7 +16920,6 @@ smiting
 smock
 smoke
 smoked
-smokeplume
 smoking
 smoky
 smolder
@@ -20059,18 +16931,15 @@ smother
 smothered
 smothering
 smuggler
-smugglers
 smuggling
 snack
 snacking
 snag
-snaggly
 snags
 snake
 snakelike
 snakes
 snakeskin
-snallygaster
 snap
 snapper
 snapping
@@ -20104,7 +16973,6 @@ sniper
 snippet
 snippets
 snippy
-snipsnaps
 snort
 snorts
 snout
@@ -20112,20 +16980,13 @@ snouts
 snow
 snowball
 snowballs
-snowblind
 snowfall
 snowflake
 snowflakes
-snowith
 snowman
-snowperson
-snowpersons
-snowqueen
 snows
 snowshoes
-snowsight
 snowstorms
-snowwhite
 snowy
 snubbed
 snuff
@@ -20142,13 +17003,10 @@ soap
 soapstone
 soapy
 soar
-soareas
 soaring
 soars
 sob
 sobbing
-sobek
-socalled
 sociability
 sociable
 social
@@ -20162,7 +17020,6 @@ socket
 sockets
 sod
 sods
-sodwose
 soft
 soften
 softened
@@ -20181,8 +17038,6 @@ sold
 soldier
 soldiers
 soldiery
-soldra
-soldras
 sole
 soled
 solely
@@ -20197,7 +17052,6 @@ solidly
 solitary
 solitude
 solo
-solodron
 solstice
 soluble
 solution
@@ -20207,19 +17061,16 @@ solved
 solvent
 solving
 somatic
-somberweave
 some
 someday
 somehow
 someone
 someplace
 somersaults
-somespent
 something
 sometimes
 somewhat
 somewhere
-somnambulatory
 somnambulism
 son
 sonata
@@ -20230,7 +17081,6 @@ songs
 sonic
 sonnet
 sonnets
-sonoffenris
 sonorous
 sons
 soon
@@ -20243,15 +17093,11 @@ soothing
 soothsayer
 soothsayers
 soothsaying
-sootstorm
-sootwing
 sooty
-sooze
 sophisticated
 soporific
 sorcerer
 sorcerers
-sorceror
 sorcerous
 sorcery
 sore
@@ -20262,18 +17108,10 @@ sort
 sorta
 sorted
 sorts
-sothoth
 sought
 soul
-soulbound
-souleater
-soulgem
 soulless
 souls
-soulspies
-soulspy
-soulsworn
-soulwrought
 sound
 sounding
 soundlessly
@@ -20285,7 +17123,6 @@ sour
 source
 sourcebook
 sources
-sourcesof
 sourcing
 south
 southeast
@@ -20294,11 +17131,9 @@ southlands
 southwest
 souvenir
 souvenirs
-sovereigh
 sovereign
 sovereigns
 sow
-sowilo
 sowing
 sown
 sows
@@ -20338,8 +17173,6 @@ spatters
 spawn
 spawned
 spawning
-spawnofakyishigal
-spawnofarbeyach
 spawns
 speak
 speaker
@@ -20347,7 +17180,6 @@ speakers
 speaking
 speaks
 spear
-spearbiter
 spearhead
 spears
 special
@@ -20359,9 +17191,7 @@ specializing
 specially
 specialties
 specialty
-specialvehicles
 species
-speciestrait
 specific
 specifically
 specifications
@@ -20382,40 +17212,20 @@ spectators
 specter
 specters
 spectral
-spectralguardian
 spectrum
 speculate
 speculation
 speech
 speeches
 speed
-speedand
 speeding
 speeds
 spell
-spellbending
 spellbinding
-spellblade
-spellbook
-spellbooks
 spellbound
-spellbreaker
-spellcaster
-spellcasters
 spellcasting
-spellcastingoption
-spellclerk
-spellclerks
-spellcomponents
 spellcraft
-spellguard
-spellhound
-spellhounds
-spelllist
 spells
-spellschool
-spellsmith
-spellsword
 spend
 spending
 spends
@@ -20429,15 +17239,10 @@ spherical
 spheroid
 sphinx
 sphinxes
-sphinxs
 spice
 spices
 spider
-spiderlings
-spiderofleng
 spiders
-spidersilk
-spiderthief
 spiderweb
 spiderwebs
 spies
@@ -20461,7 +17266,6 @@ spinel
 spines
 spinner
 spinning
-spinosaurus
 spins
 spiny
 spiracles
@@ -20470,7 +17274,6 @@ spiraling
 spirals
 spire
 spires
-spirewalker
 spirit
 spirited
 spirits
@@ -20479,7 +17282,6 @@ spirituality
 spiritually
 spirt
 spit
-spitdart
 spite
 spiteful
 spits
@@ -20520,7 +17322,6 @@ spontaneously
 spook
 spooked
 spooking
-spooklight
 spooky
 spool
 spoon
@@ -20528,9 +17329,7 @@ spoonful
 spoonfuls
 spoor
 spore
-sporeborn
 spores
-sporesight
 sporous
 sport
 sporting
@@ -20559,7 +17358,6 @@ sprigs
 spring
 springing
 springs
-springspike
 sprinkle
 sprinkled
 sprinkling
@@ -20628,10 +17426,6 @@ squirrels
 squirting
 squishes
 squishing
-srasama
-srd
-ssadar
-ssadars
 st
 stab
 stabbing
@@ -20673,8 +17467,6 @@ stalactite
 stalactites
 stalagmite
 stalagmites
-stalagteeth
-stalagtite
 stale
 stalk
 stalker
@@ -20705,15 +17497,11 @@ star
 starburst
 starches
 starchy
-stardrake
 stardust
 stare
 stares
-starfall
 starfish
-starflare
 stargazer
-stariji
 staring
 stark
 starkly
@@ -20722,7 +17510,6 @@ starry
 stars
 starshine
 starships
-starspawnofcthulhu
 start
 started
 starter
@@ -20738,7 +17525,6 @@ starvation
 starve
 starved
 starves
-starvines
 starving
 stash
 stashed
@@ -20790,13 +17576,11 @@ stealth
 stealthily
 stealthy
 steam
-steamgolem
 steaming
 steams
 steed
 steeds
 steel
-steelsilk
 steely
 steep
 steeped
@@ -20825,7 +17609,6 @@ steve
 stew
 steward
 stewards
-stewardshipare
 stick
 sticking
 sticklers
@@ -20835,7 +17618,6 @@ stiff
 stiffened
 stiffness
 stigmata
-stike
 stiletto
 still
 stillborn
@@ -20856,8 +17638,6 @@ stinks
 stipulate
 stipulation
 stir
-stirge
-stirges
 stirred
 stirring
 stirrings
@@ -20885,23 +17665,13 @@ stomp
 stomping
 stomps
 stone
-stonechewer
 stonecraft
-stonecunning
-stonedrift
-stoneguard
-stonemaster
 stones
-stoneshape
-stoneskin
-stonesteel
-stonetalker
 stonework
 stony
 stood
 stoop
 stooped
-stoor
 stop
 stopped
 stopper
@@ -20916,20 +17686,13 @@ storied
 stories
 storing
 storm
-stormboar
-stormboars
-stormcloud
-stormheart
 storms
-stormshield
-stormsight
 stormwind
 stormy
 story
 storybook
 storylines
 storyteller
-storytellers
 storytelling
 stout
 stoutness
@@ -20941,7 +17704,6 @@ str
 straddle
 straddler
 stragglers
-strahd
 straight
 straightens
 straighter
@@ -21009,7 +17771,6 @@ strides
 striding
 strife
 strike
-strikeback
 striker
 strikes
 striking
@@ -21051,7 +17812,6 @@ strumming
 strung
 struts
 strutting
-stryx
 stubborn
 stubby
 stuck
@@ -21068,8 +17828,6 @@ stuffed
 stuffing
 stuffs
 stuffy
-stuhac
-stuhacs
 stumble
 stumbled
 stumbles
@@ -21096,7 +17854,6 @@ sturdier
 sturdy
 stutters
 stygian
-stygianfat
 style
 styled
 styles
@@ -21113,7 +17870,6 @@ subconscious
 subconsciously
 subdue
 subduing
-subek
 subgroups
 subject
 subjected
@@ -21123,7 +17879,6 @@ subjugate
 subjugated
 subjugating
 subjugation
-sublicensable
 sublicenses
 sublimates
 subliminal
@@ -21176,7 +17931,6 @@ subtropical
 subtype
 subtypes
 subverting
-succcess
 succeed
 succeeded
 succeeding
@@ -21190,7 +17944,6 @@ succession
 successive
 succor
 succubus
-succubusincubus
 succulence
 succulent
 succumb
@@ -21224,14 +17977,12 @@ suffuses
 suffusing
 sugar
 sugary
-sugges
 suggest
 suggested
 suggestible
 suggestion
 suggestions
 suggests
-sugilite
 sui
 suicidal
 suicide
@@ -21243,14 +17994,10 @@ suited
 suits
 sulfur
 sulfuric
-sulfurlord
 sulfurous
 sullen
 sully
-sulphuric
 sulphurous
-sulsha
-sulshas
 sum
 sumac
 summaries
@@ -21273,7 +18020,6 @@ sun
 sunbathing
 sunbeam
 sunburst
-suncatcher
 sundered
 sundering
 sundial
@@ -21287,7 +18033,6 @@ sunny
 sunray
 sunrays
 sunrise
-suns
 sunset
 sunshine
 sunstone
@@ -21341,7 +18086,6 @@ supreme
 surcoat
 sure
 surefire
-sureflippered
 surefootedness
 surely
 surest
@@ -21349,7 +18093,6 @@ surety
 surf
 surface
 surfaced
-surfaceor
 surfaces
 surge
 surgeon
@@ -21378,7 +18121,6 @@ surrounded
 surrounding
 surroundings
 surrounds
-surtur
 survey
 survival
 survive
@@ -21387,10 +18129,8 @@ survives
 surviving
 survivor
 survivors
-susanoo
 susceptibility
 susceptible
-suskind
 suspect
 suspected
 suspects
@@ -21407,13 +18147,6 @@ sustaining
 sustains
 sustenance
 susurrus
-sutureflies
-suturefly
-svafrlami
-svalinn
-svg
-svipdagr
-svirfneblin
 swaggering
 swallow
 swallowed
@@ -21422,9 +18155,6 @@ swallowing
 swallows
 swam
 swamp
-swampadder
-swampbound
-swampgas
 swampland
 swamplands
 swamps
@@ -21436,15 +18166,7 @@ swapped
 swapping
 swaps
 swarm
-swarmdagger
-swarmfoe
 swarming
-swarmoffiredancers
-swarmofmanabanescarabs
-swarmofprismaticbeetles
-swarmofsluaghs
-swarmofwharflings
-swarmofwolfspirits
 swarms
 swashing
 swath
@@ -21475,7 +18197,6 @@ swells
 swept
 swerves
 swift
-swiftblade
 swifter
 swiftly
 swiftness
@@ -21488,7 +18209,6 @@ swindlers
 swine
 swing
 swinging
-swingline
 swings
 swipe
 swipes
@@ -21503,16 +18223,13 @@ switchbacks
 switched
 switching
 swivel
-swolbold
 swollen
 swoop
 swooping
 swoops
 sword
-swordbreaker
 swords
 swordsman
-swordtrained
 swore
 sworn
 swung
@@ -21530,7 +18247,6 @@ symbolic
 symbolizes
 symbology
 symbols
-symetrical
 symmetrically
 sympathetic
 sympathize
@@ -21576,15 +18292,11 @@ tactician
 tactics
 tactile
 tadpole
-tafl
 tag
-tagelharpa
-taggit
 tags
 taiga
 tail
 tailed
-tailedscorpion
 tailless
 tailor
 tailored
@@ -21603,16 +18315,13 @@ taken
 takers
 takes
 taking
-takoba
 tal
 talc
-taldorei
 tale
 talent
 talented
 talents
 tales
-talespinners
 talisman
 talismans
 talk
@@ -21620,19 +18329,16 @@ talkers
 talking
 tall
 taller
-tallerthan
 tallest
 tallow
 talon
 taloned
 talons
-talonss
 talpidae
 talus
 tame
 tamed
 tamer
-tamers
 tamil
 taming
 tamper
@@ -21640,7 +18346,6 @@ tampered
 tampering
 tams
 tan
-tanar
 tandem
 tangible
 tangle
@@ -21661,23 +18366,18 @@ tapped
 tapping
 taps
 tar
-taranis
 tarantula
 target
 targeted
 targeting
 targets
-tarian
 tarlike
 tarnish
 tarnished
 tarnishes
 tarnishing
-tarrasque
-tarrasques
 tarry
 tart
-tarterian
 tartlets
 tarts
 task
@@ -21697,7 +18397,6 @@ tatters
 tattoo
 tattooed
 tattoos
-tatzelwurm
 taught
 taunt
 taunting
@@ -21705,13 +18404,10 @@ taunts
 tauric
 taut
 tavern
-tavernkeeper
-tavernkeepers
 taverns
 tawdry
 taxes
 taxing
-tdcs
 tea
 teach
 teachable
@@ -21759,8 +18455,6 @@ teller
 telling
 tells
 telltale
-tembril
-tembrils
 temp
 temper
 temperament
@@ -21778,7 +18472,6 @@ templars
 template
 templates
 temple
-templedog
 temples
 tempo
 temporal
@@ -21803,7 +18496,6 @@ tending
 tendon
 tendons
 tendril
-tendrilpuppet
 tendrils
 tends
 tenebrous
@@ -21860,9 +18552,7 @@ tetanus
 tether
 tethered
 tethers
-tetomatli
 tetrahedron
-tewaz
 text
 textile
 texts
@@ -21876,27 +18566,17 @@ thank
 thankfully
 thanks
 that
-thats
 thaumaturgy
 thaw
 thawed
 thawing
 thaws
-thay
 the
 theaters
 theatre
-thecrew
-theday
-thedifficulty
-thedungeon
 theft
-thegm
 their
-theirminds
-theirmouths
 theirs
-thejump
 them
 thematic
 thematically
@@ -21920,16 +18600,11 @@ thereby
 therefore
 therein
 thereof
-therizinosaurus
 these
 thesis
 thespian
-theullai
-theullali
 theurgists
 they
-theydbeen
-theyuse
 thick
 thicker
 thicket
@@ -21937,8 +18612,6 @@ thickets
 thickly
 thickness
 thief
-thiefs
-thier
 thievery
 thieves
 thieving
@@ -21962,9 +18635,6 @@ thirsty
 thirteen
 thirty
 this
-thissection
-thisweapon
-thlevel
 thomas
 thompson
 thong
@@ -21972,8 +18642,6 @@ thor
 thorax
 thorn
 thorned
-thornheart
-thornish
 thorns
 thorny
 thoroughly
@@ -21999,12 +18667,9 @@ threat
 threaten
 threatened
 threatening
-threateningsituation
 threatens
 threats
 three
-threecategories
-threequarters
 threes
 threshers
 threshing
@@ -22017,8 +18682,6 @@ thrill
 thrilled
 thrilling
 thrills
-thripper
-thrippish
 thrive
 thrives
 thriving
@@ -22031,7 +18694,6 @@ thrones
 throttle
 throttled
 throttler
-throttlers
 through
 throughout
 throw
@@ -22040,19 +18702,13 @@ throwers
 throwing
 thrown
 throws
-throwsagainst
 thru
 thrum
 thrumming
-thrummren
-thrummrens
 thrums
 thrust
 thrusting
 thrusts
-thrym
-thsidhe
-thuellai
 thug
 thugs
 thumb
@@ -22066,7 +18722,6 @@ thunderbird
 thunderbirds
 thunderbolt
 thunderbolts
-thundercall
 thunderclap
 thunderclaps
 thundercloud
@@ -22075,15 +18730,9 @@ thunderhead
 thundering
 thunderous
 thunderously
-thunderstaff
-thunderstomper
 thunderstorm
 thunderstorms
 thunderstrike
-thunderwave
-thunderwavea
-thurs
-thursir
 thus
 thwart
 thwarted
@@ -22092,7 +18741,6 @@ thwarts
 thyrsus
 ti
 tiamat
-tian
 tick
 ticket
 ticking
@@ -22103,18 +18751,13 @@ ticks
 tics
 tidal
 tide
-tidehunter
-tidehunters
 tidepool
 tides
 tidy
 tidying
 tie
 tied
-tiefling
-tieflings
 ties
-tigebra
 tiger
 tigers
 tight
@@ -22131,7 +18774,6 @@ tilt
 timber
 timbre
 time
-timeblade
 timed
 timeframe
 timeframes
@@ -22145,13 +18787,10 @@ timepiece
 timer
 timers
 times
-timewarped
 timeworn
 timing
-timingila
 tin
 tincture
-tindalos
 tinder
 tinderbox
 tined
@@ -22166,8 +18805,6 @@ tinkle
 tint
 tinted
 tiny
-tion
-tional
 tip
 tippable
 tipped
@@ -22189,17 +18826,13 @@ tissues
 titan
 titania
 titanic
-titanoboa
-titanoboas
 titans
 tithe
 tithes
-titivillus
 title
 titled
 titles
 tittering
-tlaloc
 tm
 to
 toa
@@ -22212,16 +18845,12 @@ tob
 tobacco
 toboggan
 tobogganing
-tocharm
-todate
 today
 toe
 toed
-toeffects
 toenails
 toes
 together
-toh
 toil
 toiling
 token
@@ -22239,7 +18868,6 @@ tombs
 tombstones
 tome
 tomes
-toname
 tone
 tones
 tongue
@@ -22296,22 +18924,15 @@ torturer
 torturers
 torturing
 torturous
-tosculi
-tosculidrone
-tosculielitebowraider
-tosculihivequeen
-tosculiwarrior
 toss
 tossed
 tosses
-tossess
 tossing
 total
 totaling
 totals
 totem
 totems
-totivillus
 touch
 touched
 touches
@@ -22324,8 +18945,6 @@ toughest
 toughness
 tour
 tourmaline
-tove
-toves
 toward
 towards
 towels
@@ -22336,13 +18955,11 @@ town
 townhouse
 towns
 townsfolk
-townshend
 townspeople
 toxic
 toxicity
 toxin
 toxins
-toxique
 toy
 toys
 trace
@@ -22419,14 +19036,12 @@ transformation
 transformative
 transformed
 transforming
-transforminto
 transforms
 transgress
 transgression
 transgressions
 transgressor
 transgressors
-transistive
 transit
 transiting
 transition
@@ -22477,8 +19092,6 @@ trappers
 trapping
 trappings
 traps
-trapsmith
-trapsmiths
 trash
 trauma
 traumatic
@@ -22487,7 +19100,6 @@ travel
 traveled
 traveler
 travelers
-travelfor
 traveling
 travelled
 travellers
@@ -22504,8 +19116,6 @@ treacle
 treacles
 tread
 treads
-treant
-treants
 treasure
 treasured
 treasures
@@ -22520,11 +19130,8 @@ treats
 treaty
 trebuchet
 tree
-treebleed
-treeheal
 treeline
 trees
-treespeech
 treetop
 treetops
 trek
@@ -22533,7 +19140,6 @@ trembles
 tremendous
 tremor
 tremors
-tremorsense
 tremulous
 trench
 trenches
@@ -22557,10 +19163,7 @@ tribes
 tribesmen
 tribespeople
 tribute
-tricenatorus
-tricenatoruses
 triceratops
-triceratopss
 trick
 trickery
 tricking
@@ -22588,7 +19191,6 @@ trimming
 trinity
 trinket
 trinkets
-trinketsalikewhen
 trio
 trip
 tripartite
@@ -22608,11 +19210,7 @@ troglodytes
 troll
 trolleys
 trollish
-trollkin
-trollking
-trollkinreaver
 trolls
-trollsblood
 trombone
 troop
 trooper
@@ -22637,12 +19235,9 @@ truant
 truce
 truculent
 true
-truesight
-truespeak
 truffle
 truly
 trumpet
-trumpetbloom
 trumpeting
 trumpets
 truncheon
@@ -22661,33 +19256,25 @@ truths
 try
 trying
 trysts
-tstart
 tsunami
-tthis
-ttir
 tub
 tube
-tuberkith
 tubes
 tubular
 tuck
 tucked
 tucks
-tudglyd
-tudwal
 tuft
 tufts
 tug
 tugging
 tugs
 tuition
-tulpa
 tulwar
 tulwars
 tumble
 tumbledown
 tumbler
-tumblesafe
 tumbleweed
 tumbling
 tumor
@@ -22701,19 +19288,15 @@ tunes
 tunic
 tunics
 tuning
-tunn
 tunnel
 tunneler
 tunnelers
 tunneling
 tunnels
-tupilak
 turban
 turbans
-turbs
 turbulence
 turbulent
-turisaz
 turkey
 turmoil
 turn
@@ -22726,13 +19309,11 @@ turtle
 turtles
 tusk
 tusked
-tuskedskyfish
 tusks
 tussler
 tutelage
 tutor
 tutors
-tveirherjar
 tweak
 tweaks
 tweet
@@ -22780,9 +19361,6 @@ tyrannosaurus
 tyranny
 tyrant
 tyrants
-tyrfing
-tzepharion
-tzepharions
 u
 udder
 uglies
@@ -22790,21 +19368,15 @@ ugliness
 ugly
 ulcers
 uller
-ulnorya
-ulnoryas
-ulthar
 ultimate
 ultimately
 ultimatum
 ultrasonic
 ultrathin
-ultroloths
 ululations
-umara
 umber
 umbrage
 umbral
-umbralvampire
 umbrella
 umbrellas
 unabated
@@ -22824,7 +19396,6 @@ unassisted
 unassuming
 unassumingly
 unattended
-unattune
 unattuned
 unavailable
 unavenged
@@ -22888,15 +19459,12 @@ uncurls
 uncut
 undamaged
 undead
-undeath
 undeniable
 undeniably
 under
 underbellies
 underbelly
 underbrush
-undercommon
-underdark
 underestimate
 underestimated
 underestimating
@@ -23021,7 +19589,6 @@ unimaginable
 unimaginably
 unimpeded
 unimposing
-unincapacitated
 uninfected
 uninhabited
 uninitiated
@@ -23061,7 +19628,6 @@ unleashed
 unleashes
 unleashing
 unless
-unlife
 unlike
 unlikely
 unlimited
@@ -23150,7 +19716,6 @@ unscrupulous
 unseals
 unseasonable
 unsecured
-unseelie
 unseen
 unsettle
 unsettling
@@ -23160,7 +19725,6 @@ unshakeable
 unsheathe
 unsheathed
 unsightly
-unska
 unskilled
 unsleeping
 unsophisticated
@@ -23168,7 +19732,6 @@ unspeakable
 unspeakably
 unspecific
 unspoken
-unspool
 unstable
 unstop
 unstoppable
@@ -23261,7 +19824,6 @@ upsetting
 upside
 upstanding
 upstream
-upto
 upward
 upwards
 ur
@@ -23272,23 +19834,12 @@ urban
 urbanized
 urchin
 urchins
-urdimmu
 urge
 urgent
 urges
 urging
-uri
-uridimmu
-uridimmus
-uriska
-urk
-urks
-url
 urn
-urochar
-urochars
 ursa
-ursan
 ursine
 urushi
 us
@@ -23303,7 +19854,6 @@ user
 users
 uses
 ushabti
-ushabtiroyalguard
 ushabtis
 usher
 using
@@ -23325,14 +19875,12 @@ uttered
 uttering
 utterly
 utters
-uvh
 v
 vacant
 vacated
 vacillate
 vacuous
 vacuum
-vaettir
 vagrant
 vagrants
 vague
@@ -23342,16 +19890,11 @@ vain
 val
 valhalla
 valiant
-valkruung
-valkruungs
 valkyrie
 valkyries
 valley
 valleys
-vallowex
-vallowexes
 valor
-vals
 valuable
 valuables
 value
@@ -23362,9 +19905,7 @@ valves
 vampire
 vampires
 vampiric
-vanara
 vandalism
-vangsluagh
 vanguard
 vanir
 vanish
@@ -23381,7 +19922,6 @@ vapor
 vaporize
 vaporized
 vaporizes
-vaporlynx
 vaporous
 vapors
 variable
@@ -23396,7 +19936,6 @@ varieties
 variety
 various
 varnish
-varrus
 vary
 varying
 vascular
@@ -23404,13 +19943,11 @@ vase
 vassals
 vast
 vastly
-vateinn
 vats
 vault
 vaulting
 vaults
 vaunted
-ve
 vector
 vegetable
 vegetables
@@ -23425,9 +19962,7 @@ veils
 veined
 veins
 veiny
-vekeshi
 veles
-vellso
 vellum
 velociraptor
 velocity
@@ -23444,7 +19979,6 @@ vengeful
 venison
 venom
 venomous
-venomousmummy
 venoms
 vent
 ventral
@@ -23462,11 +19996,9 @@ verdict
 verdigris
 verge
 veritable
-veritigibbet
 vermilion
 vermillion
 vermin
-verminform
 verminous
 versa
 versatile
@@ -23481,7 +20013,6 @@ vertebrae
 vertical
 vertically
 very
-vesiculosa
 vessel
 vessels
 vest
@@ -23489,12 +20020,10 @@ vested
 vestiges
 vestigial
 vestments
-vetala
 veteran
 veterans
 vex
 vexing
-vexxeh
 via
 viable
 vial
@@ -23533,12 +20062,9 @@ vigilantes
 vigor
 vigorous
 vigorously
-viiret
-viirets
 vikings
 vila
 vile
-vilebarber
 village
 villager
 villagers
@@ -23547,13 +20073,10 @@ villain
 villainous
 villains
 villainy
-villalta
 vindictive
 vine
 vinegar
-vinelord
 vines
-vinetrollskeleton
 viny
 viol
 violate
@@ -23613,34 +20136,19 @@ vividly
 vizier
 vocal
 vocalized
-vodyanoi
 voice
 voices
 void
-voidborn
-voidclaw
-voiddragonwyrmling
 voiding
-voidlike
-voidling
-voidlings
-voidpool
-voidpools
 voids
-voidskin
-voidwalker
-voidwarped
 volatile
 volcanic
 volcano
 volcanoes
 volcanos
-volguloth
 volley
-volsung
 volta
 voltage
-voltas
 volume
 volumes
 voluminous
@@ -23649,13 +20157,11 @@ voluntary
 volunteer
 volunteers
 voluptuous
-vom
 vomit
 vomited
 vomiting
 vomits
 von
-voorish
 voracious
 voraciously
 voraciousness
@@ -23663,18 +20169,13 @@ voracity
 vorpal
 vortex
 vortexes
-vorthropod
 vortices
 vow
 vowed
 vows
 voyage
 voyages
-vrock
-vrocks
 vs
-vttir
-vttirs
 vulgar
 vulnerabilities
 vulnerability
@@ -23708,7 +20209,6 @@ waist
 wait
 waiting
 waits
-waivable
 waive
 waived
 waiver
@@ -23719,7 +20219,6 @@ wakefulness
 waken
 wakes
 waking
-wakwak
 walk
 walked
 walker
@@ -23736,9 +20235,7 @@ wallows
 walls
 walnut
 walnuts
-walters
 wampus
-wampuscat
 wand
 wander
 wandered
@@ -23756,12 +20253,8 @@ wanting
 wanton
 wantonly
 wants
-wanyudo
-wanyudos
 war
-warband
 warbling
-warchief
 ward
 warded
 warden
@@ -23769,15 +20262,8 @@ wardens
 warding
 wardings
 wardrobe
-wardrums
 wards
-wardu
-wardus
 warfare
-warframe
-warhammer
-warhammers
-warhordling
 warhorse
 warhorses
 warlike
@@ -23786,7 +20272,6 @@ warlocks
 warlord
 warlords
 warm
-warmages
 warmblooded
 warmed
 warmer
@@ -23798,11 +20283,8 @@ warn
 warned
 warning
 warnings
-warostrich
 warp
-warpblade
 warped
-warpick
 warping
 warps
 warranties
@@ -23814,7 +20296,6 @@ warriors
 wars
 warship
 warships
-warsong
 wart
 warts
 wary
@@ -23823,7 +20304,6 @@ wash
 washbowl
 washed
 washes
-washi
 washing
 washings
 wasn
@@ -23835,7 +20315,6 @@ waste
 wasted
 wasteful
 wasteland
-wastelander
 wastelands
 wastes
 wasting
@@ -23853,33 +20332,24 @@ watchmen
 water
 waterborne
 watercraft
-waterdeep
 waterfall
 waterfalls
 waterfowl
 watering
-waterkledde
-waterleaper
 waterless
 waterlogged
 watermen
-watermust
 waterproof
 waters
 waterskin
-waterskins
 waterspout
 watertight
-waterwalker
 waterways
 watery
 wattles
 wave
-waveboards
 waved
 wavered
-waverider
-waveriders
 wavering
 wavers
 waves
@@ -23892,11 +20362,7 @@ waxes
 waxy
 way
 wayfarer
-wayfarers
-wayfinder
 ways
-waystone
-waystones
 wayward
 we
 weak
@@ -23917,11 +20383,8 @@ wealthy
 weapon
 weaponizing
 weaponless
-weaponproperty
-weaponpropertyassignment
 weaponry
 weapons
-weaponsmithing
 wear
 wearable
 wearer
@@ -23954,7 +20417,6 @@ week
 weeks
 weep
 weeping
-weepingtreant
 weeps
 weepy
 weevil
@@ -23967,8 +20429,6 @@ weighted
 weightless
 weights
 weighty
-weiler
-weilers
 weird
 weirding
 weirdly
@@ -23977,7 +20437,6 @@ welcome
 welcomed
 welcoming
 welded
-welham
 well
 wellbeing
 wells
@@ -23986,28 +20445,16 @@ wendigo
 wends
 went
 were
-werebat
-werebats
 werebear
 wereboar
 werecrocodile
 weregild
 werehyena
 weren
-wereotter
-wereowl
-wereowls
-wererat
-wererats
-wereshark
-weresharks
 weretiger
-weretigers
 werewolf
-werewolfs
 werewolves
 wergild
-werynax
 west
 westerly
 western
@@ -24018,8 +20465,6 @@ whale
 whalebone
 whales
 whaling
-wharfling
-wharflings
 what
 whatever
 whatsoever
@@ -24043,7 +20488,6 @@ wherever
 whether
 whetstone
 which
-whicha
 whichever
 whiff
 while
@@ -24083,7 +20527,6 @@ whistle
 whistles
 whistling
 white
-whiteape
 whiteout
 whitish
 whittle
@@ -24097,18 +20540,14 @@ whomever
 whomping
 whooping
 whoops
-whorling
 whorls
 whose
-whuffling
 why
 whys
-whythe
 wick
 wicked
 wickedly
 wickedness
-wickerman
 wicks
 wide
 widely
@@ -24126,7 +20565,6 @@ wight
 wights
 wigs
 wiki
-wikipedia
 wild
 wildcat
 wildebeest
@@ -24142,7 +20580,6 @@ wildlife
 wildling
 wildly
 wilds
-wildshaped
 will
 willed
 willful
@@ -24152,9 +20589,6 @@ willing
 willingly
 willingness
 willow
-willowhaunt
-willowhaunts
-willowisp
 willows
 willpower
 wills
@@ -24167,7 +20601,6 @@ winch
 wind
 windblown
 windborne
-winddragonwyrmling
 winding
 window
 windows
@@ -24176,7 +20609,6 @@ windstorm
 windstorms
 windswept
 windup
-windwalker
 windy
 wine
 wineskin
@@ -24197,52 +20629,31 @@ winning
 winnings
 wins
 winter
-winterdark
-winterghast
-winterghasts
-wintergrim
-wintergrims
-winterlands
 winters
 wintry
 wipe
 wiped
-wipo
-wirbeln
 wire
 wired
-wireframe
 wires
 wiry
 wis
 wisdom
-wisdon
 wise
 wisely
 wiser
 wisest
 wish
-wishbound
 wishes
 wishing
 wisp
-wispers
 wisps
 wispy
 wit
 witch
-witchalder
-witchbane
 witchcraft
 witches
-witchfinders
-witchfyre
-witchfyres
-witchlight
-witchlights
-witchs
 with
-withdarkvision
 withdraw
 withdrawals
 withdrawing
@@ -24277,18 +20688,10 @@ wobbles
 wobbling
 woe
 woes
-woflgang
 woken
 wolf
-wolfbite
-wolfgang
-wolfmother
-wolfreaverdwarf
 wolfs
 wolfsbane
-wolfsong
-woll
-wolpertinger
 wolverine
 wolves
 woman
@@ -24305,11 +20708,9 @@ woodcraft
 woodcutter
 wooded
 wooden
-woodfriend
 woodland
 woodlands
 woods
-woodsfolk
 woodsman
 woodsmoke
 woodsy
@@ -24325,8 +20726,6 @@ worded
 wording
 words
 wore
-worg
-worgs
 work
 worked
 workers
@@ -24339,19 +20738,12 @@ works
 workshop
 workshops
 world
-worldbook
-worldbuilder
 worldly
 worlds
 worldview
 worldwide
 worm
-wormhearted
-wormheartedsuffragan
-wormkiller
 worms
-wormsilk
-wormway
 worn
 worries
 worry
@@ -24375,27 +20767,21 @@ worthless
 worthwhile
 worthy
 wotan
-wotans
-wotc
 would
 wouldn
-wouldnormally
 wound
 wounded
 wounding
 wounds
 wove
 woven
-wp
 wrack
 wracked
 wracking
 wracks
-wrackwraith
 wraith
 wraithlike
 wraiths
-wraithstone
 wrangled
 wrap
 wrapped
@@ -24418,7 +20804,6 @@ wrecks
 wrench
 wrenches
 wrenching
-wrenchthe
 wrest
 wresting
 wrestle
@@ -24453,57 +20838,23 @@ wronged
 wrongs
 wrote
 wrought
-wurm
 www
-wyatt
-wychwood
 wyrd
-wyrdling
-wyrdweaver
-wyrm
-wyrmblood
-wyrmling
-wyrmlings
 wyvern
 wyverns
-wz
 x
-xanka
-xecha
-xenabsorber
 xenophobia
 xenophobic
 xeric
-xhkarsh
-xing
-xiphus
-xolotl
-xorn
-xorns
-xp
-xphb
 xx
 y
-yaga
-yagas
-yakat
-yakiran
-yakirian
 yali
 yank
 yanked
 yanking
-yann
-yannan
-yaojing
 yards
-yathon
-yavalnoi
-yavalnois
 yawning
 yawp
-ychen
-ychenbannog
 yd
 year
 yearn
@@ -24511,14 +20862,11 @@ yearned
 yearning
 years
 yeast
-yek
 yell
 yelling
 yellow
 yellowed
 yellowish
-yellowishgreen
-yelloworange
 yells
 yelp
 yes
@@ -24529,89 +20877,46 @@ yew
 yggdrasil
 yield
 yields
-yig
 yip
 yips
 yobbo
 yobbos
 yodeling
-yog
-yolanda
-yolandas
 yolks
-yorama
 yore
-yoth
 you
 young
-youngcavedragon
 younger
 youngest
-youngflamedragon
-youngmithraldragon
-youngseadragon
-youngspinosaurus
-youngvoiddragon
-youngwinddragon
-younormally
 your
 yours
 yourself
 youth
 yowl
 yowler
-ysgard
-ysgolhaig
 yuan
 yucca
-yugoloths
 yuk
 yuks
-yumerai
 z
-zalikum
-zalikums
-zanskaran
-zanskaranviper
 zany
-zaratan
-zaratans
-zarovich
 zealot
 zealous
 zeitgeist
 zeitgeists
-zelekhut
 zephyr
-zereh
 zero
-zerogg
 zest
 zeus
 ziggurat
-zilaq
-zimwi
 zinc
 zine
 zines
 zip
 ziphian
-ziphius
-zipline
 zipped
-zirnitran
-zlick
-zlicks
-zmey
-zmeyheadling
 zoetrope
-zojz
-zoku
-zom
 zombie
 zombies
 zone
-zoog
-zoryas
-zouyu
-zymurgic`;
+zymurgic
