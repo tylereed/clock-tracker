@@ -1,6 +1,5 @@
 import Typo from "typo-js";
 import { sleep } from "./helpers";
-import { appendFile, write, writeFile } from "fs";
 
 function addCustomWords(dict: Typo, ...words: string[]) {
   const d: any = dict;
@@ -358,7 +357,7 @@ async function loadDictionary(customWords: string[]) {
     return cachedDictionary;
   }
 
-  const dictionary = new Typo("en_FiveE", null, null, { dictionaryPath: "dictionaries", asyncLoad: true });
+  const dictionary = new Typo("en_US_FiveE", null, null, { dictionaryPath: "dictionaries", asyncLoad: true });
   while (!dictionary.loaded) {
     await sleep(100);
   }
@@ -370,24 +369,6 @@ async function loadDictionary(customWords: string[]) {
 
 export default async function formatParagraph(text: string, customWords: string[]) {
   const dictionary = await loadDictionary(customWords);
-
-  //writeFile("./wordlist.csv", "", () => { });
-
-  // let realWords = "";
-  // let fakeWords = "";
-
-  // for (const foo of allWords.split("\n")) {
-  //   const isWord = dictionary.check(foo);
-  //   if (isWord) {
-  //     realWords += foo + "\n";
-  //   } else {
-  //     fakeWords += foo + "\n";
-  //   }
-  // }
-  // writeFile("./real_wordlist.csv", realWords, (err) => { if (err) console.error(err) });
-  // writeFile("./fake_wordlist.csv", fakeWords, (err) => { if (err) console.error(err) });
-
-  // return;
 
   const testWord = function (possiblyWord: string) {
     return dictionary.check(possiblyWord) || isNumber(possiblyWord) || isDiceThrow(possiblyWord);
