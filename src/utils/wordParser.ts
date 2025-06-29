@@ -27,6 +27,7 @@ const minus = Symbol("-");
 const comma = Symbol(",");
 const colon = Symbol(":");
 const possessive = Symbol("possessive");
+const upperPossessive = Symbol("upperPossessive");
 const openParen = Symbol("openParen");
 const closeParen = Symbol("closeParen");
 
@@ -37,7 +38,8 @@ const specialChars: SpecialChar[] = [
   { symbol: minus, regex: /^-$/, text: "-" },
   { symbol: comma, regex: /^,$/, text: "," },
   { symbol: colon, regex: /^:$/, text: ":" },
-  { symbol: possessive, regex: /^(?:'|’)s$/i, text: "'s" },
+  { symbol: possessive, regex: /^(?:'|’)s$/, text: "'s" },
+  { symbol: upperPossessive, regex: /^(?:'|’)S$/, text: "'S" },
   { symbol: openParen, regex: /\(/, text: "(" },
   { symbol: closeParen, regex: /\)/, text: ")" },
 ];
@@ -81,7 +83,7 @@ function* combine(used: IndexedWord[], unused: IndexedWord[]) {
   while (unused.length) yield unused.pop()!.word;
 }
 
-function splitWords(word1: string, word2: string, testWord: (w: string) => boolean) {
+function splitWords(word1: string, word2: string, testWord: (w: string) => IsWordSource) {
   const newWords = word1 + word2;
 
   for (let i = 1; i < newWords.length; i++) {
@@ -95,7 +97,7 @@ function splitWords(word1: string, word2: string, testWord: (w: string) => boole
   return [word1, word2];
 }
 
-function* fixupWords(words: string[], testWord: (w: string) => boolean) {
+function* fixupWords(words: string[], testWord: (w: string) => IsWordSource) {
   if (words.length === 0) {
     return;
   }
@@ -125,7 +127,7 @@ function* fixupWords(words: string[], testWord: (w: string) => boolean) {
   yield previousWord;
 }
 
-function buildWordsForward(text: string, testWord: (w: string) => boolean): string[] {
+function buildWordsForward(text: string, testWord: (w: string) => IsWordSource): string[] {
 
   const letters = text.split(/\s+/).filter(x => x !== "");
   const size = letters.length;
@@ -184,7 +186,7 @@ function buildWordsForward(text: string, testWord: (w: string) => boolean): stri
   }
 }
 
-function buildWordsBackwards(text: string, testWord: (w: string) => boolean): string[] {
+function buildWordsBackwards(text: string, testWord: (w: string) => IsWordSource): string[] {
 
   const letters = text.split(/\s+/).filter(x => x !== "");
   const size = letters.length;
@@ -244,28 +246,174 @@ function buildWordsBackwards(text: string, testWord: (w: string) => boolean): st
   }
 }
 
-function buildConsensus(forwards: string[], backwards: string[], testWord: (w: string) => boolean): string[] {
-  const fAllWords = forwards.map(testWord).every(x => x);
-  const bAllWords = backwards.map(testWord).every(x => x);
+function toScore(source: IsWordSource): number {
+  switch (source) {
+    case false:
+      return -1;
+    case "number":
+      return 2;
+    case "dictionary":
+      return 3;
+    case "dice":
+      return 1;
+  }
+}
+
+function whichMin(first: number, ...x: number[]) {
+  let index = 0;
+  let value = first;
+
+  for (let i = 0; i < x.length; i++) {
+    if (x[i] < value) {
+      index = i + 1;
+      value = x[i];
+    }
+  }
+
+  return { index, value };
+}
+
+type Alignment = "=" | "S" | "I" | "D";
+function getModifications(forwards: string[], backwards: string[]): Alignment[] {
+  const matrix = Array.from({ length: forwards.length }).map(_ => Array.from({ length: backwards.length }).fill(0)) as number[][];
+  for (let i = 1; i < backwards.length; i++) {
+    matrix[0][i] = i;
+  }
+  for (let i = 1; i < forwards.length; i++) {
+    matrix[i][0] = i;
+  }
+
+  for (let i = 1; i < forwards.length; i++) {
+    for (let j = 1; j < backwards.length; j++) {
+      const subsitutionCost = forwards[i] === backwards[j] ? 0 : 1;
+
+      const min = whichMin(matrix[i - 1][j] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j - 1] + subsitutionCost);
+      matrix[i][j] = min.value;
+    }
+  }
+
+  let modifications: Alignment[] = [];
+  let x = forwards.length - 1, y = backwards.length - 1;
+  while (x > 0 && y > 0) {
+    if (forwards[x] === backwards[y]) {
+      modifications.push("=");
+    } else {
+      modifications.push("S");
+    }
+    const min = whichMin(matrix[x - 1][y], matrix[x][y - 1], matrix[x - 1][y - 1]);
+    if (min.index === 0) {
+      x--;
+      modifications.push("I");
+    } else if (min.index === 1) {
+      y--;
+      modifications.push("D");
+    } else {
+      x--;
+      y--;
+    }
+  }
+
+  while (x-- > 0) {
+    modifications.push("I");
+  }
+  while (y-- > 0) {
+    modifications.push("D");
+  }
+
+  return modifications.reverse();
+}
+
+type WordWithSource = { word: string; source: IsWordSource; };
+
+function getBestByScore(fMismatch: WordWithSource[], bMismatch: WordWithSource[]) {
+  const fScore = fMismatch.map(f => toScore(f.source)).reduce((x, y) => x + y, 0) / fMismatch.length;
+  const bScore = bMismatch.map(b => toScore(b.source)).reduce((x, y) => x + y, 0) / bMismatch.length;
+
+  return fScore > bScore ? fMismatch.map(f => f.word) : bMismatch.map(b => b.word);
+}
+
+function* buildConsensus(mods: Alignment[], forwards: string[], backwards: string[],
+  fWordSource: IsWordSource[], bWordSource: IsWordSource[]) {
+
+  forwards = forwards.toReversed();
+  fWordSource = fWordSource.toReversed();
+  backwards = backwards.toReversed();
+  bWordSource = bWordSource.toReversed();
+
+  let fMismatch: WordWithSource[] = [];
+  let bMismatch: WordWithSource[] = [];
+
+  for (const m of mods) {
+    if (m === "=") {
+
+      if (fMismatch.length || bMismatch.length) {
+        yield* getBestByScore(fMismatch, bMismatch);
+        fMismatch = [];
+        bMismatch = [];
+      }
+
+      backwards.pop();
+      bWordSource.pop();
+      yield forwards.pop()!;
+      fWordSource.pop();
+    } else if (m === "S") {
+      fMismatch.push({
+        word: forwards.pop()!,
+        source: fWordSource.pop()!
+      });
+      bMismatch.push({
+        word: backwards.pop()!,
+        source: bWordSource.pop()!
+      });
+    } else if (m === "D") {
+      bMismatch.push({
+        word: backwards.pop()!,
+        source: bWordSource.pop()!
+      });
+    } else if (m === "I") {
+      fMismatch.push({
+        word: forwards.pop()!,
+        source: fWordSource.pop()!
+      });
+    } else {
+      throw "Unknown modification type: " + m;
+    }
+  }
+
+}
+
+function getBest(forwards: string[], backwards: string[], testWord: (w: string) => IsWordSource): string[] {
+  const fWordSource = forwards.map(testWord);
+  const bWordSource = backwards.map(testWord);
+
+  const fAllWords = fWordSource.every(x => x);
+  const bAllWords = bWordSource.every(x => x);
 
   if (fAllWords != bAllWords) {
     return fAllWords ? forwards : backwards;
   }
 
-  //TODO: implement a consensus algorithm
-  return backwards;
+  if (forwards.length === backwards.length) {
+    let score = 0;
+    for (let i = 0; i < forwards.length; i++) {
+      score += toScore(fWordSource[i]) - toScore(bWordSource[i]);
+    }
+    return score > 0 ? forwards : backwards;
+  }
+
+  const mods = getModifications(forwards, backwards);
+  return [...buildConsensus(mods, forwards, backwards, fWordSource, bWordSource)];
 }
 
-function buildWords(text: string, testWord: (w: string) => boolean): string {
+function buildWords(text: string, testWord: (w: string) => IsWordSource): string {
   const forwards = buildWordsForward(text, testWord);
   const backwards = buildWordsBackwards(text, testWord);
 
   const forwardsResult = forwards.join(" ");
-  //return forwardsResult;
 
   if (forwards.length != backwards.length || forwardsResult != backwards.join(" ")) {
-    const consensus = buildConsensus(forwards, backwards, testWord);
-    return consensus.join(" ");
+    const bestResult = getBest(forwards, backwards, testWord);
+    return bestResult.join(" ");
   } else {
     return forwardsResult;
   }
@@ -283,7 +431,7 @@ function findSpecialChars(text: string): string | symbol {
   return text;
 }
 
-function format(text: string | symbol, testWord: (w: string) => boolean): string | SpecialChar {
+function format(text: string | symbol, testWord: (w: string) => IsWordSource): string | SpecialChar {
   const type = typeof text;
 
   if (type === "string") {
@@ -336,6 +484,7 @@ function buildParagraph(words: (string | SpecialChar)[]): string[] {
         case comma:
         case colon:
         case possessive:
+        case upperPossessive:
         case closeParen:
           previousString = w.text;
           break;
@@ -367,11 +516,22 @@ async function loadDictionary(customWords: string[]) {
   return dictionary;
 }
 
+type IsWordSource = false | "dictionary" | "number" | "dice";
+
 export default async function formatParagraph(text: string, customWords: string[]) {
   const dictionary = await loadDictionary(customWords);
 
-  const testWord = function (possiblyWord: string) {
-    return dictionary.check(possiblyWord) || isNumber(possiblyWord) || isDiceThrow(possiblyWord);
+  const testWord = function (possiblyWord: string): IsWordSource {
+    if (dictionary.check(possiblyWord)) {
+      return "dictionary"
+    }
+    if (isNumber(possiblyWord)) {
+      return "number";
+    }
+    if (isDiceThrow(possiblyWord)) {
+      return "dice";
+    }
+    return false;
   }
 
   const lines = splitInput(text).map(findSpecialChars).filter(x => x !== "");
