@@ -30,6 +30,8 @@ const possessive = Symbol("possessive");
 const upperPossessive = Symbol("upperPossessive");
 const openParen = Symbol("openParen");
 const closeParen = Symbol("closeParen");
+const openQuote = Symbol("openQuote");
+const closeQuote = Symbol("closeQuote");
 
 const specialChars: SpecialChar[] = [
   { symbol: newline, regex: /^\r?\n$/, text: "\n" },
@@ -42,10 +44,12 @@ const specialChars: SpecialChar[] = [
   { symbol: upperPossessive, regex: /^(?:'|’)S$/, text: "'S" },
   { symbol: openParen, regex: /\(/, text: "(" },
   { symbol: closeParen, regex: /\)/, text: ")" },
+  { symbol: openQuote, regex: /“/, text: '“' },
+  { symbol: closeQuote, regex: /”/, text: '”' }
 ];
 
 function splitInput(text: string): string[] {
-  return text.split(/(\r?\n|\.|,|\+|-|:|(?:'|’)s|\(|\))/i);
+  return text.split(/(\r?\n|\.|,|\+|-|:|(?:'|’)s|\(|\)|“|”)/i);
 }
 
 function* findUnused(covered: boolean[]) {
@@ -297,8 +301,6 @@ function getModifications(forwards: string[], backwards: string[]): Alignment[] 
   while (x > 0 && y > 0) {
     if (forwards[x] === backwards[y]) {
       modifications.push("=");
-    } else {
-      modifications.push("S");
     }
     const min = whichMin(matrix[x - 1][y], matrix[x][y - 1], matrix[x - 1][y - 1]);
     if (min.index === 0) {
@@ -308,9 +310,16 @@ function getModifications(forwards: string[], backwards: string[]): Alignment[] 
       y--;
       modifications.push("D");
     } else {
+      if (forwards[x] !== backwards[y]) {
+        modifications.push("S");
+      }
       x--;
       y--;
     }
+  }
+
+  if (x == 0 && y == 0 && forwards[x] === backwards[y]) {
+    modifications.push("=");
   }
 
   while (x-- > 0) {
@@ -380,6 +389,10 @@ function* buildConsensus(mods: Alignment[], forwards: string[], backwards: strin
     }
   }
 
+  if (fMismatch.length || bMismatch.length) {
+    yield* getBestByScore(fMismatch, bMismatch);
+  }
+
 }
 
 function getBest(forwards: string[], backwards: string[], testWord: (w: string) => IsWordSource): string[] {
@@ -421,6 +434,7 @@ function buildWords(text: string, testWord: (w: string) => IsWordSource): string
 }
 
 function findSpecialChars(text: string): string | symbol {
+  if (!text) return "";
 
   for (let special of specialChars) {
     if (text.match(special.regex)) {
@@ -506,7 +520,7 @@ async function loadDictionary(customWords: string[]) {
     return cachedDictionary;
   }
 
-  const dictionary = new Typo("en_US_FiveE", null, null, { dictionaryPath: "dictionaries", asyncLoad: true });
+  const dictionary = new Typo("en_US_FiveE_10", null, null, { dictionaryPath: "dictionaries", asyncLoad: true });
   while (!dictionary.loaded) {
     await sleep(100);
   }
@@ -520,6 +534,15 @@ type IsWordSource = false | "dictionary" | "number" | "dice";
 
 export default async function formatParagraph(text: string, customWords: string[]) {
   const dictionary = await loadDictionary(customWords);
+
+  // let log = "";
+  // for (const w of words.split("\n")) {
+  //   if (!dictionary.check(w)) {
+  //     log += w + "\n";
+  //   }
+  // }
+
+  // console.log(log);
 
   const testWord = function (possiblyWord: string): IsWordSource {
     if (dictionary.check(possiblyWord)) {
@@ -539,3 +562,4 @@ export default async function formatParagraph(text: string, customWords: string[
 
   return buildParagraph(words).join("");
 }
+
