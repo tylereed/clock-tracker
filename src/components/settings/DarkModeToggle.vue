@@ -1,6 +1,6 @@
 <template>
-  <v-switch v-model:model-value="isDark" true-icon="mdi-moon-waxing-crescent"
-    false-icon="mdi-white-balance-sunny" inset />
+  <v-switch v-model:model-value="isDark" true-icon="mdi-moon-waxing-crescent" false-icon="mdi-white-balance-sunny"
+    inset />
 </template>
 
 <script setup lang="ts">
@@ -12,7 +12,8 @@ const vTheme = useTheme();
 
 const isDark = useDark({
   onChanged: (isDark) => {
-    vTheme.global.name.value = isDark ? "dark" : "light";
+    const newTheme = isDark ? "dark" : "light";
+    vTheme.change(newTheme);
   }
 });
 </script>

@@ -44,6 +44,7 @@ export default defineConfig({
   test: {
     includeSource: ['src/**/*.{js,ts}'],
     globals: true,
+    setupFiles: "tests/setup/setup.ts",
     environment: "jsdom",
     testTimeout: 10000,
     alias: {
