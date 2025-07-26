@@ -21,7 +21,12 @@
           </template>
         </v-autocomplete>
         <br />
-        <div><v-btn @click="showLicense = !showLicense">Monster Data License Information</v-btn></div>
+        <v-card flat>
+          <v-card-actions>
+            <v-btn variant="elevated" @click="showLicense = !showLicense">Monster Data License Information</v-btn>
+            <v-btn variant="elevated" :disabled="customMonsters.length === 0" @click="showSaved = !showSaved">Show Saved Monsters</v-btn>
+          </v-card-actions>
+        </v-card>
       </v-col>
       <v-col cols="3">
         <ts-expando-button class="mt-3" :disabled="!monsterSearch" :actions="addMonsterButtons" />
@@ -34,6 +39,20 @@
   </v-dialog>
   <v-dialog v-model="showLicense" width="75%" min-width="400px">
     <license />
+  </v-dialog>
+  <v-dialog v-model="showSaved">
+    <v-card>
+      <v-card-text>
+        <v-row v-for="(custom, index) in customMonsters">
+          <v-col cols="2">
+            <v-card>
+              <v-card-text>{{ custom.name }}</v-card-text>
+              <v-card-actions><v-btn @click="deleteCustom(index)"><v-icon icon="mdi-delete-forever" color="error" /></v-btn></v-card-actions>
+            </v-card>
+          </v-col>
+        </v-row>
+      </v-card-text>
+    </v-card>
   </v-dialog>
 </template>
 
@@ -49,6 +68,7 @@ import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
 import Initiative from "@/types/Initiative";
 import { monsterO5eToInitiative } from "./initiativeHelpers";
 import { MonsterNameO5e as MonsterName, getMonsterListCached, getMonsterCached, MonsterO5e } from "@/utils/Open5e";
+import { useStorageAsync } from "@vueuse/core";
 
 const emit = defineEmits<{
   (e: "addMonster", monster: Initiative): void
@@ -112,5 +132,17 @@ async function addMonster() {
     emit("addMonster", initMonster);
   }
 }
+
+
+const showSaved = ref(false);
+const customMonsters = useStorageAsync("customMonsters", [] as Initiative[]);
+
+function deleteCustom(index: number) {
+  customMonsters.value.splice(index, 1);
+  if (customMonsters.value.length === 0) {
+    showSaved.value = false;
+  }
+}
+
 
 </script>

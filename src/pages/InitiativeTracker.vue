@@ -6,8 +6,11 @@
       @insert-init-command="insertInitCommand" />
     <v-container fluid>
       <v-row>
-        <v-col><v-btn @click="addInitiative()" variant="elevated" color="primary">Add
-            Initiative</v-btn></v-col>
+        <v-col>
+          <v-btn @click="addInitiative()" variant="elevated" color="primary">
+            Add Initiative
+          </v-btn>
+        </v-col>
         <v-col cols="8"><v-btn @click="clearInitiative()" variant="outlined" color="error">Clear</v-btn></v-col>
       </v-row>
     </v-container>

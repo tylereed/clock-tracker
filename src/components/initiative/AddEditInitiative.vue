@@ -155,7 +155,7 @@ function cloneInitiative(init: Initiative): NewInitiative {
 
 function addAction(actionName: InitiativeActionKey) {
   newInit.value[actionName] ??= [];
-  newInit.value[actionName].push({ name: "", desc: "" });
+  newInit.value[actionName]!.push({ name: "", desc: "" });
 }
 
 onMounted(() => {
