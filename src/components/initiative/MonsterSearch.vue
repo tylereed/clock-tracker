@@ -24,7 +24,8 @@
         <v-card flat>
           <v-card-actions>
             <v-btn variant="elevated" @click="showLicense = !showLicense">Monster Data License Information</v-btn>
-            <v-btn variant="elevated" :disabled="customMonsters.length === 0" @click="showSaved = !showSaved">Show Saved Monsters</v-btn>
+            <v-btn variant="elevated" :disabled="!customMonsters.length" @click="showSaved = !showSaved">Show Saved
+              Monsters</v-btn>
           </v-card-actions>
         </v-card>
       </v-col>
@@ -34,7 +35,7 @@
     </v-row>
   </v-container>
   <v-dialog v-model="addInitiativeDisplay" width="60%" min-width="400px">
-    <add-edit-initiative class="pa-2 ma-6" :monster-stats="monsterStats" @add-init="addInit"
+    <add-edit-initiative class="pa-2 ma-6" :monster-stats="monsterStats" :init-stats="initStats" @add-init="addInit"
       @close="addInitiativeDisplay = false" />
   </v-dialog>
   <v-dialog v-model="showLicense" width="75%" min-width="400px">
@@ -47,7 +48,8 @@
           <v-col cols="2">
             <v-card>
               <v-card-text>{{ custom.name }}</v-card-text>
-              <v-card-actions><v-btn @click="deleteCustom(index)"><v-icon icon="mdi-delete-forever" color="error" /></v-btn></v-card-actions>
+              <v-card-actions><v-btn @click="deleteCustom(index)"><v-icon icon="mdi-delete-forever"
+                    color="error" /></v-btn></v-card-actions>
             </v-card>
           </v-col>
         </v-row>
@@ -65,22 +67,26 @@ import License from "@/components/initiative/License.vue";
 import ShowStats from "./ShowStats.vue";
 
 import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
-import Initiative from "@/types/Initiative";
+import Initiative, { InitWithId } from "@/types/Initiative";
 import { monsterO5eToInitiative } from "./initiativeHelpers";
-import { MonsterNameO5e as MonsterName, getMonsterListCached, getMonsterCached, MonsterO5e } from "@/utils/Open5e";
+import { MonsterNameO5e, getMonsterListCached, getMonsterCached, MonsterO5e } from "@/utils/Open5e";
 import { useStorageAsync } from "@vueuse/core";
 
 const emit = defineEmits<{
   (e: "addMonster", monster: Initiative): void
 }>();
 
+type CustomMonster = Initiative & { document__slug: string };
+type MonsterName = CustomMonster | MonsterNameO5e;
+
 const addInitiativeDisplay = ref(false);
 const showLicense = ref(false);
 
 const monsterSearch = ref<MonsterName>();
 const searchInput = ref<string>("");
-const monsters = ref<MonsterName[]>([]);
+const monsters = ref<(MonsterName)[]>([]);
 const monsterStats = ref<MonsterO5e | null>(null);
+const initStats = ref<InitWithId | null>(null);
 
 const loading = ref(false);
 
@@ -89,7 +95,14 @@ async function doSearch(text: string) {
   if (text.length >= 3 && text !== monsterSearch.value?.name) {
     loading.value = true;
     try {
-      const result = await getMonsterListCached(text);
+      const o5eList = await getMonsterListCached(text);
+      const customList = getCustomList(text);
+
+      const result = [
+        ...o5eList.map(o5e => ({ ...o5e, type: "o5e" })),
+        ...customList.map(c => ({ ...c, type: "custom", document__slug: "custom" }))
+      ].sort((a, b) => a.name.localeCompare(b.name));
+
       monsters.value = result;
     } finally {
       loading.value = false;
@@ -112,7 +125,14 @@ function addInit(init: Initiative) {
 
 async function editMonster() {
   if (monsterSearch.value) {
-    monsterStats.value = await getMonsterCached(monsterSearch.value.slug);
+    if ("slug" in monsterSearch.value) {
+      monsterStats.value = await getMonsterCached(monsterSearch.value.slug);
+      initStats.value = null;
+    } else {
+      monsterStats.value = null;
+      //TODO: update initStats and AddEditInitiative to be just an Initiative
+      initStats.value = monsterSearch.value as Initiative;
+    }
     addInitiativeDisplay.value = true;
   }
 }
@@ -120,6 +140,7 @@ async function editMonster() {
 let nameIndex = 0;
 async function addMonster() {
   if (monsterSearch.value) {
+    //todo: make this handle o5e or saved custom
     const monster = await getMonsterCached(monsterSearch.value.slug);
     const letter = String.fromCharCode(65 + nameIndex);
     nameIndex++;
@@ -142,6 +163,10 @@ function deleteCustom(index: number) {
   if (customMonsters.value.length === 0) {
     showSaved.value = false;
   }
+}
+
+function getCustomList(search: string) {
+  return customMonsters.value.filter(m => m.name.toLowerCase().includes(search.toLowerCase())).map(m => ({ ...m }));
 }
 
 
