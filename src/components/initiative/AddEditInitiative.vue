@@ -82,6 +82,7 @@
         </v-container>
       </v-card-text>
       <v-card-actions>
+        <v-btn variant="outlined" color="primary" :disabled="!isFormValid" @click="saveCustom()">Save Custom</v-btn>
         <v-btn variant="elevated" color="primary" :disabled="!isFormValid" type="submit">
           {{ isEdit ? "Edit" : "Add" }}
         </v-btn>
@@ -105,6 +106,8 @@ import v from "./InitiativeRules";
 import { monsterO5eToInitiative } from "./initiativeHelpers";
 import { TemplateType, DragonType, dragonTypes, TemplateOptions, templates as templateNames } from "@/components/initiative/templates/types";
 import * as t from "@/components/initiative/templates";
+import { useStorageAsync } from "@vueuse/core";
+import { useToast } from "vue-toast-notification";
 
 const props = defineProps<{ monsterStats?: MonsterO5e | null, initStats?: InitWithId | null }>();
 const { monsterStats, initStats } = toRefs(props);
@@ -204,9 +207,8 @@ function cleanActions(actions?: ActionDescription[]): ActionDescription[] {
   return [];
 }
 
-function addEditInitiative() {
-  if (isFormValid.value) {
-    const init: Initiative = {
+function cloneNewInit(): Initiative {
+  return {
       ...newInit.value,
       order: +newInit.value.order,
       dex: asInt(newInit.value.dex),
@@ -218,13 +220,27 @@ function addEditInitiative() {
       reactions: cleanActions(newInit.value.reactions),
       legendaryActions: cleanActions(newInit.value.legendaryActions),
       traits: cleanActions(newInit.value.traits),
-    };
+  };
+}
+
+function addEditInitiative() {
+  if (isFormValid.value) {
+    const init = cloneNewInit();
     if (isEdit.value) {
       emit("editInit", initStats.value!.id, init);
     } else {
       emit("addInit", init);
     }
   }
+}
+
+const customMonsters = useStorageAsync("customMonsters", [] as Initiative[]);
+const toast = useToast();
+
+async function saveCustom() {
+  const newMonster = cloneNewInit();
+  customMonsters.value.push(newMonster);
+  toast.success("Saved Custom Monster");
 }
 
 const undeadFortitude = ref(true);
