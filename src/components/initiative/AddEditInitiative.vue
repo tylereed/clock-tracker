@@ -4,7 +4,7 @@
       <v-card-title>{{ isEdit ? "Edit" : "Add" }} {{ isMonster ? "Monster" : "PC" }} Initiative</v-card-title>
       <v-card-text>
         <v-container>
-          <v-row v-if="monsterStats">
+          <v-row v-if="isO5e(monsterStats)">
             <v-col cols="9">
               <v-select v-model="selectedTemplate" density="compact" label="Template" :items="templates" />
             </v-col>
@@ -44,7 +44,7 @@
           <v-row>
             <v-col :cols="isMonster ? 9 : 12"><v-text-field label="Initiative" density="compact" v-model="newInit.order"
                 :rules="v.OrderRules" data-test="txtInitiative" /></v-col>
-            <v-col v-if="isMonster" cols="3">
+            <v-col v-if="isMonster && initiativeDice" cols="3">
               <v-btn @click="rollInitiative()" v-tooltip:top="initiativeDice.toString()"
                 data-test="btnInitiative">Roll</v-btn>
             </v-col>
@@ -82,6 +82,7 @@
         </v-container>
       </v-card-text>
       <v-card-actions>
+        <v-btn variant="outlined" color="primary" :disabled="!isFormValid" @click="saveCustom()">Save Custom</v-btn>
         <v-btn variant="elevated" color="primary" :disabled="!isFormValid" type="submit">
           {{ isEdit ? "Edit" : "Add" }}
         </v-btn>
@@ -100,13 +101,15 @@ import TsExpandoButton from "@/components/common/TsExpandoButton.vue";
 
 import Dice from "@/utils/Dice";
 import Initiative, { ActionDescription, InitiativeActionKey, InitWithId } from "@/types/Initiative";
-import { MonsterO5e } from "@/utils/Open5e";
+import { MonsterO5e, isO5e } from "@/utils/Open5e";
 import v from "./InitiativeRules";
 import { monsterO5eToInitiative } from "./initiativeHelpers";
 import { TemplateType, DragonType, dragonTypes, TemplateOptions, templates as templateNames } from "@/components/initiative/templates/types";
 import * as t from "@/components/initiative/templates";
+import { useStorage } from "@vueuse/core";
+import { useToast } from "vue-toast-notification";
 
-const props = defineProps<{ monsterStats?: MonsterO5e | null, initStats?: InitWithId | null }>();
+const props = defineProps<{ monsterStats?: MonsterO5e | Initiative | null, initStats?: InitWithId | null }>();
 const { monsterStats, initStats } = toRefs(props);
 
 const emit = defineEmits<{
@@ -123,11 +126,19 @@ const isEdit = ref(false);
 const newInit = ref<NewInitiative>({} as NewInitiative);
 let defaultHealth = 0;
 
-function setMonster(monster: MonsterO5e) {
-  initiativeDice.value = Dice.D20.ofStat(monster.dexterity);
-  healthDice.value = Dice.parse(monster.hit_dice);
-  defaultHealth = monster.hit_points;
-  newInit.value = monsterO5eToInitiative(monster);
+function setMonster(monster: MonsterO5e | Initiative) {
+
+  if (isO5e(monster)) {
+    initiativeDice.value = Dice.D20.ofStat(monster.dexterity);
+    healthDice.value = Dice.parse(monster.hit_dice);
+    defaultHealth = monster.hit_points;
+    newInit.value = monsterO5eToInitiative(monster);
+  } else {
+    initiativeDice.value = monster.dex ? Dice.D20.ofStat(monster.dex) : null;
+    healthDice.value = null;
+    defaultHealth = monster.maxHp ?? 0;
+    newInit.value = cloneInitiative(monster);
+  }
 }
 
 function cloneActions(actions?: ActionDescription[]): ActionDescription[] {
@@ -152,7 +163,7 @@ function cloneInitiative(init: Initiative): NewInitiative {
 
 function addAction(actionName: InitiativeActionKey) {
   newInit.value[actionName] ??= [];
-  newInit.value[actionName].push({ name: "", desc: "" });
+  newInit.value[actionName]!.push({ name: "", desc: "" });
 }
 
 onMounted(() => {
@@ -171,12 +182,14 @@ onMounted(() => {
   }
 });
 
-const initiativeDice = ref<Dice>(Dice.D20.ofModifier(0));
+const initiativeDice = ref<Dice | null>(Dice.D20.ofModifier(0));
 function rollInitiative() {
-  newInit.value.order = initiativeDice.value.throw();
+  if (initiativeDice.value) {
+    newInit.value.order = initiativeDice.value.throw();
+  }
 }
 
-const healthDice = ref<Dice>();
+const healthDice = ref<Dice | null>();
 const healthRollActions = reactive([
   { label: "Roll", action: () => rollHealth() },
   { label: "Roll 1.5x", action: () => rollHealth(1.5) },
@@ -204,27 +217,40 @@ function cleanActions(actions?: ActionDescription[]): ActionDescription[] {
   return [];
 }
 
+function cloneNewInit(): Initiative {
+  return {
+    ...newInit.value,
+    order: +newInit.value.order,
+    dex: asInt(newInit.value.dex),
+    ac: asInt(newInit.value.ac),
+    maxHp: asInt(newInit.value.maxHp),
+    hp: asInt(newInit.value.maxHp),
+    actions: cleanActions(newInit.value.actions),
+    bonusActions: cleanActions(newInit.value.bonusActions),
+    reactions: cleanActions(newInit.value.reactions),
+    legendaryActions: cleanActions(newInit.value.legendaryActions),
+    traits: cleanActions(newInit.value.traits),
+  };
+}
+
 function addEditInitiative() {
   if (isFormValid.value) {
-    const init: Initiative = {
-      ...newInit.value,
-      order: +newInit.value.order,
-      dex: asInt(newInit.value.dex),
-      ac: asInt(newInit.value.ac),
-      maxHp: asInt(newInit.value.maxHp),
-      hp: asInt(newInit.value.maxHp),
-      actions: cleanActions(newInit.value.actions),
-      bonusActions: cleanActions(newInit.value.bonusActions),
-      reactions: cleanActions(newInit.value.reactions),
-      legendaryActions: cleanActions(newInit.value.legendaryActions),
-      traits: cleanActions(newInit.value.traits),
-    };
+    const init = cloneNewInit();
     if (isEdit.value) {
       emit("editInit", initStats.value!.id, init);
     } else {
       emit("addInit", init);
     }
   }
+}
+
+const customMonsters = useStorage("customMonsters", [] as Initiative[]);
+const toast = useToast();
+
+async function saveCustom() {
+  const newMonster = cloneNewInit();
+  customMonsters.value.push(newMonster);
+  toast.success("Saved Custom Monster");
 }
 
 const undeadFortitude = ref(true);
@@ -260,7 +286,7 @@ function getOptions(type: TemplateType): TemplateOptions | undefined {
 const templates = ref(templateNames);
 const selectedTemplate = ref<TemplateType>("Squad");
 async function applyTemplate() {
-  if (selectedTemplate.value && monsterStats.value) {
+  if (selectedTemplate.value && isO5e(monsterStats.value)) {
     const options = getOptions(selectedTemplate.value);
     const template = await t.applyTemplate(selectedTemplate.value, monsterStats.value, options);
     if (template) {

@@ -120,3 +120,7 @@ export async function getMonsterCached(name: string, clearCache?: boolean) {
   const url = `${monsterApi}${name}`;
   return await monsterCache.getCachedItem(url, clearCache);
 }
+
+export function isO5e(monster?: any): monster is MonsterO5e {
+  return monster && "slug" in monster;
+}
