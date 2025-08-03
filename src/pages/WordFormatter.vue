@@ -4,6 +4,7 @@
     <v-card-actions>
       <v-btn variant="elevated" color="primary" :loading="loading" @click="formatText()">Format</v-btn>
       <v-btn variant="elevated" @click="openCustomWords()">Add Custom Words</v-btn>
+      <v-btn variant="elevated" @click="importCustomMonster()">Import Custom Monster</v-btn>
     </v-card-actions>
   </v-card>
   <v-dialog v-model="showCustomWords">
@@ -20,6 +21,7 @@
 
 <script setup lang="ts">
 import formatParagraph from '@/utils/wordParser';
+import parseCustomMonster from '@/utils/statblockParser';
 import { useStorage } from '@vueuse/core';
 import { ref } from 'vue';
 
@@ -40,6 +42,10 @@ const showCustomWords = ref(false);
 const customWords = useStorage("customWordsFormatter", "");
 function openCustomWords() {
   showCustomWords.value = true;
+}
+
+function importCustomMonster() {
+  const customMonster = parseCustomMonster(words.value);
 }
 
 </script>
