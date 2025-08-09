@@ -32,6 +32,7 @@ import { ref } from 'vue';
 import { useToast } from 'vue-toast-notification';
 
 import AddEditInitiative from '@/components/initiative/AddEditInitiative.vue';
+import { stat } from 'fs';
 
 const words = ref("");
 const loading = ref(false);
@@ -61,7 +62,12 @@ function statBlockToInitiative(statBlock: StatBlock): Initiative {
   return {
     name: statBlock.name,
     order: 0,
+    dex: statBlock.initiative ?? statBlock.dexMod,
+    ac: statBlock.ac,
+    maxHp: statBlock.hitpoints,
     conditions: {},
+    cr: statBlock.cr?.toString(),
+    traits: statBlock.traits?.map(a => ({ name: a.name, desc: a.description })),
     actions: statBlock.actions?.map(a => ({ name: a.name, desc: a.description })),
     bonusActions: statBlock.bonusActions?.map(a => ({ name: a.name, desc: a.description })),
     legendaryActions: statBlock.legendaryActions?.map(a => ({ name: a.name, desc: a.description })),

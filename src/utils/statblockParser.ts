@@ -1,6 +1,4 @@
-import { react } from "@babel/types";
-
-interface NameDescription {
+export interface NameDescription {
   name: string;
   description: string;
 }
@@ -11,6 +9,7 @@ export interface StatBlock {
   alignment: string;
   ac: number;
   acSource: string;
+  initiative?: number;
   hitpoints: number;
   hitDice: string;
   speed: string;
@@ -194,7 +193,79 @@ function extractAbility(text: string, range?: Range) {
   return undefined;
 }
 
+interface HeaderTexts {
+  name: string;
+  type: string;
+  alignment: string;
+  ac: number;
+  acSource: string;
+  initiative?: number;
+  hitpoints: number;
+  hitDice: string;
+  speed: string;
+}
+
+function getHeader(text: string): HeaderTexts {
+  const lines = text.split(/\s*\n\s*/g);
+
+  const result: Partial<HeaderTexts> = {};
+
+  for (const line of lines) {
+    if (!result.name) {
+      result.name = line.trim();
+      continue;
+    }
+
+    const typeMatch = line.match(/^\s*((?:Tiny|Small|Medium|Large|Huge|Gargantuan|Titanic)\s*[^,]+),\s*(.+?)\s*$/i);
+    if (typeMatch) {
+      result.type = typeMatch[1].trim();
+      result.alignment = typeMatch[2].trim();
+      continue;
+    }
+
+    const acMatch = line.match(/^\s*(?:AC|Armor Class)\s*(\d+)\s*(?:\((.+?)\))?/);
+    if (acMatch) {
+      result.ac = parseInt(acMatch[1]);
+      result.acSource = acMatch[2]?.trim();
+      continue;
+    }
+
+    const initMatch = line.match(/^\s*Initiative\s*\+(\d+)/i);
+    if (initMatch) {
+      result.initiative = parseInt(initMatch[1]);
+      continue;
+    }
+
+    const hpMatch = line.match(/^\s*(?:HP|Hit Points)\s*(\d+)\s*\((.+?)\)/);
+    if (hpMatch) {
+      result.hitpoints = parseInt(hpMatch[1]);
+      result.hitDice = hpMatch[2].trim();
+      continue;
+    }
+
+    const speedMatch = line.match(/$\s*(?:Speed)\s*(\d+)\s*ft\./i);
+    if (speedMatch) {
+      result.speed = speedMatch[1].trim();
+      continue;
+    }
+  }
+
+  return {
+    name: result.name ?? "",
+    type: result.type ?? "",
+    alignment: result.alignment ?? "",
+    ac: result.ac ?? 0,
+    acSource: result.acSource ?? "",
+    initiative: result.initiative,
+    hitpoints: result.hitpoints ?? 0,
+    hitDice: result.hitDice ?? "",
+    speed: result.speed ?? ""
+  };
+}
+
 export default function parseCustomMonster(text: string): StatBlock {
+
+  const header = getHeader(text);
 
   const abilityRanges = getAbilityRanges(text);
 
@@ -204,9 +275,10 @@ export default function parseCustomMonster(text: string): StatBlock {
   const reactions = extractAbility(text, abilityRanges.reaction);
 
   return {
+    ...header,
     actions,
     bonusActions,
     legendaryActions,
     reactions
-  } as StatBlock;
+  } as unknown as StatBlock;
 }
