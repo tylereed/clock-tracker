@@ -62,7 +62,7 @@ function statBlockToInitiative(statBlock: StatBlock): Initiative {
   return {
     name: statBlock.name,
     order: 0,
-    dex: statBlock.initiative ?? statBlock.dexMod,
+    dex: statBlock.dex,
     ac: statBlock.ac,
     maxHp: statBlock.hitpoints,
     conditions: {},

@@ -15,16 +15,22 @@ export interface StatBlock {
   speed: string;
   str: number;
   strMod: number;
+  strSave?: number;
   dex: number;
   dexMod: number;
+  dexSave?: number;
   con: number;
   conMod: number;
+  conSave?: number;
   int: number;
   intMod: number;
+  intSave?: number;
   wis: number;
   wisMod: number;
+  wisSave?: number;
   cha: number;
   chaMod: number;
+  chaSave?: number;
   skills: string;
   senses: string;
   languages: string;
@@ -115,7 +121,6 @@ function getAbilityRanges(text: string): AbilitityTextRanges {
     }
     return baseResult;
   };
-
 
   const actionMatch = getBestMatch(text, /ACTIONS/igd, scoreActions);
   const bonusMatch = getBestMatch(text, /BONUS ACTIONS/igd, createScoreAbilityMatchFunc("BONUS ACTIONS"));
@@ -243,7 +248,7 @@ function getHeader(text: string): HeaderTexts {
       continue;
     }
 
-    const speedMatch = line.match(/$\s*(?:Speed)\s*(\d+)\s*ft\./i);
+    const speedMatch = line.match(/^\s*(?:Speed)\s*(\d+)\s*ft\./i);
     if (speedMatch) {
       result.speed = speedMatch[1].trim();
       continue;
@@ -263,12 +268,128 @@ function getHeader(text: string): HeaderTexts {
   };
 }
 
+function buildAbilityScoreRegex(a1: string, a2?: string) {
+  const end = a2 ? `\\D+\\b${a2}\\b` : '';
+  const regexStr = `\\b${a1}\\b(?:[^0-9\\+\\-]+(?:[\\+-]?\\d+))+${end}`;
+  return new RegExp(regexStr, "i");
+}
+
+interface AbilityScores {
+  str: number;
+  strMod: number;
+  strSave?: number;
+  dex: number;
+  dexMod: number;
+  dexSave?: number;
+  con: number;
+  conMod: number;
+  conSave?: number;
+  int: number;
+  intMod: number;
+  intSave?: number;
+  wis: number;
+  wisMod: number;
+  wisSave?: number;
+  cha: number;
+  chaMod: number;
+  chaSave?: number;
+}
+
+type ScoreName = "str" | "dex" | "con" | "int" | "wis" | "cha";
+function setAbilityScores(result: any, text: string, scoreStart: ScoreName, scoreEnd?: ScoreName) {
+  const getNumbers = /(\+|-)?\d+/g;
+
+  const r = buildAbilityScoreRegex(scoreStart, scoreEnd);
+  const rMatch = text.match(r);
+  if (rMatch) {
+    const numbers = [...rMatch[0].matchAll(getNumbers).map(x => x[0])];
+    result[scoreStart] = numbers.length > 0 ? parseInt(numbers[0]) : undefined;
+    result[scoreStart + "Mod"] = numbers.length > 1 ? parseInt(numbers[1]) : undefined;
+    result[scoreStart + "Save"] = numbers.length > 2 ? parseInt(numbers[2]) : undefined;
+  }
+}
+
+function getAbilityScores(text: string) {
+  const result: Partial<AbilityScores> = {};
+
+  const beginMatch = text.match(/\bSTR\b/i);
+  const skillsMatch = text.match(/\bSkills\b/i);
+
+  const abilityScoresText = text.slice(beginMatch?.index, skillsMatch?.index);
+
+  setAbilityScores(result, abilityScoresText, "str", "dex");
+  setAbilityScores(result, abilityScoresText, "dex", "con");
+  setAbilityScores(result, abilityScoresText, "con", "int");
+  setAbilityScores(result, abilityScoresText, "int", "wis");
+  setAbilityScores(result, abilityScoresText, "wis", "cha");
+  setAbilityScores(result, abilityScoresText, "cha");
+
+  return result as AbilityScores;
+}
+
+interface SkillBlock {
+  skills: string;
+  senses: string;
+  languages: string;
+  cr: number;
+  xp: number;
+}
+
+function getSkills(text: string) {
+  const result: Partial<SkillBlock> = {};
+
+  const beginMatch = text.match(/\bSkills\b/);
+  const endMatch = text.match(/\b(?:CR|Challenge)\b.*?$/);
+
+  const endIndex = endMatch?.index ? endMatch.index + endMatch[0].length : undefined;
+  const skillBlock = text.slice(beginMatch?.index, endIndex);
+
+  const lines = skillBlock.split(/\s*\n\s*/g);
+
+  for (const line of lines) {
+
+    if (/^Skills/i.test(line)) {
+      result.skills = line.slice(6).trim();
+      continue;
+    }
+
+    if (/^Senses/i.test(line)) {
+      result.senses = line.slice(6).trim();
+      continue;
+    }
+
+    if (/^Languages/i.test(line)) {
+      result.languages = line.slice(9).trim();
+      continue;
+    }
+
+    const crMatch = line.match(/^\s*(?:CR|Challenge)\s*(\d+)/i);
+    if (crMatch) {
+      result.cr = parseInt(crMatch[1]);
+    }
+  }
+
+  return result as SkillBlock;
+}
+
 export default function parseCustomMonster(text: string): StatBlock {
 
   const header = getHeader(text);
 
-  const abilityRanges = getAbilityRanges(text);
+  const abilityScores = getAbilityScores(text);
 
+  const skills = getSkills(text);
+
+  const endMatch = text.match(/\b(?:CR|Challenge)\b.*?\n/);
+  const traitStart = endMatch?.index ? endMatch.index + endMatch[0].length : 0;
+
+  const abilityRanges = getAbilityRanges(text);
+  const traitEnd = Math.min(abilityRanges.action?.start ?? Number.MAX_SAFE_INTEGER,
+    abilityRanges.bonusAction?.start ?? Number.MAX_SAFE_INTEGER,
+    abilityRanges.reaction?.start ?? Number.MAX_SAFE_INTEGER,
+    abilityRanges.legendaryAction?.start ?? Number.MAX_SAFE_INTEGER);
+
+  const traits = extractAbility(text, { start: traitStart, end: traitEnd });
   const actions = extractAbility(text, abilityRanges.action);
   const bonusActions = extractAbility(text, abilityRanges.bonusAction);
   const legendaryActions = extractAbility(text, abilityRanges.legendaryAction);
@@ -276,9 +397,12 @@ export default function parseCustomMonster(text: string): StatBlock {
 
   return {
     ...header,
+    ...abilityScores,
+    ...skills,
+    traits,
     actions,
     bonusActions,
     legendaryActions,
     reactions
-  } as unknown as StatBlock;
+  } as StatBlock;
 }
