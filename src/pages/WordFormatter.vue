@@ -84,7 +84,7 @@ function importCustomMonster() {
 function saveCustom(monster: Initiative) {
   customMonster.value = undefined;
   showEditCustomMonster.value = false;
-  //customMonsters.value.push(monster);
+  customMonsters.value.push(monster);
   toast.success("Saved Custom Monster!");
 }
 
