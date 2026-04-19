@@ -1,6 +1,6 @@
 import { BuildAsyncCache } from "./Cache";
 
-const baseUrl = "https://api.open5e.com";
+const baseUrl = "https://api.open5e.com/v1";
 const monsterApi = `${baseUrl}/monsters/`;
 
 export type DocumentSlug = "o5e" | "wotc-srd" | "tob" | "cc" | "tob2" | "dmag" | "menagerie" | "tob3" | "a5e" | "kp" | "dmag-e" | "warlock" | "vom" | "toh" | "taldorei" | "blackflag" | "tob-2023";

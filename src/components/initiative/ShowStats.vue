@@ -1,5 +1,5 @@
 <template>
-  <v-btn icon :href="url" target="_blank">
+  <v-btn icon :href="url" target="_blank" :disabled="true">
     <v-icon icon="mdi-open-in-new" />
   </v-btn>
 </template>
