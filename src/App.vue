@@ -2,7 +2,7 @@
   <v-app>
     <v-main>
       <v-sheet class="mx-2 rounded-b-lg d-flex align-center">
-        <span class="text-h2 ml-2">GM Tools</span>
+        <span class="text-display-medium ml-2 my-2">GM Tools</span>
         <v-spacer />
         <settings class="ma-2" />
       </v-sheet>

@@ -107,7 +107,6 @@ import { monsterO5eToInitiative } from "./initiativeHelpers";
 import { TemplateType, DragonType, dragonTypes, TemplateOptions, templates as templateNames } from "@/components/initiative/templates/types";
 import * as t from "@/components/initiative/templates";
 import { useStorage } from "@vueuse/core";
-import { useToast } from "vue-toast-notification";
 
 const props = defineProps<{ monsterStats?: MonsterO5e | Initiative | null, initStats?: InitWithId | null }>();
 const { monsterStats, initStats } = toRefs(props);
@@ -245,12 +244,11 @@ function addEditInitiative() {
 }
 
 const customMonsters = useStorage("customMonsters", [] as Initiative[]);
-const toast = useToast();
 
 async function saveCustom() {
   const newMonster = cloneNewInit();
   customMonsters.value.push(newMonster);
-  toast.success("Saved Custom Monster");
+  // TODO: new toast library - 'Saved Custom Monster'
 }
 
 const undeadFortitude = ref(true);

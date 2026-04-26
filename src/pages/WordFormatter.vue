@@ -29,7 +29,6 @@ import formatParagraph from '@/utils/wordParser';
 import parseCustomMonster, { StatBlock } from '@/utils/statblockParser';
 import { useStorage } from '@vueuse/core';
 import { ref } from 'vue';
-import { useToast } from 'vue-toast-notification';
 
 import AddEditInitiative from '@/components/initiative/AddEditInitiative.vue';
 
@@ -55,7 +54,6 @@ function openCustomWords() {
 const customMonsters = useStorage("customMonsters", [] as Initiative[]);
 const customMonster = ref<Initiative>();
 const showEditCustomMonster = ref(false);
-const toast = useToast();
 
 function statBlockToInitiative(statBlock: StatBlock): Initiative {
   return {
@@ -84,7 +82,7 @@ function saveCustom(monster: Initiative) {
   customMonster.value = undefined;
   showEditCustomMonster.value = false;
   customMonsters.value.push(monster);
-  toast.success("Saved Custom Monster!");
+  // TODO: add toast back in - display success
 }
 
 </script>

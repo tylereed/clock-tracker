@@ -4,7 +4,7 @@
       <v-col>
         <v-combobox :label="label" v-model="search" @update:model-value="setSelected" :items="groupStore.names"
           @keyup.enter="createNewGroup" :hide-no-data="false">
-          <template v-slot:no-data>
+          <template #no-data>
             <v-list-item>
               <v-list-item-title>
                 No results matching "<strong>{{ search }}</strong>". Press

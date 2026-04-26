@@ -4,15 +4,15 @@
       <v-col cols="9">
         <v-autocomplete v-model="monsterSearch" v-model:search="searchInput" :loading="loading" :items="monsters"
           return-object auto-select-first item-title="name" item-value="slug" @update:search="doSearchDebounced">
-          <template v-slot:append>
+          <template #append>
             <show-stats :disabled="!isO5e(monsterSearch)" :id="getSlug(monsterSearch)" />
           </template>
-          <template v-slot:item="{ props, item }">
+          <template #item="{ props, item }">
             <v-list-item v-bind="props" :title="''">
-              {{ item.title }} <v-chip density="comfortable" size="x-small">{{ item.raw.document__slug }}</v-chip>
+              {{ item.name }} <v-chip density="comfortable" size="x-small">{{ item.document__slug }}</v-chip>
             </v-list-item>
           </template>
-          <template v-slot:no-data>
+          <template #no-data>
             <v-list-item>
               <v-list-item-title>
                 {{ searchInput?.length >= 3 ? "No creatures found" : "Enter at least 3 characters to search" }}

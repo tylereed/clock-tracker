@@ -1,5 +1,3 @@
-import { ActiveToast } from "vue-toast-notification";
-
 export interface Timer {
   id: number;
   name?: string;
@@ -12,5 +10,6 @@ export interface Timer {
   isRunning: boolean;
   timePauses: number;
   isTimerDisplay: boolean;
-  toast?: ActiveToast;
+  // TODO: add toast back in
+  toast?: unknown;
 }

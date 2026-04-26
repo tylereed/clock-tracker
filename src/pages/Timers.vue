@@ -2,7 +2,7 @@
   <v-card flat>
     <v-card-text>
       <v-container fluid>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="2" v-for="(timer, index) in timers" :key="'Timer' + index">
             <timer-vue v-bind="timer" @delete-timer="deleteTimer" @start-timer="startTimer" @pause-timer="pauseTimer"
               @reset-timer="resetTimer" @elapsed-timer="elapsedTimer" />
@@ -23,7 +23,6 @@
 
 <script setup lang="ts">
 import { reactive, ref } from "vue";
-import { useToast } from "vue-toast-notification";
 
 import AddCountdown from "@/components/timer/AddCountdown.vue";
 import TimerVue from "@/components/timer/Timer.vue";
@@ -78,7 +77,7 @@ function deleteTimer(id: number) {
   if (toRemove.elapsedId) {
     clearInterval(toRemove.elapsedId);
   }
-  toRemove.toast?.dismiss();
+  // TODO: add new toast library - dismiss
   if (timers.value.length === 0) {
     addTimer();
   }
@@ -137,20 +136,18 @@ function resetTimer(id: number) {
       timer.isTimerDisplay = true;
       timer.elapsedId = null;
     }
-    timer.toast?.dismiss();
+    // TODO: add new toast library - dismiss
 
     timer.time = 0;
     timer.timePauses = 0;
   }
 }
 
-const toast = useToast();
-
 function elapsedTimer(id: number) {
   const timer = timers.value[id];
   if (!timer.elapsed) {
     timer.elapsed = true;
-    timer.toast = toast.info(`Countdown ${id + 1} has finished`, { duration: 0 });
+    timer.toast = null;
     let state = 0;
 
     timer.elapsedId = setInterval(function () {

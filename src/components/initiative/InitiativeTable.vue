@@ -1,6 +1,6 @@
 <template>
   <v-container class="init-table" fluid>
-    <v-row class="font-weight-bold" dense>
+    <v-row class="font-weight-bold"  density="compact">
       <v-col v-if="hasTurnOrder">Round {{ round }}</v-col>
       <v-col v-if="hasInitiative">Initiative</v-col>
       <v-col v-if="hasDex">Dex</v-col>
@@ -13,7 +13,7 @@
       <v-col v-if="hasConditions" cols="3">Conditions</v-col>
       <v-col cols="1"></v-col>
     </v-row>
-    <v-row align="center" v-for="(init, i) in initiatives" :key="i" :class="getRowClass(i)" dense>
+    <v-row align="center" v-for="(init, i) in initiatives" :key="i" :class="getRowClass(i)"  density="compact">
       <v-col v-if="hasTurnOrder" text-align="center"><v-icon v-show="i === turn" icon="mdi-circle-medium" /></v-col>
       <v-col v-if="hasInitiative">
         <v-text-field :hide-details="true" density="compact" v-model="init.order" :rules="r.OrderRules"
@@ -45,7 +45,7 @@
       </v-col>
       <v-col v-if="hasHp">
         <v-menu location="end center" :close-on-content-click="false" :open-on-focus="true" :offset="2">
-          <template v-slot:activator="{ props }">
+          <template #activator="{ props }">
             <v-text-field v-bind="props" :hide-details="true" density="compact" v-model="init.hp" :rules="[validateHp]"
               @update:focused="(focused) => handleHpChange(i, focused)" @keyup.enter.stop="nextRow($event)"
               data-test="txtHp" />
@@ -188,7 +188,7 @@ function getRowClass(index: number) {
   }
 
   if (index === turn.value) {
-    classes.push("elevation-10");
+    classes.push("elevation-2");
   }
 
   return classes;
