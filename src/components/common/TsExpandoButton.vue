@@ -1,7 +1,7 @@
 <template>
   <v-card flat>
     <v-menu transition="scroll-y-transition" :target="mainButton">
-      <template v-slot:activator="{ isActive, props }">
+      <template #activator="{ isActive, props }">
         <v-btn :loading="loading" class="mr-0 rounded-s rounded-e-0" @click="runButton(mainAction)" variant="elevated"
           color="primary" ref="mainButton">
           {{ mainAction.label }}

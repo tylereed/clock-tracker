@@ -1,6 +1,6 @@
 <template>
   <v-menu :close-on-content-click="false">
-    <template v-slot:activator="{ props }">
+    <template #activator="{ props }">
       <v-btn icon="mdi-cog" v-bind="props" class="mx-2" />
     </template>
 

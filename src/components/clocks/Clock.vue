@@ -1,7 +1,7 @@
 <template>
   <v-hover @update:model-value="updateHover">
-    <template v-slot:default="{ isHovering, props }">
-      <v-card v-bind="props" elevation="5" class="d-flex justify-center" @click="increment()" @click.right="decrement()"
+    <template #default="{ isHovering, props }">
+      <v-card v-bind="props" elevation="1" class="d-flex justify-center" @click="increment()" @click.right="decrement()"
         @contextmenu.prevent>
         <v-sheet v-show="isHovering" class="topright text-center">
           <v-btn @click.stop="emit('editClock', clock.id)">
@@ -107,7 +107,7 @@ function render() {
       fillStyle = ctx.createPattern(offscreen, "repeat")!;
       ctx.globalAlpha = .4;
     } else {
-      fillStyle = backgroundColor;
+      fillStyle = backgroundColor as unknown as CanvasPattern;
     }
 
     ctx.beginPath();

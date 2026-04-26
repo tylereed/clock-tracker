@@ -1,7 +1,7 @@
 <template>
   <v-hover @update:model-value="updateHover">
-    <template v-slot:default="{ isHovering, props }">
-      <v-card v-bind="props" class="d-flex justify-center" elevation="5">
+    <template #default="{ isHovering, props }">
+      <v-card v-bind="props" class="d-flex justify-center" elevation="1">
         <v-sheet>
           <v-card elevation="0">
             <v-card-item><v-card-title>{{ max != null ? "Countdown" : "Timer" }}</v-card-title></v-card-item>

@@ -2,7 +2,7 @@
   <div id="dropDisplay" :style="dropDisplayStyle" />
   <v-container fluid>
     <v-row class="clock-list" @drop="(e: DragEvent) => drop(e)" @dragover="showDrop" @dragleave="clearDrop" @dragenter.prevent
-      v-resize="resizeClocks" dense>
+      v-resize="resizeClocks" density="compact">
       <v-col v-for="clock in clocks" :key="'Clock' + clock.id" cols="3" lg="2" xxl="1">
         <div draggable="true" @dragstart="startDrag(clock)" @dragend="clearDrag">
           <clock-vue v-bind="clock" @update-slice="(...a) => e('updateSlice', ...a)"
